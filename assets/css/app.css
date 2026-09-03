@@ -1,0 +1,95 @@
+/* Shared top navigation + small shared helpers.
+   Colours match the existing report/scorecard palette. */
+
+.pps-nav {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+  background: #33465a;
+  /* bleed to the edge of the card: cancels the body's 24px/28px padding */
+  margin: -24px -28px 18px;
+  padding: 10px 16px;
+  border-radius: 6px 6px 0 0;
+}
+.pps-nav .pps-brand {
+  color: #d9c48a;
+  font-weight: 700;
+  margin-right: 14px;
+  letter-spacing: 0.4px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.pps-nav a {
+  color: #cdd6e0;
+  text-decoration: none;
+  font-size: 13px;
+  padding: 5px 11px;
+  border-radius: 4px;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.pps-nav a:hover { background: #42566b; color: #fff; }
+.pps-nav a.active { background: #5c7d99; color: #fff; font-weight: 600; }
+
+.pps-note {
+  font-size: 12.5px;
+  font-style: italic;
+  color: #6a7788;
+  margin: 0 0 12px;
+}
+.pps-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #4d7a5c;
+  font-style: normal;
+  font-weight: 600;
+}
+.pps-live::before {
+  content: "";
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #4d7a5c;
+}
+.pps-empty {
+  text-align: center;
+  color: #8b96a3;
+  font-style: italic;
+  padding: 14px 8px;
+}
+.pps-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.pps-btn {
+  background: #5c7d99;
+  color: #fff;
+  border: none;
+  padding: 7px 14px;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.pps-btn:hover { background: #476380; }
+.pps-btn.secondary {
+  background: #fff;
+  color: #5c7d99;
+  border: 1px solid #5c7d99;
+}
+.pps-btn.secondary:hover { background: #e3e9f0; }
+
+.pps-select {
+  font-family: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid #3d4b5c;
+  border-radius: 4px;
+  background: #fff;
+  color: #1a1a1a;
+  min-width: 260px;
+}
