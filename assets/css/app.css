@@ -1,95 +1,330 @@
-/* Shared top navigation + small shared helpers.
-   Colours match the existing report/scorecard palette. */
+/* ============================================================
+   PMO Portfolio Suite — shared design system
+   Visual language modelled on the classic Microsoft Dynamics
+   CRM case form: a light command ribbon, a record-header strip
+   of label/value pairs, a green chevron process bar, airy
+   hairline grids with grey uppercase column heads, and quiet
+   underline form fields. One accent (the green flow bar) does
+   the heavy lifting; everything else stays disciplined.
+   ============================================================ */
 
+:root {
+  --ink:        #1b2733;   /* primary text            */
+  --ink-soft:   #66727e;   /* micro-labels, secondary */
+  --ink-faint:  #93a0ab;   /* placeholders, hints     */
+  --line:       #d9dfe4;   /* hairline borders/grid   */
+  --line-soft:  #edf0f3;   /* zebra / faint fills     */
+  --surface:    #ffffff;   /* app + card surface      */
+  --canvas:     #e9edf1;   /* page canvas behind app  */
+  --ribbon:     #f7f9fb;   /* command bar + header    */
+  --fill:       #f3f6f8;   /* input / value fills     */
+
+  --link:       #1568b8;   /* hyperlinks + primary    */
+  --link-dark:  #0f4f8c;
+  --danger:     #c0392b;   /* validation              */
+  --warn:       #b5651d;
+
+  /* process-flow greens (from the screenshot chevrons) */
+  --stage-active: #7fb086;
+  --stage-active-ink: #17301c;
+  --stage-done:   #bcdabf;
+  --stage-done-ink:   #2c4631;
+  --stage-todo:   #e0ece1;
+  --stage-todo-ink:   #55705a;
+
+  --pad: 26px;             /* horizontal body padding */
+}
+
+* { box-sizing: border-box; }
+
+html { background: var(--canvas); }
+
+body {
+  font-family: "Segoe UI", "Segoe UI Web", Calibri, Arial, sans-serif;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.45;
+  background: var(--surface);
+  max-width: 1180px;
+  margin: 18px auto;
+  padding: 0 var(--pad) 30px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(27,39,51,0.06), 0 6px 20px rgba(27,39,51,0.05);
+  overflow: hidden;               /* keep full-bleed bars inside the radius */
+}
+body.narrow { max-width: 940px; }
+
+/* full-bleed helper: cancels the body's horizontal padding so a
+   bar can run edge to edge like the Dynamics command ribbon */
+.bleed { margin-left: calc(var(--pad) * -1); margin-right: calc(var(--pad) * -1); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { color: var(--link-dark); text-decoration: underline; }
+
+/* ============================================================
+   1. COMMAND RIBBON  (top navigation)
+   ============================================================ */
 .pps-nav {
   display: flex;
-  gap: 4px;
   align-items: center;
+  gap: 2px;
   flex-wrap: wrap;
-  background: #33465a;
-  /* bleed to the edge of the card: cancels the body's 24px/28px padding */
-  margin: -24px -28px 18px;
-  padding: 10px 16px;
-  border-radius: 6px 6px 0 0;
+  background: var(--ribbon);
+  border-bottom: 1px solid var(--line);
+  margin-left: calc(var(--pad) * -1);
+  margin-right: calc(var(--pad) * -1);
+  padding: 0 16px;
+  min-height: 46px;
 }
 .pps-nav .pps-brand {
-  color: #d9c48a;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
   font-weight: 700;
-  margin-right: 14px;
-  letter-spacing: 0.4px;
-  font-size: 14px;
+  font-size: 12px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  margin-right: 12px;
   white-space: nowrap;
+}
+.pps-nav .pps-brand::before {         /* small app tile, stands in for the CRM icon */
+  content: "";
+  width: 20px; height: 20px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, var(--stage-active), #5f9468);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
 }
 .pps-nav a {
-  color: #cdd6e0;
-  text-decoration: none;
-  font-size: 13px;
-  padding: 5px 11px;
-  border-radius: 4px;
+  color: var(--ink-soft);
+  font-size: 11.5px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 15px 13px;
   white-space: nowrap;
-  transition: background 0.15s ease, color 0.15s ease;
+  border-bottom: 2px solid transparent;
+  transition: color .12s ease, background .12s ease, border-color .12s ease;
 }
-.pps-nav a:hover { background: #42566b; color: #fff; }
-.pps-nav a.active { background: #5c7d99; color: #fff; font-weight: 600; }
+.pps-nav a:hover { color: var(--ink); background: #eef2f5; text-decoration: none; }
+.pps-nav a.active {
+  color: var(--ink);
+  border-bottom-color: var(--stage-active);
+  background: #fff;
+}
+
+/* ============================================================
+   2. RECORD HEADER STRIP  (title + label/value run)
+   ============================================================ */
+.crm-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px 26px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  margin-left: calc(var(--pad) * -1);
+  margin-right: calc(var(--pad) * -1);
+  padding: 16px var(--pad) 15px;
+}
+.crm-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.crm-eyebrow::after { content: "\25BE"; font-size: 9px; color: var(--ink-faint); }
+.crm-title {
+  font-size: 23px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.15;
+  margin: 3px 0 0;
+}
+.crm-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+}
+.crm-field {
+  padding: 2px 0 2px 22px;
+  margin-left: 22px;
+  border-left: 1px solid var(--line);
+  min-width: 96px;
+}
+.crm-fields .crm-field:first-child { border-left: none; margin-left: 0; padding-left: 0; }
+.crm-flabel {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 3px;
+}
+.crm-fvalue { font-size: 14px; color: var(--ink); font-weight: 600; }
+.crm-fvalue.req { color: var(--danger); }
+.crm-fvalue .dot { vertical-align: -1px; margin-right: 5px; }
+.crm-fvalue a { font-weight: 600; }
+
+/* ============================================================
+   3. CHEVRON PROCESS BAR
+   ============================================================ */
+.crm-flow {
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  margin-left: calc(var(--pad) * -1);
+  margin-right: calc(var(--pad) * -1);
+  padding: 9px var(--pad);
+}
+.crm-stage {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 7px 12px 7px 22px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--stage-todo-ink);
+  background: var(--stage-todo);
+  clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%, 13px 50%);
+}
+.crm-stage:first-child { clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%); padding-left: 16px; }
+.crm-stage:last-child  { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 13px 50%); }
+.crm-stage .crm-stage-mark {
+  flex: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+  background: rgba(255,255,255,0.55);
+  color: inherit;
+}
+.crm-stage .crm-stage-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.crm-stage.is-done { background: var(--stage-done); color: var(--stage-done-ink); }
+.crm-stage.is-done .crm-stage-mark { background: rgba(255,255,255,0.7); }
+.crm-stage.is-active {
+  background: var(--stage-active);
+  color: var(--stage-active-ink);
+  box-shadow: 0 1px 3px rgba(45,88,52,0.28);
+}
+.crm-stage.is-active .crm-stage-mark { background: rgba(255,255,255,0.85); }
+
+/* ============================================================
+   4. SECTION HEADS + NOTES + LEGEND
+   ============================================================ */
+.crm-sec {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  padding: 4px 0 6px;
+  margin: 22px 0 10px;
+  border-bottom: 1px solid var(--line);
+}
 
 .pps-note {
   font-size: 12.5px;
-  font-style: italic;
-  color: #6a7788;
-  margin: 0 0 12px;
+  color: var(--ink-soft);
+  margin: 14px 0 12px;
 }
 .pps-live {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: #4d7a5c;
-  font-style: normal;
-  font-weight: 600;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; letter-spacing: 0.4px; text-transform: uppercase;
+  color: #3d7a52; font-weight: 700;
 }
 .pps-live::before {
-  content: "";
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: #4d7a5c;
+  content: ""; width: 8px; height: 8px; border-radius: 50%;
+  background: #4d9a68; box-shadow: 0 0 0 3px rgba(77,154,104,0.18);
 }
-.pps-empty {
-  text-align: center;
-  color: #8b96a3;
-  font-style: italic;
-  padding: 14px 8px;
+.pps-empty { text-align: center; color: var(--ink-faint); font-style: italic; padding: 16px 8px; }
+
+.crm-legend {
+  display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center;
+  padding: 9px 12px; margin: 0 0 12px;
+  background: var(--ribbon);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 12px; color: var(--ink-soft);
 }
-.pps-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-bottom: 10px;
-}
+.crm-legend .li { display: inline-flex; align-items: center; gap: 6px; }
+.crm-legend .li .dot { vertical-align: middle; }
+
+.pps-toolbar { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin: 14px 0 12px; flex-wrap: wrap; }
+
+/* ============================================================
+   5. BUTTONS + SELECT
+   ============================================================ */
 .pps-btn {
-  background: #5c7d99;
-  color: #fff;
-  border: none;
-  padding: 7px 14px;
-  font-size: 13px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-family: inherit;
+  background: var(--link); color: #fff; border: 1px solid var(--link);
+  padding: 7px 15px; font-size: 12.5px; border-radius: 4px;
+  cursor: pointer; font-family: inherit; font-weight: 600;
+  transition: background .12s ease, border-color .12s ease;
 }
-.pps-btn:hover { background: #476380; }
-.pps-btn.secondary {
-  background: #fff;
-  color: #5c7d99;
-  border: 1px solid #5c7d99;
-}
-.pps-btn.secondary:hover { background: #e3e9f0; }
+.pps-btn:hover { background: var(--link-dark); border-color: var(--link-dark); }
+.pps-btn.secondary { background: #fff; color: var(--link); border-color: var(--line); }
+.pps-btn.secondary:hover { background: var(--fill); color: var(--link-dark); border-color: var(--link); }
 
 .pps-select {
-  font-family: inherit;
-  font-size: 13px;
-  padding: 6px 8px;
-  border: 1px solid #3d4b5c;
-  border-radius: 4px;
-  background: #fff;
-  color: #1a1a1a;
-  min-width: 260px;
+  font-family: inherit; font-size: 13px; padding: 6px 9px;
+  border: 1px solid var(--line); border-radius: 4px;
+  background: #fff; color: var(--ink); min-width: 260px;
 }
+.pps-select:focus { outline: none; border-color: var(--link); box-shadow: 0 0 0 2px rgba(21,104,184,0.15); }
+
+/* ============================================================
+   6. GRID / TABLE DEFAULTS
+   ============================================================ */
+table { border-collapse: collapse; width: 100%; }
+td, th { border: 1px solid var(--line); padding: 8px 10px; vertical-align: top; text-align: left; }
+.center { text-align: center; }
+.status-cell { text-align: center; vertical-align: middle; }
+
+/* uppercase grey column heads */
+.col-header td, .col-head td, thead.col-head th {
+  background: #eef2f5;
+  color: var(--ink-soft);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  text-align: center;
+  border-color: var(--line);
+}
+/* section band inside a grid */
+.section-header td, .sec-head td {
+  background: #e5ebef;
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  padding: 7px 10px;
+  border-color: var(--line);
+}
+.sec-head .note { font-weight: 400; font-style: italic; text-transform: none; letter-spacing: 0; font-size: 12px; color: var(--ink-soft); }
+
+/* subtle row hover on data grids */
+tbody tr:hover td { background: #f6f9fb; }
+
+/* ============================================================
+   7. STATUS DOTS  (semantic — shared by every page)
+   ============================================================ */
+.dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.14); }
+.dot-black { background: #33465a; }
+.dot-grey  { background: #b7c0cb; }
+.dot-green { background: #4d9a68; }
+.dot-yellow{ background: #d0a13f; }
+.dot-red   { background: var(--danger); }
+.dot-purple{ background: #6a5a8c; }
+.dot-blue  { background: var(--link); }
