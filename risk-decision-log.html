@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Risk &amp; Decision Log</title>
+<link rel="stylesheet" href="assets/css/app.css">
+<style>
+  table.grid td, table.grid th { font-size: 12.5px; padding: 7px 9px; }
+  table.grid { border: 1px solid var(--line); }
+  td.desc-cell { max-width: 340px; }
+  td.action-cell { max-width: 300px; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<nav class="pps-nav">
+  <span class="pps-brand">PMO Suite</span>
+  <a href="index.html">Home</a>
+  <div class="pps-dropdown">
+    <button type="button" class="pps-dropdown-toggle">Project Intake Process</button>
+    <div class="pps-dropdown-menu">
+      <a href="intake-form.html">1. Intake Form</a>
+      <a href="intake-report.html">2. Intake Report</a>
+    </div>
+  </div>
+  <a href="portfolio-review.html">Portfolio Review</a>
+  <div class="pps-dropdown">
+    <button type="button" class="pps-dropdown-toggle active">Project Status</button>
+    <div class="pps-dropdown-menu">
+      <a href="scorecard.html">1. Project Scorecard</a>
+      <a href="risk-decision-log.html" class="active">2. Risk &amp; Decision</a>
+      <a href="repository.html">3. Repository</a>
+      <a href="change-request-form.html">4. Change Request</a>
+    </div>
+  </div>
+</nav>
+
+<header class="crm-head">
+  <div class="crm-id">
+    <span class="crm-eyebrow">Governance</span>
+    <div class="crm-title">Risk &amp; Decision Log</div>
+  </div>
+  <div class="crm-fields">
+    <div class="crm-field"><span class="crm-flabel">Report Date</span><span class="crm-fvalue" id="reportDate">&mdash;</span></div>
+    <div class="crm-field"><span class="crm-flabel">Open Risks/Issues</span><span class="crm-fvalue" id="openCount">&mdash;</span></div>
+    <div class="crm-field"><span class="crm-flabel">Open Decisions</span><span class="crm-fvalue" id="openDecisionCount">&mdash;</span></div>
+  </div>
+</header>
+
+<div class="crm-flow" aria-label="Project Status">
+  <div class="crm-stage is-todo"><span class="crm-stage-mark">1</span><span class="crm-stage-label">Project Scorecard</span></div>
+  <div class="crm-stage is-active"><span class="crm-stage-mark">2</span><span class="crm-stage-label">Risk &amp; Decision</span></div>
+  <div class="crm-stage is-todo"><span class="crm-stage-mark">3</span><span class="crm-stage-label">Repository</span></div>
+  <div class="crm-stage is-todo"><span class="crm-stage-mark">4</span><span class="crm-stage-label">Change Request</span></div>
+</div>
+
+<script src="assets/js/store.js"></script>
+
+<p class="pps-note">
+  <span class="pps-live">Live</span>
+  &nbsp;Sample Risk/Issue and Decision registers for the flagship portfolio project, in the same format used to run weekly governance reviews. Switch tabs to move between the two logs.
+</p>
+
+<div class="pps-tabs" role="tablist">
+  <div class="pps-tab active" data-tab="risk" role="tab">Risk / Issue Log <span class="count" id="riskCountLabel"></span></div>
+  <div class="pps-tab" data-tab="decision" role="tab">Decision Log <span class="count" id="decisionCountLabel"></span></div>
+</div>
+
+<!-- ==================== RISK / ISSUE LOG ==================== -->
+<div class="pps-tabpanel active" id="panel-risk">
+
+  <div class="crm-legend" aria-label="Risk status legend">
+    <span class="li"><span class="dot dot-yellow"></span> Open</span>
+    <span class="li"><span class="dot dot-green"></span> Closed</span>
+    <span class="li"><span class="sev sev-low">Low</span> Probability / Impact</span>
+    <span class="li"><span class="sev sev-medium">Medium</span></span>
+    <span class="li"><span class="sev sev-high">High</span></span>
+  </div>
+
+  <table class="grid">
+    <colgroup>
+      <col style="width:3%"><col style="width:19%"><col style="width:7%"><col style="width:9%">
+      <col style="width:9%"><col style="width:26%"><col style="width:11%"><col style="width:8%"><col style="width:8%">
+    </colgroup>
+    <thead class="col-head">
+      <tr>
+        <td>#</td><td>Description</td><td>Type</td><td>Probability</td><td>Impact</td>
+        <td>Mitigating Actions / Status</td><td>Action By</td><td>Target Date</td><td>Status</td>
+      </tr>
+    </thead>
+    <tbody id="riskBody"><!-- injected by JS --></tbody>
+  </table>
+</div>
+
+<!-- ==================== DECISION LOG ==================== -->
+<div class="pps-tabpanel" id="panel-decision">
+
+  <div class="crm-legend" aria-label="Decision status legend">
+    <span class="li"><span class="dot dot-yellow"></span> Open</span>
+    <span class="li"><span class="dot dot-green"></span> Closed</span>
+  </div>
+
+  <table class="grid">
+    <colgroup>
+      <col style="width:22%"><col style="width:16%"><col style="width:38%"><col style="width:12%"><col style="width:12%">
+    </colgroup>
+    <thead class="col-head">
+      <tr>
+        <td>Decision Point</td><td>Ownership</td><td>Comments</td><td>Decision Date</td><td>Status</td>
+      </tr>
+    </thead>
+    <tbody id="decisionBody"><!-- injected by JS --></tbody>
+  </table>
+</div>
+
+<script>
+(function () {
+  document.getElementById("reportDate").textContent = PPS.today();
+
+  /* ============================================================
+     Sample data, adapted from a real Risk/Issue & Decision log:
+     structure and tone preserved, entries trimmed to a
+     representative set, and any individually-identifying detail
+     generalized for a public demo.
+     ============================================================ */
+  var RISKS = [
+    { id: 1,  desc: "Delay in hardware delivery & infrastructure readiness", type: "Issue", prob: "High", impact: "High", action: "Development started in a temporary environment to minimize impact; full impact to be reassessed after hardware commissioning at the client data center. Critical path item, ~1 month impact across workstreams.", by: "Client IT", date: "5-Mar-22", status: "Open" },
+    { id: 2,  desc: "Delay in resource onboarding", type: "Risk", prob: "Low", impact: "Medium", action: "Delivery squads mobilized and operational; hiring for remaining slots in progress.", by: "Client / Vendor", date: "On-going", status: "Open" },
+    { id: 3,  desc: "Design language for backend web interfaces", type: "Risk", prob: "Low", impact: "Medium", action: "Art direction (CX/UI) for back-office systems agreed between client and vendor.", by: "Client / Vendor", date: "31-Jan-22", status: "Closed" },
+    { id: 4,  desc: "Native vs hybrid app decision", type: "Risk", prob: "High", impact: "Medium", action: "Decision taken; see Decision Log.", by: "Client", date: "31-Jan-22", status: "Closed" },
+    { id: 5,  desc: "Backend API architecture and development", type: "Risk", prob: "Low", impact: "High", action: "Identification and prioritization of APIs jointly agreed, aligned to critical path.", by: "Client / Vendor", date: "18-Mar-22", status: "Open" },
+    { id: 6,  desc: "Document management system upgrade dependency", type: "Risk", prob: "Low", impact: "High", action: "Client upgrading its document management system; any delay directly impacts downstream workstreams. APIs to be made available by end of March to de-risk timeline.", by: "Client", date: "31-Mar-22", status: "Open" },
+    { id: 7,  desc: "Data migration strategy", type: "Risk", prob: "Medium", impact: "Medium", action: "Slightly behind schedule; fast-tracking stakeholder engagement to formalize strategy and plan.", by: "Client / Vendor", date: "31-Mar-22", status: "Open" },
+    { id: 8,  desc: "Training & rollout strategy and plan", type: "Risk", prob: "Medium", impact: "Medium", action: "Slightly behind schedule; fast-tracking stakeholder engagement to formalize strategy and plan.", by: "Client / Vendor", date: "31-Mar-22", status: "Open" },
+    { id: 9,  desc: "Software architecture per workstream", type: "Risk", prob: "Medium", impact: "Medium", action: "Core platform supports a microservices approach; architecture for each workstream still needs to be finalized with the client.", by: "Client / Vendor", date: "1-Aug-22", status: "Open" },
+    { id: 10, desc: "CI/CD pipelining", type: "Risk", prob: "Medium", impact: "Medium", action: "Implementation of CI/CD in progress to enable automated deployment.", by: "Client", date: "1-Aug-22", status: "Open" },
+    { id: 11, desc: "Stress testing", type: "Risk", prob: "Medium", impact: "Medium", action: "Approach needs finalizing so application performance can be validated ahead of production deployment.", by: "Client", date: "1-Aug-22", status: "Open" },
+    { id: 12, desc: "Scope creep across workstreams", type: "Risk", prob: "Medium", impact: "Medium", action: "Additional requirements identified across workstreams during UAT; being centrally logged and managed by the core team rather than absorbed silently.", by: "Client", date: "1-Aug-22", status: "Open" },
+    { id: 13, desc: "SDK limitations for a responsive onboarding app", type: "Risk", prob: "Medium", impact: "High", action: "The onboarding solution's web-responsive approach introduced challenges accessing device-native biometric and camera hardware on tablets.", by: "Client", date: "23-Aug-22", status: "Open" },
+    { id: 14, desc: "UAT timeline slippage", type: "Risk", prob: "Medium", impact: "Medium", action: "UAT start delayed due to stakeholder availability; original start date pushed back roughly one week.", by: "Client", date: "5-Sep-22", status: "Open" }
+  ];
+
+  var DECISIONS = [
+    { point: "Hardware sizing", owner: "Core Platform Vendor", comments: "Hardware sizing concluded with the client team; current hardware confirmed sufficient for the application, including test environments.", date: "10-Mar-22", status: "Closed" },
+    { point: "Test environment / API access to vendor dev cloud", owner: "Client (InfoSec)", comments: "InfoSec requires data masking before approval. Site-to-site VPN request submitted for dev environment API access.", date: "", status: "Open" },
+    { point: "Active-Active architecture", owner: "Core Platform Vendor", comments: "Two application and fabric deployments across separate locations to enable active-active at the application layer.", date: "10-Mar-22", status: "Closed" },
+    { point: "Prioritization and delivery of backend APIs", owner: "Client / Vendor", comments: "Discussion underway to align on API delivery priority order.", date: "", status: "Open" },
+    { point: "Tooling selection and implementation", owner: "Client", comments: "Tool list finalized; procurement to be initiated by the client where applicable.", date: "", status: "Open" },
+    { point: "Identity management for external customers", owner: "Client", comments: "Client to confirm whether to use the platform's built-in identity module or a third-party provider for consumer-facing apps.", date: "", status: "Open" },
+    { point: "SSO for back-office users", owner: "Core Platform Vendor", comments: "SSO to be used as identity broker with the client's directory service; customization handled by the delivery vendor with no timeline impact.", date: "11-Mar-22", status: "Closed" },
+    { point: "Master app scope (retail + omni-channel)", owner: "Client Steering Committee", comments: "Decided at steering committee review.", date: "7-Sep-21", status: "Closed" },
+    { point: "Branchless additional sales app", owner: "Client Steering Committee", comments: "Decided at steering committee review.", date: "14-Jan-22", status: "Closed" },
+    { point: "OCR approach", owner: "Client Steering Committee", comments: "Decided at steering committee review.", date: "25-Feb-22", status: "Closed" },
+    { point: "Tablet vs. responsive web for onboarding", owner: "Client", comments: "Client accepted the web-based approach for tablet onboarding, conditional on smooth customer experience, biometric verification support, rooted-device detection, and reliable image capture.", date: "13-May-22", status: "Closed" },
+    { point: "Core transaction engine scope", owner: "Client", comments: "Core engine to handle all transactions going forward; general ledger entries forwarded to the client's core banking system.", date: "10-May-22", status: "Closed" },
+    { point: "Development code access for client resources", owner: "Client", comments: "Client resources granted the same code access as the delivery vendor's development team, in line with a one-team delivery model.", date: "3-Jul-22", status: "Closed" },
+    { point: "Architecture finalization", owner: "Client / Core Platform Vendor / Delivery Vendor", comments: "Architecture submitted by the platform vendor; a joint technical review is still required to formally close this item.", date: "", status: "Open" },
+    { point: "Multi-factor authentication approach", owner: "Client", comments: "To be presented at the technical review committee, since it falls outside current scope; design vs. MFA trade-off needs sign-off.", date: "7-Jul-22", status: "Closed" }
+  ];
+
+  function statusDot(status) {
+    var s = String(status || "").toLowerCase();
+    if (s.indexOf("closed") > -1) return "dot-green";
+    return "dot-yellow";
+  }
+  function sevPill(level) {
+    var s = String(level || "").toLowerCase();
+    var cls = s === "high" ? "sev-high" : (s === "medium" ? "sev-medium" : "sev-low");
+    return '<span class="sev ' + cls + '">' + PPS.esc(level) + '</span>';
+  }
+
+  function renderRisks() {
+    var body = document.getElementById("riskBody");
+    var esc = PPS.esc;
+    body.innerHTML = RISKS.map(function (r) {
+      return '<tr>' +
+        '<td class="center">' + r.id + '</td>' +
+        '<td class="desc-cell">' + esc(r.desc) + '</td>' +
+        '<td class="center">' + esc(r.type) + '</td>' +
+        '<td class="center">' + sevPill(r.prob) + '</td>' +
+        '<td class="center">' + sevPill(r.impact) + '</td>' +
+        '<td class="action-cell">' + esc(r.action) + '</td>' +
+        '<td class="center">' + esc(r.by) + '</td>' +
+        '<td class="center">' + esc(r.date) + '</td>' +
+        '<td class="status-cell"><span class="dot ' + statusDot(r.status) + '" title="' + esc(r.status) + '"></span></td>' +
+      '</tr>';
+    }).join("");
+    var open = RISKS.filter(function (r) { return statusDot(r.status) === "dot-yellow"; }).length;
+    document.getElementById("openCount").textContent = open + " of " + RISKS.length;
+    document.getElementById("riskCountLabel").textContent = "(" + RISKS.length + ")";
+  }
+
+  function renderDecisions() {
+    var body = document.getElementById("decisionBody");
+    var esc = PPS.esc;
+    body.innerHTML = DECISIONS.map(function (d) {
+      return '<tr>' +
+        '<td>' + esc(d.point) + '</td>' +
+        '<td>' + esc(d.owner) + '</td>' +
+        '<td class="action-cell" style="max-width:none;">' + esc(d.comments) + '</td>' +
+        '<td class="center">' + (d.date ? esc(d.date) : '&mdash;') + '</td>' +
+        '<td class="status-cell"><span class="dot ' + statusDot(d.status) + '" title="' + esc(d.status) + '"></span></td>' +
+      '</tr>';
+    }).join("");
+    var open = DECISIONS.filter(function (d) { return statusDot(d.status) === "dot-yellow"; }).length;
+    document.getElementById("openDecisionCount").textContent = open + " of " + DECISIONS.length;
+    document.getElementById("decisionCountLabel").textContent = "(" + DECISIONS.length + ")";
+  }
+
+  renderRisks();
+  renderDecisions();
+
+  /* ---- Tab switching ---- */
+  var tabs = document.querySelectorAll(".pps-tab");
+  var panels = { risk: document.getElementById("panel-risk"), decision: document.getElementById("panel-decision") };
+  tabs.forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      tabs.forEach(function (t) { t.classList.remove("active"); });
+      Object.keys(panels).forEach(function (k) { panels[k].classList.remove("active"); });
+      tab.classList.add("active");
+      panels[tab.getAttribute("data-tab")].classList.add("active");
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

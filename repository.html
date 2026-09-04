@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Repository</title>
+<link rel="stylesheet" href="assets/css/app.css">
+<style>
+  .repo-layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; margin-top: 14px; }
+  @media (max-width: 760px) { .repo-layout { grid-template-columns: 1fr; } }
+
+  /* ---- Left rail: phase folders ---- */
+  .phase-rail { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: #fff; }
+  .phase-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 12px; border-bottom: 1px solid var(--line); cursor: pointer;
+    font-size: 12.5px; color: var(--ink); transition: background .12s ease;
+  }
+  .phase-item:last-child { border-bottom: none; }
+  .phase-item:hover { background: var(--ribbon); }
+  .phase-item.active { background: #eaf3ec; color: var(--stage-active-ink); font-weight: 700; }
+  .phase-icon {
+    flex: none; width: 26px; height: 22px; border-radius: 3px;
+    background: linear-gradient(135deg, #f2d98a, #e2bb5a);
+    display: flex; align-items: center; justify-content: center; font-size: 12px;
+  }
+  .phase-name { flex: 1; }
+  .phase-count { font-size: 10.5px; color: var(--ink-faint); font-weight: 600; }
+
+  /* ---- Right panel: subfolders + file table ---- */
+  .repo-panel { border: 1px solid var(--line); border-radius: 6px; background: #fff; padding: 16px 18px; min-height: 360px; }
+  .repo-panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 4px; flex-wrap: wrap; }
+  .repo-phase-title { font-size: 16px; font-weight: 700; color: var(--ink); }
+  .repo-phase-sub { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+
+  .subfolder-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 14px; }
+  .subfolder-tab {
+    padding: 6px 12px; border: 1px solid var(--line); border-radius: 14px;
+    font-size: 11.5px; font-weight: 600; color: var(--ink-soft); cursor: pointer; background: #fff;
+    transition: all .12s ease;
+  }
+  .subfolder-tab:hover { border-color: #b9c6d2; color: var(--ink); }
+  .subfolder-tab.active { background: var(--stage-active); color: var(--stage-active-ink); border-color: var(--stage-active); }
+
+  table.filetable td, table.filetable th { font-size: 12.5px; padding: 7px 9px; }
+  table.filetable td.fname { display: flex; align-items: center; gap: 8px; }
+  .file-icon { flex: none; font-size: 13px; }
+  .file-name { color: var(--ink); }
+  .file-meta { color: var(--ink-faint); font-size: 11px; }
+
+  .upload-row { display: flex; justify-content: space-between; align-items: center; margin: 16px 0 4px; flex-wrap: wrap; gap: 8px; }
+  #uploadStatus { font-size: 12px; color: #1a7f37; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<nav class="pps-nav">
+  <span class="pps-brand">PMO Suite</span>
+  <a href="index.html">Home</a>
+  <div class="pps-dropdown">
+    <button type="button" class="pps-dropdown-toggle">Project Intake Process</button>
+    <div class="pps-dropdown-menu">
+      <a href="intake-form.html">1. Intake Form</a>
+      <a href="intake-report.html">2. Intake Report</a>
+    </div>
+  </div>
+  <a href="portfolio-review.html">Portfolio Review</a>
+  <div class="pps-dropdown">
+    <button type="button" class="pps-dropdown-toggle active">Project Status</button>
+    <div class="pps-dropdown-menu">
+      <a href="scorecard.html">1. Project Scorecard</a>
+      <a href="risk-decision-log.html">2. Risk &amp; Decision</a>
+      <a href="repository.html" class="active">3. Repository</a>
+      <a href="change-request-form.html">4. Change Request</a>
+    </div>
+  </div>
+</nav>
+
+<header class="crm-head">
+  <div class="crm-id">
+    <span class="crm-eyebrow">Document Control</span>
+    <div class="crm-title">Project Repository</div>
+  </div>
+  <div class="crm-fields">
+    <div class="crm-field"><span class="crm-flabel">Project</span><span class="crm-fvalue" id="repoProjectName">&mdash;</span></div>
+    <div class="crm-field"><span class="crm-flabel">Structure</span><span class="crm-fvalue">OPA</span></div>
+    <div class="crm-field"><span class="crm-flabel">Access</span><span class="crm-fvalue">Simulated</span></div>
+  </div>
+</header>
+
+<div class="crm-flow" aria-label="Project Status">
+  <div class="crm-stage is-todo"><span class="crm-stage-mark">1</span><span class="crm-stage-label">Project Scorecard</span></div>
+  <div class="crm-stage is-todo"><span class="crm-stage-mark">2</span><span class="crm-stage-label">Risk &amp; Decision</span></div>
+  <div class="crm-stage is-active"><span class="crm-stage-mark">3</span><span class="crm-stage-label">Repository</span></div>
+  <div class="crm-stage is-todo"><span class="crm-stage-mark">4</span><span class="crm-stage-label">Change Request</span></div>
+</div>
+
+<script src="assets/js/store.js"></script>
+
+<p class="pps-note">
+  <span class="pps-live">Live</span>
+  &nbsp;The OPA (Organizational Process Assets) folder structure for the flagship portfolio project, from requirement initiation through project closure. Files shown are sample placeholders for demonstration &mdash; nothing is uploaded to a server.
+</p>
+
+<div class="repo-layout">
+  <div class="phase-rail" id="phaseRail"><!-- injected by JS --></div>
+
+  <div class="repo-panel">
+    <div class="repo-panel-head">
+      <div>
+        <div class="repo-phase-title" id="phaseTitle">&mdash;</div>
+        <div class="repo-phase-sub" id="phaseSub">&mdash;</div>
+      </div>
+    </div>
+
+    <div class="subfolder-tabs" id="subfolderTabs"><!-- injected by JS --></div>
+
+    <table class="filetable grid" style="border:1px solid var(--line);">
+      <colgroup><col style="width:52%"><col style="width:14%"><col style="width:16%"><col style="width:18%"></colgroup>
+      <thead class="col-head"><tr><td style="text-align:left;">File</td><td>Type</td><td>Size</td><td>Last Modified</td></tr></thead>
+      <tbody id="fileBody"><!-- injected by JS --></tbody>
+    </table>
+
+    <div class="upload-row">
+      <label class="pps-btn secondary" style="cursor:pointer;">
+        &#8593; Upload to this folder
+        <input type="file" id="fakeUpload" style="display:none;" multiple>
+      </label>
+      <span id="uploadStatus"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var flagship = PPS.getProject("P2606-01");
+  var projectName = (flagship && flagship.name) ? flagship.name : "Import Billing Automation";
+  document.getElementById("repoProjectName").textContent = projectName;
+
+  /* ============================================================
+     OPA STRUCTURE  (phases -> subfolders -> sample files)
+     ============================================================ */
+  var STRUCTURE = [
+    {
+      id: "p0", name: "0 - Requirement Initiation",
+      sub: [
+        { id: "0.1", name: "0.1 New Initiative Request - NIR", files: [
+          { name: "NIR_ImportBillingAutomation_v1.pdf", type: "PDF", size: "212 KB", date: "12-Jun-26" }
+        ]},
+        { id: "0.2", name: "0.2 Project Charter", files: [
+          { name: "ProjectCharter_P2606-01_Signed.pdf", type: "PDF", size: "340 KB", date: "18-Jun-26" }
+        ]},
+        { id: "0.3", name: "0.3 Business Requirement Document - BRD", files: [
+          { name: "BRD_ImportBillingAutomation_v2.docx", type: "DOCX", size: "486 KB", date: "28-Jun-26" },
+          { name: "BRD_ImportBillingAutomation_v1.docx", type: "DOCX", size: "471 KB", date: "20-Jun-26" }
+        ]},
+        { id: "0.4", name: "0.4 Functional Specifications Document - FSD", files: [
+          { name: "FSD_BillingReconEngine_v1.docx", type: "DOCX", size: "512 KB", date: "20-Jul-26" }
+        ]}
+      ]
+    },
+    {
+      id: "p1", name: "1 - Project Planning",
+      sub: [
+        { id: "1.1", name: "1.1 Efforts Estimation", files: [
+          { name: "EffortsEstimation_P2606-01.xlsx", type: "XLSX", size: "58 KB", date: "1-Jul-26" }
+        ]},
+        { id: "1.2", name: "1.2 Project Plan", files: [
+          { name: "ProjectPlan_P2606-01_Baseline.mpp", type: "MPP", size: "94 KB", date: "3-Jul-26" },
+          { name: "ProjectPlan_P2606-01_v2.mpp", type: "MPP", size: "97 KB", date: "9-Aug-26" }
+        ]}
+      ]
+    },
+    {
+      id: "p2", name: "2 - Design & Development",
+      sub: [
+        { id: "2.1", name: "2.1 Solution Design Documents", files: [
+          { name: "SolutionDesign_BillingEngine_v1.pdf", type: "PDF", size: "1.1 MB", date: "8-Aug-26" }
+        ]},
+        { id: "2.2", name: "2.2 Unit Test Cases", files: [
+          { name: "UnitTestCases_ReconModule.xlsx", type: "XLSX", size: "76 KB", date: "20-Aug-26" }
+        ]},
+        { id: "2.3", name: "2.3 Development Package", files: [
+          { name: "Build_ReconEngine_v0.9.zip", type: "ZIP", size: "6.4 MB", date: "26-Aug-26" }
+        ]}
+      ]
+    },
+    {
+      id: "p3", name: "3 - Quality Assurance",
+      sub: [
+        { id: "3.1", name: "3.1 QA Test Cases & Plan", files: [
+          { name: "QA_TestPlan_ReconEngine.docx", type: "DOCX", size: "188 KB", date: "27-Aug-26" }
+        ]},
+        { id: "3.2", name: "3.2 QA Status Reports", files: [
+          { name: "QA_StatusReport_Week1.pdf", type: "PDF", size: "150 KB", date: "3-Sep-26" }
+        ]},
+        { id: "3.3", name: "3.3 Verified Package & Release Notes", files: []}
+      ]
+    },
+    {
+      id: "p4", name: "4 - User Acceptance Testing",
+      sub: [
+        { id: "4.1", name: "4.1 UAT Cases", files: [
+          { name: "UAT_Cases_BillingRecon_v1.xlsx", type: "XLSX", size: "112 KB", date: "12-Sep-26" }
+        ]},
+        { id: "4.2", name: "4.2 UAT Sign-off", files: []}
+      ]
+    },
+    {
+      id: "p5", name: "5 - Go-Live",
+      sub: [
+        { id: "5.1", name: "5.1 Cutover Plan & Checklist", files: []},
+        { id: "5.2", name: "5.2 Production Rollout Approval", files: []},
+        { id: "5.3", name: "5.3 Production Release Log", files: []},
+        { id: "5.4", name: "5.4 Pilot Run", files: []}
+      ]
+    },
+    {
+      id: "p6", name: "6 - Project Closure",
+      sub: [
+        { id: "6.1", name: "6.1 Project Sign-off", files: []},
+        { id: "6.2", name: "6.2 Lessons Learned", files: []}
+      ]
+    }
+  ];
+
+  var ICONS = { PDF: "\uD83D\uDCC4", DOCX: "\uD83D\uDCDD", XLSX: "\uD83D\uDCCA", ZIP: "\uD83D\uDDC3", MPP: "\uD83D\uDDD3" };
+
+  var railEl = document.getElementById("phaseRail");
+  var tabsEl = document.getElementById("subfolderTabs");
+  var bodyEl = document.getElementById("fileBody");
+  var titleEl = document.getElementById("phaseTitle");
+  var subEl = document.getElementById("phaseSub");
+
+  var state = { phaseId: STRUCTURE[0].id, subId: STRUCTURE[0].sub[0].id };
+
+  function phaseFileCount(phase) {
+    return phase.sub.reduce(function (n, s) { return n + s.files.length; }, 0);
+  }
+
+  function renderRail() {
+    railEl.innerHTML = STRUCTURE.map(function (p) {
+      var active = p.id === state.phaseId ? " active" : "";
+      return '<div class="phase-item' + active + '" data-phase="' + p.id + '">' +
+        '<div class="phase-icon">\uD83D\uDCC1</div>' +
+        '<div class="phase-name">' + p.name + '</div>' +
+        '<div class="phase-count">' + phaseFileCount(p) + '</div>' +
+      '</div>';
+    }).join("");
+    railEl.querySelectorAll(".phase-item").forEach(function (el) {
+      el.addEventListener("click", function () {
+        state.phaseId = el.getAttribute("data-phase");
+        var phase = STRUCTURE.filter(function (p) { return p.id === state.phaseId; })[0];
+        state.subId = phase.sub[0].id;
+        renderAll();
+      });
+    });
+  }
+
+  function currentPhase() { return STRUCTURE.filter(function (p) { return p.id === state.phaseId; })[0]; }
+  function currentSub() { return currentPhase().sub.filter(function (s) { return s.id === state.subId; })[0]; }
+
+  function renderPanel() {
+    var phase = currentPhase();
+    titleEl.textContent = phase.name;
+    subEl.textContent = phase.sub.length + " document type" + (phase.sub.length === 1 ? "" : "s") + " \u00b7 " + phaseFileCount(phase) + " file" + (phaseFileCount(phase) === 1 ? "" : "s") + " in this phase";
+
+    tabsEl.innerHTML = phase.sub.map(function (s) {
+      var active = s.id === state.subId ? " active" : "";
+      return '<div class="subfolder-tab' + active + '" data-sub="' + s.id + '">' + s.name + ' (' + s.files.length + ')</div>';
+    }).join("");
+    tabsEl.querySelectorAll(".subfolder-tab").forEach(function (el) {
+      el.addEventListener("click", function () {
+        state.subId = el.getAttribute("data-sub");
+        renderFiles();
+        tabsEl.querySelectorAll(".subfolder-tab").forEach(function (t) { t.classList.remove("active"); });
+        el.classList.add("active");
+      });
+    });
+
+    renderFiles();
+  }
+
+  function renderFiles() {
+    var sub = currentSub();
+    if (!sub.files.length) {
+      bodyEl.innerHTML = '<tr><td colspan="4" class="pps-empty">No files uploaded to this folder yet.</td></tr>';
+      return;
+    }
+    bodyEl.innerHTML = sub.files.map(function (f) {
+      return '<tr>' +
+        '<td class="fname"><span class="file-icon">' + (ICONS[f.type] || "\uD83D\uDCC4") + '</span><span class="file-name">' + f.name + '</span></td>' +
+        '<td class="center">' + f.type + '</td>' +
+        '<td class="center file-meta">' + f.size + '</td>' +
+        '<td class="center file-meta">' + f.date + '</td>' +
+      '</tr>';
+    }).join("");
+  }
+
+  function renderAll() { renderRail(); renderPanel(); }
+
+  renderAll();
+
+  /* Simulated upload: adds a placeholder row to the current subfolder, in memory only */
+  document.getElementById("fakeUpload").addEventListener("change", function (e) {
+    var files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    var sub = currentSub();
+    files.forEach(function (f) {
+      var ext = (f.name.split(".").pop() || "").toUpperCase();
+      sub.files.push({
+        name: f.name,
+        type: ICONS[ext] ? ext : (ext || "FILE"),
+        size: Math.round(f.size / 1024) + " KB",
+        date: new Date().toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "2-digit" })
+      });
+    });
+    renderAll();
+    var statusEl = document.getElementById("uploadStatus");
+    statusEl.textContent = files.length + " file" + (files.length === 1 ? "" : "s") + " added to " + sub.name + " (this session only).";
+    setTimeout(function () { statusEl.textContent = ""; }, 4000);
+    e.target.value = "";
+  });
+})();
+</script>
+
+</body>
+</html>

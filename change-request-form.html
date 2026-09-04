@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Change Implementation Form</title>
+<link rel="stylesheet" href="assets/css/app.css">
+<style>
+  .required { color: var(--danger); }
+
+  /* ---- Part header bars (Part A / B / C / D), styled after the CIF screenshot ---- */
+  .part-head {
+    background: var(--ink); color: #fff;
+    padding: 8px 12px; margin: 22px 0 0;
+    font-size: 13px; font-weight: 700;
+    border-radius: 4px 4px 0 0;
+  }
+  .part-head .hint { font-weight: 400; font-style: italic; color: #c7ceD6; font-size: 12px; }
+  .part-body { border: 1px solid var(--line); border-top: none; border-radius: 0 0 4px 4px; margin-bottom: 4px; }
+
+  table.cif { width: 100%; border-collapse: collapse; }
+  table.cif td { border: 1px solid var(--line); padding: 8px 10px; vertical-align: top; }
+  table.cif td.label { width: 210px; font-weight: 600; color: var(--ink); background: #fafbfc; }
+  table.cif td.label .sub { display: block; font-weight: 400; font-style: italic; color: var(--ink-soft); font-size: 11px; margin-top: 2px; }
+  table.cif td.field { background: #fff; }
+  table.cif input[type="text"], table.cif input[type="datetime-local"], table.cif input[type="date"] {
+    width: 100%; border: none; border-bottom: 1px dotted var(--line);
+    background: transparent; font-family: inherit; font-size: 13px; color: var(--ink); padding: 3px 2px;
+  }
+  table.cif input::placeholder { color: var(--ink-faint); font-style: italic; }
+  table.cif input:focus { outline: none; border-bottom: 1px solid var(--link); }
+  table.cif textarea {
+    width: 100%; min-height: 64px; border: 1px solid var(--line); border-radius: 4px;
+    font-family: inherit; font-size: 13px; padding: 8px; resize: vertical; color: var(--ink);
+  }
+  table.cif textarea::placeholder { color: var(--ink-faint); font-style: italic; }
+  table.cif textarea:focus { outline: none; border-color: var(--link); box-shadow: 0 0 0 2px rgba(21,104,184,0.14); }
+
+  .cb-row { display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: center; }
+  .cb-opt { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; white-space: nowrap; }
+  .cb-opt input { width: 15px; height: 15px; accent-color: var(--stage-active); }
+  .radio-row { display: flex; gap: 22px; align-items: center; }
+  .radio-row label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+
+  .sig-cell { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .sig-cell .sig-field { display: flex; flex-direction: column; gap: 3px; }
+  .sig-cell label.mini { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--ink-soft); }
+
+  .invalid { border-bottom-color: var(--danger) !important; background: #fdf3f2 !important; }
+  textarea.invalid { border-color: var(--danger) !important; box-shadow: 0 0 0 2px rgba(192,57,43,0.15); background: #fdf3f2 !important; }
+
+  .submit-row { text-align: right; margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
+  #formStatus { margin-top: 10px; text-align: right; font-size: 13px; font-weight: 600; }
+  #formStatus.success { color: #1a7f37; }
+  #formStatus.fail { color: var(--danger); }
+
+  .crm-fvalue input { border: none; background: transparent; font: inherit; font-weight: 600; color: var(--ink); padding: 0; width: 150px; }
+</style>
+</head>
+<body class="narrow">
+
+<nav class="pps-nav">
+  <span class="pps-brand">PMO Suite</span>
+  <a href="index.html">Home</a>
+  <div class="pps-dropdown">
+    <button type="button" class="pps-dropdown-toggle">Project Intake Process</button>
+    <div class="pps-dropdown-menu">
+      <a href="intake-form.html">1. Intake Form</a>
+      <a href="intake-report.html">2. Intake Report</a>
+    </div>
+  </div>
+  <a href="portfolio-review.html">Portfolio Review</a>
+  <div class="pps-dropdown">
+    <button type="button" class="pps-dropdown-toggle active">Project Status</button>
+    <div class="pps-dropdown-menu">
+      <a href="scorecard.html">1. Project Scorecard</a>
+      <a href="risk-decision-log.html">2. Risk &amp; Decision</a>
+      <a href="repository.html">3. Repository</a>
+      <a href="change-request-form.html" class="active">4. Change Request</a>
+    </div>
+  </div>
+</nav>
+
+<header class="crm-head">
+  <div class="crm-id">
+    <span class="crm-eyebrow">Deployment Governance</span>
+    <div class="crm-title">Change Implementation Form</div>
+  </div>
+  <div class="crm-fields">
+    <div class="crm-field"><span class="crm-flabel">CIF Number</span><span class="crm-fvalue"><input type="text" id="cifNumber" readonly></span></div>
+    <div class="crm-field"><span class="crm-flabel">Request Date</span><span class="crm-fvalue"><input type="text" id="cifDate" readonly></span></div>
+    <div class="crm-field"><span class="crm-flabel">Status</span><span class="crm-fvalue"><span id="statusBadge">Draft</span></span></div>
+  </div>
+</header>
+
+<div class="crm-flow" aria-label="Project Status">
+  <div class="crm-stage is-todo"><span class="crm-stage-mark">1</span><span class="crm-stage-label">Project Scorecard</span></div>
+  <div class="crm-stage is-todo"><span class="crm-stage-mark">2</span><span class="crm-stage-label">Risk &amp; Decision</span></div>
+  <div class="crm-stage is-todo"><span class="crm-stage-mark">3</span><span class="crm-stage-label">Repository</span></div>
+  <div class="crm-stage is-active"><span class="crm-stage-mark">4</span><span class="crm-stage-label">Change Request</span></div>
+</div>
+
+<script src="assets/js/store.js"></script>
+
+<p class="pps-note">CIF Number is allotted automatically by IT EPMO on submission. Fields marked <span class="required">*</span> are required before the deployment can be logged.</p>
+
+<div class="log-note" style="font-size:12px;color:var(--ink-soft);margin:12px 0 8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+  <span>Every submitted CIF is automatically logged to a CSV file on this device.</span>
+  <button type="button" class="pps-btn secondary" id="downloadLogBtn">&#8681; Download CIF Log (CSV)</button>
+</div>
+
+<form id="cifForm" novalidate>
+
+  <!-- ==================== PART A ==================== -->
+  <div class="part-head">Part A) Change Details &mdash; To be filled by Change Initiator <span class="hint">(fill in with appropriate information)</span></div>
+  <div class="part-body">
+    <table class="cif">
+      <tr>
+        <td class="label">Requestor Name <span class="required">*</span></td>
+        <td class="field" colspan="3"><input type="text" id="requestorName" required placeholder="Write name of person initiating the form for deployment"></td>
+      </tr>
+      <tr>
+        <td class="label">Request Date <span class="sub">(dd/mm/yyyy)</span></td>
+        <td class="field"><input type="text" id="requestDate" readonly></td>
+        <td class="label">Related CIF Number</td>
+        <td class="field"><input type="text" id="relatedCif" placeholder="Only if related to a prior CIF"></td>
+      </tr>
+      <tr>
+        <td class="label">NIR / RFC Number(s)</td>
+        <td class="field"><input type="text" id="nirRfc" placeholder="Only in case of RFC"></td>
+        <td class="label">Project Code</td>
+        <td class="field"><input type="text" id="projectCode" placeholder="Only in case of project, e.g. P2606-01"></td>
+      </tr>
+      <tr>
+        <td class="label">Brief Description <span class="required">*</span></td>
+        <td class="field" colspan="3"><textarea id="briefDesc" required placeholder="Just write brief description of change moving into production"></textarea></td>
+      </tr>
+      <tr>
+        <td class="label">Change Impact <span class="sub">List objects: folder creations, compiled forms/reports/GUI files, DB scripts &amp; object counts</span></td>
+        <td class="field" colspan="3"><textarea id="changeImpact" placeholder="1. Folder creations on application / web server&#10;2. Compiled forms and reports / GUI files (# of files)&#10;3. Database scripts with number of objects being created/modified"></textarea></td>
+      </tr>
+      <tr>
+        <td class="label">Rollback Steps <span class="sub">Steps to move back to original state if an issue occurs</span></td>
+        <td class="field" colspan="3"><textarea id="rollbackSteps" placeholder="List down steps to perform for moving back to original state in case of any issue during deployment"></textarea></td>
+      </tr>
+      <tr>
+        <td class="label">Priority <span class="required">*</span></td>
+        <td class="field" colspan="3">
+          <div class="radio-row" id="priorityGroup" data-req-group="priority">
+            <label><input type="radio" name="priority" value="Planned"> Planned</label>
+            <label><input type="radio" name="priority" value="Emergency"> Emergency</label>
+            <span class="hint" style="font-style:italic;color:var(--ink-soft);font-size:11.5px;">(Planned &mdash; for projects and RFCs. Emergency &mdash; in case of production issues.)</span>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="label">Deployment Date &amp; Time</td>
+        <td class="field" colspan="3"><input type="text" id="deployDateTime" placeholder="Planned date and time for deployment"></td>
+      </tr>
+      <tr>
+        <td class="label">Initiated By</td>
+        <td class="field" colspan="1">
+          <div class="sig-cell">
+            <div class="sig-field"><label class="mini">Name</label><input type="text" id="initiatedByName" placeholder="Name"></div>
+            <div class="sig-field"><label class="mini">Date</label><input type="text" id="initiatedByDate" readonly></div>
+          </div>
+        </td>
+        <td class="label">Supervisor</td>
+        <td class="field">
+          <div class="sig-cell">
+            <div class="sig-field"><label class="mini">Name</label><input type="text" id="supervisorName" placeholder="Name"></div>
+            <div class="sig-field"><label class="mini">Date</label><input type="text" id="supervisorDate" placeholder="dd/mm/yyyy"></div>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ==================== PART B ==================== -->
+  <div class="part-head">Part B) IT System Admin. &amp; Databases <span class="hint">(fill in with appropriate information)</span></div>
+  <div class="part-body">
+    <table class="cif">
+      <tr>
+        <td class="label">Comments</td>
+        <td class="field" style="width:64%;"><textarea id="sysAdminComments" placeholder="Comments of Lead IT System administrator and Database against the deployment"></textarea></td>
+        <td class="field" style="width:22%;">
+          <div class="cb-row" style="flex-direction:column;align-items:flex-start;gap:8px;">
+            <label class="cb-opt"><input type="checkbox" id="scriptsShared"> Scripts shared?</label>
+            <label class="cb-opt"><input type="checkbox" id="additionalStorage"> Additional Storage?</label>
+            <label class="cb-opt"><input type="checkbox" id="additionalServer"> Additional Server?</label>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="label">Administrator</td>
+        <td class="field" colspan="2">
+          <div class="sig-cell" style="grid-template-columns:1fr 1fr 1fr;">
+            <div class="sig-field"><label class="mini">Name</label><input type="text" id="sysAdminName" placeholder="Name"></div>
+            <div class="sig-field"><label class="mini">Signature</label><input type="text" id="sysAdminSig" placeholder="Signature"></div>
+            <div class="sig-field"><label class="mini">Date</label><input type="text" id="sysAdminDate" placeholder="dd/mm/yyyy"></div>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ==================== PART C ==================== -->
+  <div class="part-head">Part C) IT Networks &amp; Messaging <span class="hint">(fill in with appropriate information)</span></div>
+  <div class="part-body">
+    <table class="cif">
+      <tr>
+        <td class="label">Comments</td>
+        <td class="field" style="width:64%;"><textarea id="networksComments" placeholder="Comments of Lead IT Networks &amp; Messaging against the deployment"></textarea></td>
+        <td class="field" style="width:22%;">
+          <div class="cb-row" style="flex-direction:column;align-items:flex-start;gap:8px;">
+            <label class="cb-opt"><input type="checkbox" id="networkAccess"> Network access open?</label>
+            <label class="cb-opt"><input type="checkbox" id="additionalBandwidth"> Additional Bandwidth?</label>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="label">Administrator</td>
+        <td class="field" colspan="2">
+          <div class="sig-cell" style="grid-template-columns:1fr 1fr 1fr;">
+            <div class="sig-field"><label class="mini">Name</label><input type="text" id="netAdminName" placeholder="Name"></div>
+            <div class="sig-field"><label class="mini">Signature</label><input type="text" id="netAdminSig" placeholder="Signature"></div>
+            <div class="sig-field"><label class="mini">Date</label><input type="text" id="netAdminDate" placeholder="dd/mm/yyyy"></div>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ==================== PART D ==================== -->
+  <div class="part-head">Part D) Implementation</div>
+  <div class="part-body">
+    <table class="cif">
+      <tr>
+        <td class="label">Status</td>
+        <td class="field" colspan="3">
+          <div class="radio-row">
+            <label><input type="radio" name="implStatus" value="Successful"> Successful</label>
+            <label><input type="radio" name="implStatus" value="Rollback"> Rollback</label>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="label">Rollback Reason</td>
+        <td class="field" colspan="3"><textarea id="rollbackReason" placeholder="Mention reason for rollback of the deployment due to any reason like technical or business decision"></textarea></td>
+      </tr>
+      <tr>
+        <td class="label">Resource(s)</td>
+        <td class="field" colspan="3"><input type="text" id="implResources" placeholder="Name of resources involved in deployment"></td>
+      </tr>
+      <tr>
+        <td class="label">Date &amp; Time</td>
+        <td class="field" colspan="3"><input type="text" id="implDateTime" placeholder="Actual date and time of deployment"></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="submit-row">
+    <button type="button" class="pps-btn secondary" id="saveDraftBtn">Save Draft</button>
+    <button type="submit" class="pps-btn" id="submitCifBtn">Submit CIF</button>
+  </div>
+  <div id="formStatus"></div>
+</form>
+
+<script>
+(function () {
+  var COUNTER_KEY = "cifCounter";
+  var LOG_KEY = "cifSubmissionsLog";
+
+  function read(key, fallback) {
+    try { var raw = localStorage.getItem(key); return raw === null ? fallback : JSON.parse(raw); }
+    catch (e) { return fallback; }
+  }
+  function write(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (e) { return false; }
+  }
+  function getCounter() { return Number(read(COUNTER_KEY, 0)) || 0; }
+  function setCounter(v) { write(COUNTER_KEY, v); }
+
+  function pad(n, len) { return String(n).padStart(len, "0"); }
+  function formatCifNumber(counter) {
+    var d = new Date();
+    return "CIF-" + d.getFullYear() + pad(d.getMonth() + 1, 2) + pad(d.getDate(), 2) + "-" + pad(counter, 4);
+  }
+  function formatDdMmYyyy(d) {
+    return pad(d.getDate(), 2) + "/" + pad(d.getMonth() + 1, 2) + "/" + d.getFullYear();
+  }
+
+  var cifNumberField = document.getElementById("cifNumber");
+  var cifDateField = document.getElementById("cifDate");
+  var requestDateField = document.getElementById("requestDate");
+  var initiatedByDateField = document.getElementById("initiatedByDate");
+  var statusBadge = document.getElementById("statusBadge");
+
+  // Preview CIF number + today's date before submission
+  cifNumberField.value = formatCifNumber(getCounter() + 1);
+  var todayStr = formatDdMmYyyy(new Date());
+  cifDateField.value = todayStr;
+  requestDateField.value = todayStr;
+  initiatedByDateField.value = todayStr;
+
+  var form = document.getElementById("cifForm");
+  var formStatus = document.getElementById("formStatus");
+
+  function val(id) { var el = document.getElementById(id); return el ? el.value : ""; }
+  function checked(id) { var el = document.getElementById(id); return !!(el && el.checked); }
+  function radioVal(name) {
+    var el = document.querySelector('input[name="' + name + '"]:checked');
+    return el ? el.value : "";
+  }
+
+  function validateForm() {
+    var valid = true;
+    form.querySelectorAll("[required]").forEach(function (el) {
+      el.classList.remove("invalid");
+      if (!el.value.trim()) { el.classList.add("invalid"); valid = false; }
+    });
+    var priorityGroup = document.getElementById("priorityGroup");
+    var priorityOk = !!radioVal("priority");
+    priorityGroup.style.outline = priorityOk ? "none" : "2px solid #c0392b";
+    priorityGroup.style.padding = priorityOk ? "" : "4px";
+    if (!priorityOk) valid = false;
+    return valid;
+  }
+
+  function buildRecord(status) {
+    return {
+      cifNumber: cifNumberField.value,
+      status: status,
+      requestDate: requestDateField.value,
+      requestorName: val("requestorName"),
+      relatedCif: val("relatedCif"),
+      nirRfc: val("nirRfc"),
+      projectCode: val("projectCode"),
+      briefDesc: val("briefDesc"),
+      changeImpact: val("changeImpact"),
+      rollbackSteps: val("rollbackSteps"),
+      priority: radioVal("priority"),
+      deployDateTime: val("deployDateTime"),
+      initiatedByName: val("initiatedByName"),
+      initiatedByDate: val("initiatedByDate"),
+      supervisorName: val("supervisorName"),
+      supervisorDate: val("supervisorDate"),
+      scriptsShared: checked("scriptsShared"),
+      additionalStorage: checked("additionalStorage"),
+      additionalServer: checked("additionalServer"),
+      sysAdminComments: val("sysAdminComments"),
+      sysAdminName: val("sysAdminName"),
+      sysAdminDate: val("sysAdminDate"),
+      networkAccess: checked("networkAccess"),
+      additionalBandwidth: checked("additionalBandwidth"),
+      networksComments: val("networksComments"),
+      netAdminName: val("netAdminName"),
+      netAdminDate: val("netAdminDate"),
+      implStatus: radioVal("implStatus"),
+      rollbackReason: val("rollbackReason"),
+      implResources: val("implResources"),
+      implDateTime: val("implDateTime")
+    };
+  }
+
+  function csvEscape(v) {
+    var s = String(v === undefined || v === null ? "" : v);
+    if (/[",\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+  function buildCsv(rows) {
+    if (!rows.length) return "";
+    var headers = Object.keys(rows[0]);
+    var lines = [headers.join(",")];
+    rows.forEach(function (r) {
+      lines.push(headers.map(function (h) { return csvEscape(r[h]); }).join(","));
+    });
+    return lines.join("\n");
+  }
+  function downloadCsv(csvText, filename) {
+    var blob = new Blob([csvText], { type: "text/csv;charset=utf-8;" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  function upsert(record) {
+    var log = read(LOG_KEY, []);
+    if (!Array.isArray(log)) log = [];
+    var idx = log.findIndex(function (r) { return r.cifNumber === record.cifNumber; });
+    if (idx >= 0) log[idx] = Object.assign({}, log[idx], record);
+    else log.push(record);
+    write(LOG_KEY, log);
+    return log;
+  }
+
+  document.getElementById("downloadLogBtn").addEventListener("click", function () {
+    var log = read(LOG_KEY, []);
+    if (!log.length) { alert("No CIFs have been logged yet on this device."); return; }
+    downloadCsv(buildCsv(log), "cif-submissions-log.csv");
+  });
+
+  document.getElementById("saveDraftBtn").addEventListener("click", function () {
+    formStatus.textContent = "Draft kept in the form (not yet submitted or logged) at " + new Date().toLocaleTimeString() + ".";
+    formStatus.className = "success";
+  });
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!validateForm()) { formStatus.textContent = ""; return; }
+
+    var next = getCounter() + 1;
+    setCounter(next);
+    cifNumberField.value = formatCifNumber(next);
+    statusBadge.textContent = "Submitted";
+
+    var record = buildRecord("Submitted");
+    var log = upsert(record);
+    downloadCsv(buildCsv(log), "cif-submissions-log.csv");
+
+    formStatus.textContent = "CIF " + cifNumberField.value + " submitted and logged to CSV.";
+    formStatus.className = "success";
+  });
+})();
+</script>
+
+</body>
+</html>
