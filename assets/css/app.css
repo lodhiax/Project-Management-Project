@@ -114,6 +114,32 @@ a:hover { color: var(--link-dark); text-decoration: underline; }
   background: #fff;
 }
 
+/* ---- dropdown groups (Project Intake Process / Project Status) ---- */
+.pps-dropdown { position: relative; }
+.pps-dropdown-toggle {
+  background: none; border: none; cursor: pointer; font-family: inherit;
+  color: var(--ink-soft); font-size: 11.5px; letter-spacing: 0.4px; text-transform: uppercase;
+  font-weight: 600; padding: 15px 13px; white-space: nowrap;
+  border-bottom: 2px solid transparent; display: inline-flex; align-items: center; gap: 5px;
+  transition: color .12s ease, background .12s ease, border-color .12s ease;
+}
+.pps-dropdown-toggle::after { content: "\25BE"; font-size: 9px; position: relative; top: 1px; }
+.pps-dropdown-toggle:hover { color: var(--ink); background: #eef2f5; }
+.pps-dropdown-toggle.active { color: var(--ink); border-bottom-color: var(--stage-active); background: #fff; }
+.pps-dropdown-menu {
+  position: absolute; top: 100%; left: 0; min-width: 200px;
+  background: #fff; border: 1px solid var(--line); border-top: none; border-radius: 0 0 6px 6px;
+  box-shadow: 0 8px 20px rgba(27,39,51,0.14);
+  display: none; flex-direction: column; padding: 6px; z-index: 60;
+}
+.pps-dropdown.open .pps-dropdown-menu { display: flex; }
+.pps-dropdown-menu a {
+  padding: 8px 10px; font-size: 12.5px; font-weight: 500; text-transform: none;
+  letter-spacing: 0; color: var(--ink); border-radius: 4px; border-bottom: none;
+}
+.pps-dropdown-menu a:hover { background: var(--ribbon); text-decoration: none; }
+.pps-dropdown-menu a.active { background: #eaf3ec; color: var(--stage-active-ink); font-weight: 700; }
+
 /* ============================================================
    2. RECORD HEADER STRIP  (title + label/value run)
    ============================================================ */
@@ -219,6 +245,11 @@ a:hover { color: var(--link-dark); text-decoration: underline; }
 }
 .crm-stage.is-active .crm-stage-mark { background: rgba(255,255,255,0.85); }
 
+.crm-flow.single-stage { padding-top: 9px; padding-bottom: 9px; }
+.crm-flow.single-stage .crm-stage {
+  clip-path: none; border-radius: 5px; padding: 7px 16px; flex: 0 0 auto; min-width: 200px;
+}
+
 /* ============================================================
    4. SECTION HEADS + NOTES + LEGEND
    ============================================================ */
@@ -261,6 +292,31 @@ a:hover { color: var(--link-dark); text-decoration: underline; }
 .crm-legend .li .dot { vertical-align: middle; }
 
 .pps-toolbar { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin: 14px 0 12px; flex-wrap: wrap; }
+
+/* ============================================================
+   4b. TAB BAR  (in-page section switcher, e.g. Risk / Decision)
+   ============================================================ */
+.pps-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: 16px 0 18px; }
+.pps-tab {
+  padding: 9px 16px; font-size: 12.5px; font-weight: 600; color: var(--ink-soft);
+  cursor: pointer; border: 1px solid transparent; border-bottom: none;
+  border-radius: 6px 6px 0 0; background: transparent; margin-bottom: -1px;
+  transition: color .12s ease, background .12s ease;
+}
+.pps-tab:hover { color: var(--ink); background: var(--ribbon); }
+.pps-tab.active {
+  color: var(--ink); background: #fff;
+  border-color: var(--line); border-bottom-color: #fff;
+}
+.pps-tab .count { color: var(--ink-faint); font-weight: 500; }
+.pps-tabpanel { display: none; }
+.pps-tabpanel.active { display: block; }
+
+/* small severity pill, used by Low / Medium / High values */
+.sev { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.3px; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; }
+.sev-low    { background: #e3f3e6; color: #1f6b34; }
+.sev-medium { background: #fbf0d9; color: #8a5a12; }
+.sev-high   { background: #fbe3e0; color: #a3291d; }
 
 /* ============================================================
    5. BUTTONS + SELECT

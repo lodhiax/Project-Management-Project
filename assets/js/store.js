@@ -206,4 +206,28 @@
     esc: esc,
     _seedRegisterCount: SEED_REGISTER.length
   };
+
+  /* ============================================================
+     NAV DROPDOWNS  (Project Intake Process / Project Status)
+     Runs immediately: this script is always included after the
+     <nav> markup in every page, so the elements already exist.
+     ============================================================ */
+  function closeAllDropdowns(except) {
+    document.querySelectorAll(".pps-dropdown.open").forEach(function (d) {
+      if (d !== except) d.classList.remove("open");
+    });
+  }
+  document.querySelectorAll(".pps-dropdown-toggle").forEach(function (btn) {
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var dd = btn.closest(".pps-dropdown");
+      var wasOpen = dd.classList.contains("open");
+      closeAllDropdowns();
+      if (!wasOpen) dd.classList.add("open");
+    });
+  });
+  document.addEventListener("click", function () { closeAllDropdowns(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") closeAllDropdowns();
+  });
 })();
