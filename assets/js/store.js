@@ -274,24 +274,72 @@
     return target === current;
   }
 
+  /* Shared gate: true = OK to leave (clears the flag), false = stay put. */
+  function confirmLeaveIfDirty() {
+    if (!navDirty) return true;
+    var ok = window.confirm(
+      "You have unsaved changes on this page.\n\n" +
+      "If you leave now, those changes will be lost.\n\nContinue anyway?"
+    );
+    if (ok) navDirty = false;
+    return ok;
+  }
+
   /* Capture phase: intercept the click before the browser follows the link. */
   document.addEventListener("click", function (e) {
     var a = (e.target && e.target.closest) ? e.target.closest("a[href]") : null;
     if (!a || !a.closest(".pps-nav")) return;      /* only guard the top nav */
     if (a.hasAttribute("data-noguard")) return;
     if (isSamePageLink(a.getAttribute("href"))) return;
-    if (!navDirty) return;                          /* nothing unsaved: navigate freely */
-    var proceed = window.confirm(
-      "You have unsaved changes on this page.\n\n" +
-      "If you leave now, those changes will be lost.\n\nContinue anyway?"
-    );
-    if (proceed) {
-      navDirty = false;                             /* let the navigation happen */
-    } else {
+    if (!confirmLeaveIfDirty()) {                   /* stay on the page */
       e.preventDefault();
-      e.stopPropagation();                          /* stay on the page */
+      e.stopPropagation();
     }
   }, true);
+
+  /* ============================================================
+     CLICKABLE STEP BARS  (.crm-flow / .crm-stage)
+     ------------------------------------------------------------
+     The chevron progress bars ("Intake Form -> Intake Report" and
+     "Project Scorecard -> Risk & Decision -> Repository ->
+     Change Request") are plain <div>s in the markup. Here we make
+     each stage that maps to a DIFFERENT page clickable (mouse +
+     keyboard), routing through the same unsaved-changes guard. The
+     stage for the current page is left as a non-clickable marker.
+     ============================================================ */
+  var STAGE_TARGETS = {
+    "intake form": "intake-form.html",
+    "intake report": "intake-report.html",
+    "portfolio review": "portfolio-review.html",
+    "project scorecard": "scorecard.html",
+    "risk & decision": "risk-decision-log.html",
+    "repository": "repository.html",
+    "change request": "change-request-form.html"
+  };
+  function normStageLabel(s) {
+    return (s || "").replace(/\s+/g, " ").trim().toLowerCase();
+  }
+  (function initStageNav() {
+    var current = location.pathname.split("/").pop() || "index.html";
+    document.querySelectorAll(".crm-flow .crm-stage").forEach(function (stage) {
+      var labelEl = stage.querySelector(".crm-stage-label");
+      if (!labelEl) return;
+      var target = STAGE_TARGETS[normStageLabel(labelEl.textContent)];
+      if (!target || target === current) return;   /* unknown, or this very page */
+      stage.classList.add("is-link");
+      stage.setAttribute("role", "link");
+      stage.setAttribute("tabindex", "0");
+      stage.setAttribute("title", "Go to " + labelEl.textContent.trim());
+      function go() { if (confirmLeaveIfDirty()) window.location.href = target; }
+      stage.addEventListener("click", go);
+      stage.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+          e.preventDefault();
+          go();
+        }
+      });
+    });
+  })();
 
   /* Optional manual hooks for page scripts. */
   if (window.PPS) {

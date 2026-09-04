@@ -245,6 +245,11 @@ a:hover { color: var(--link-dark); text-decoration: underline; }
 }
 .crm-stage.is-active .crm-stage-mark { background: rgba(255,255,255,0.85); }
 
+/* Interactive (clickable) stages — added by store.js when a stage maps to another page */
+.crm-stage.is-link { cursor: pointer; transition: filter .12s ease, box-shadow .12s ease; }
+.crm-stage.is-link:hover { filter: brightness(0.95); box-shadow: inset 0 0 0 1px rgba(45,88,52,0.4); }
+.crm-stage.is-link:focus-visible { outline: 2px solid var(--stage-active); outline-offset: -2px; }
+
 .crm-flow.single-stage { padding-top: 9px; padding-bottom: 9px; }
 .crm-flow.single-stage .crm-stage {
   clip-path: none; border-radius: 5px; padding: 7px 16px; flex: 0 0 auto; min-width: 200px;
