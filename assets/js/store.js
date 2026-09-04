@@ -230,4 +230,75 @@
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") closeAllDropdowns();
   });
+
+  /* ============================================================
+     UNSAVED-CHANGES NAV GUARD
+     ------------------------------------------------------------
+     Warns before leaving a page that has an edited <form> on it
+     (Intake Form and Change Request Form). It fires when the user
+     clicks ANY top-nav link, including the dropdown items under
+     "Project Intake Process" and "Project Status". Controls that
+     sit OUTSIDE a <form> (the scorecard project picker, the
+     repository search box, etc.) are view filters, not data, so
+     they never trigger the prompt. Same-page and in-page (#) links
+     are ignored. Add data-noguard to any link or field to opt out.
+     ============================================================ */
+  var navDirty = false;
+
+  function isGuardedField(el) {
+    if (!el || !el.tagName) return false;
+    var tag = el.tagName;
+    if (tag !== "INPUT" && tag !== "SELECT" && tag !== "TEXTAREA") return false;
+    if (el.disabled || el.readOnly) return false;
+    var t = (el.type || "").toLowerCase();
+    if (t === "hidden" || t === "button" || t === "submit" || t === "reset") return false;
+    if (el.hasAttribute("data-noguard")) return false;
+    return !!el.closest("form");            /* only genuine forms count as "changes" */
+  }
+
+  document.addEventListener("input", function (e) {
+    if (isGuardedField(e.target)) navDirty = true;
+  }, true);
+  document.addEventListener("change", function (e) {
+    if (isGuardedField(e.target)) navDirty = true;
+  }, true);
+  /* A submit means the form was saved/logged, so there is nothing to lose. */
+  document.addEventListener("submit", function () { navDirty = false; }, true);
+
+  function isSamePageLink(href) {
+    if (!href) return true;
+    if (href.charAt(0) === "#") return true;
+    var target = href.split("#")[0].split("?")[0];
+    if (target === "") return true;
+    var current = location.pathname.split("/").pop() || "index.html";
+    return target === current;
+  }
+
+  /* Capture phase: intercept the click before the browser follows the link. */
+  document.addEventListener("click", function (e) {
+    var a = (e.target && e.target.closest) ? e.target.closest("a[href]") : null;
+    if (!a || !a.closest(".pps-nav")) return;      /* only guard the top nav */
+    if (a.hasAttribute("data-noguard")) return;
+    if (isSamePageLink(a.getAttribute("href"))) return;
+    if (!navDirty) return;                          /* nothing unsaved: navigate freely */
+    var proceed = window.confirm(
+      "You have unsaved changes on this page.\n\n" +
+      "If you leave now, those changes will be lost.\n\nContinue anyway?"
+    );
+    if (proceed) {
+      navDirty = false;                             /* let the navigation happen */
+    } else {
+      e.preventDefault();
+      e.stopPropagation();                          /* stay on the page */
+    }
+  }, true);
+
+  /* Optional manual hooks for page scripts. */
+  if (window.PPS) {
+    window.PPS.navGuard = {
+      markDirty: function () { navDirty = true; },
+      markClean: function () { navDirty = false; },
+      isDirty:   function () { return navDirty; }
+    };
+  }
 })();
