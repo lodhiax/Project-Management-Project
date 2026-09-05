@@ -8,6 +8,7 @@
 <style>
   table.grid td, table.grid th { font-size: 12.5px; padding: 7px 9px; }
   table.grid { border: 1px solid var(--line); }
+  /* Shared toolbar / row-actions / modal styles now live in app.css */
 </style>
 </head>
 <body>
@@ -63,32 +64,103 @@
 
 <script src="assets/js/store.js"></script>
 
+<div class="pm-toolbar">
+  <span class="pm-hint">Add, edit, or remove projects. Changes save to this browser and feed the Weekly Scorecard.</span>
+  <button type="button" class="pps-btn" id="addProjectBtn">+ Add project</button>
+</div>
+
 <table class="grid">
   <colgroup>
-    <col style="width:4%"><col style="width:16%"><col style="width:10%"><col style="width:9%">
-    <col style="width:8%"><col style="width:8%"><col style="width:6%"><col style="width:21%">
-    <col style="width:14%"><col style="width:4%">
+    <col style="width:4%"><col style="width:15%"><col style="width:10%"><col style="width:8%">
+    <col style="width:7%"><col style="width:7%"><col style="width:6%"><col style="width:17%">
+    <col style="width:12%"><col style="width:4%"><col style="width:10%">
   </colgroup>
 
-  <tr class="section-header"><td colspan="10">Active Projects</td></tr>
+  <tr class="section-header"><td colspan="11">Active Projects</td></tr>
   <tr class="col-header">
     <td>#</td><td>Project</td><td>Project Manager</td><td>Phase</td><td>Start Date</td>
-    <td>Planned End</td><td>% Complete</td><td>This Week's Progress</td><td>Remarks / Blockers</td><td>Status</td>
+    <td>Planned End</td><td>% Complete</td><td>This Week's Progress</td><td>Remarks / Blockers</td><td>Status</td><td>Actions</td>
   </tr>
   <tbody id="activeBody"></tbody>
 
-  <tr class="section-header"><td colspan="10">Completed Projects</td></tr>
+  <tr class="section-header"><td colspan="11">Completed Projects</td></tr>
   <tr class="col-header">
     <td>#</td><td>Project</td><td>Project Manager</td><td>Phase</td><td>Start Date</td>
-    <td>Planned End</td><td>% Complete</td><td>This Week's Progress</td><td>Remarks / Blockers</td><td>Status</td>
+    <td>Planned End</td><td>% Complete</td><td>This Week's Progress</td><td>Remarks / Blockers</td><td>Status</td><td>Actions</td>
   </tr>
   <tbody id="completedBody"></tbody>
 </table>
+
+<div class="pm-overlay" id="pmOverlay" aria-hidden="true">
+  <div class="pm-modal" role="dialog" aria-modal="true" aria-labelledby="pmTitle">
+    <div class="pm-modal-head">
+      <span class="pm-modal-title" id="pmTitle">Add project</span>
+      <button type="button" class="pm-close" id="pmClose" aria-label="Close">&times;</button>
+    </div>
+    <form class="pm-form" id="pmForm">
+      <div class="pm-grid">
+        <div class="pm-field">
+          <label for="f_code">Code <span class="req">*</span></label>
+          <input id="f_code" name="code" type="text" placeholder="e.g. P2610-09" autocomplete="off">
+        </div>
+        <div class="pm-field">
+          <label for="f_name">Project name <span class="req">*</span></label>
+          <input id="f_name" name="name" type="text" autocomplete="off">
+        </div>
+        <div class="pm-field">
+          <label for="f_pm">Project manager</label>
+          <input id="f_pm" name="pm" type="text" autocomplete="off">
+        </div>
+        <div class="pm-field">
+          <label for="f_phase">Phase</label>
+          <input id="f_phase" name="phase" type="text" placeholder="e.g. Development, UAT, Live" autocomplete="off">
+        </div>
+        <div class="pm-field">
+          <label for="f_start">Start date</label>
+          <input id="f_start" name="start" type="text" placeholder="e.g. 15-Sep-26" autocomplete="off">
+        </div>
+        <div class="pm-field">
+          <label for="f_end">Planned end</label>
+          <input id="f_end" name="end" type="text" placeholder="e.g. 31-Jan-27 or TBD" autocomplete="off">
+        </div>
+        <div class="pm-field">
+          <label for="f_percent">% complete</label>
+          <input id="f_percent" name="percent" type="number" min="0" max="100" step="1" value="0">
+        </div>
+        <div class="pm-field">
+          <label for="f_status">Status</label>
+          <select id="f_status" name="status"></select>
+        </div>
+        <div class="pm-field">
+          <label for="f_section">Section</label>
+          <select id="f_section" name="section">
+            <option value="active">Active</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+        <div class="pm-field full">
+          <label for="f_progress">This week's progress</label>
+          <textarea id="f_progress" name="progress" rows="2"></textarea>
+        </div>
+        <div class="pm-field full">
+          <label for="f_remarks">Remarks / blockers</label>
+          <textarea id="f_remarks" name="remarks" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="pm-error" id="pmError"></div>
+    </form>
+    <div class="pm-actions">
+      <button type="button" class="pps-btn secondary" id="pmCancel">Cancel</button>
+      <button type="button" class="pps-btn" id="pmSave">Save project</button>
+    </div>
+  </div>
+</div>
 
 <script>
   (function () {
     document.getElementById("reportDate").textContent = PPS.today();
     var esc = PPS.esc;
+    function attr(s) { return esc(s).replace(/"/g, "&quot;"); }
 
     function rowHtml(p, n) {
       var st = PPS.portfolioStatus(p.status);
@@ -103,6 +175,10 @@
         '<td>' + esc(p.progress) + '</td>' +
         '<td>' + esc(p.remarks) + '</td>' +
         '<td class="status-cell"><span class="dot ' + st.dot + '" title="' + esc(st.label) + '"></span></td>' +
+        '<td class="row-actions">' +
+          '<button type="button" class="edit" data-code="' + attr(p.code) + '">Edit</button>' +
+          '<button type="button" class="del" data-code="' + attr(p.code) + '">Delete</button>' +
+        '</td>' +
       '</tr>';
     }
 
@@ -115,11 +191,107 @@
       var n = 0;
       document.getElementById("activeBody").innerHTML =
         active.map(function (p) { n++; return rowHtml(p, n); }).join("") ||
-        '<tr><td colspan="10" class="pps-empty">No active projects in the current cycle.</td></tr>';
+        '<tr><td colspan="11" class="pps-empty">No active projects yet. Use "Add project" to create one.</td></tr>';
       document.getElementById("completedBody").innerHTML =
         done.map(function (p) { n++; return rowHtml(p, n); }).join("") ||
-        '<tr><td colspan="10" class="pps-empty">No completed projects in the current cycle.</td></tr>';
+        '<tr><td colspan="11" class="pps-empty">No completed projects in the current cycle.</td></tr>';
     }
+
+    /* ---------------- Add / Edit modal ---------------- */
+    var overlay  = document.getElementById("pmOverlay");
+    var form     = document.getElementById("pmForm");
+    var errBox   = document.getElementById("pmError");
+    var titleEl  = document.getElementById("pmTitle");
+    var codeInput= document.getElementById("f_code");
+    var editingCode = null;
+
+    function fillStatusOptions() {
+      document.getElementById("f_status").innerHTML =
+        PPS.statusList().map(function (s) {
+          return '<option value="' + attr(s.value) + '">' + esc(s.label) + '</option>';
+        }).join("");
+    }
+    function setField(name, val) {
+      if (form.elements[name]) form.elements[name].value = (val === undefined || val === null) ? "" : val;
+    }
+    function clearGuard() { if (window.PPS && PPS.navGuard) PPS.navGuard.markClean(); }
+
+    function openModal(mode, project) {
+      errBox.classList.remove("show"); errBox.textContent = "";
+      fillStatusOptions();
+      if (mode === "edit" && project) {
+        titleEl.textContent = "Edit project";
+        editingCode = project.code;
+        codeInput.readOnly = true;
+        setField("code", project.code);
+        setField("name", project.name);   setField("pm", project.pm);
+        setField("phase", project.phase); setField("start", project.start);
+        setField("end", project.end);     setField("percent", project.percent);
+        setField("status", project.status || "notStarted");
+        setField("section", project.section === "completed" ? "completed" : "active");
+        setField("progress", project.progress); setField("remarks", project.remarks);
+      } else {
+        titleEl.textContent = "Add project";
+        editingCode = null;
+        form.reset();
+        codeInput.readOnly = false;
+        setField("percent", 0); setField("status", "notStarted"); setField("section", "active");
+      }
+      overlay.classList.add("open");
+      overlay.setAttribute("aria-hidden", "false");
+      clearGuard();
+      setTimeout(function () { (editingCode ? form.elements["name"] : codeInput).focus(); }, 30);
+    }
+    function closeModal() {
+      overlay.classList.remove("open");
+      overlay.setAttribute("aria-hidden", "true");
+      editingCode = null;
+      clearGuard();   // the modal's fields must not trip the unsaved-changes leave guard
+    }
+    function showErr(msg) { errBox.textContent = msg; errBox.classList.add("show"); }
+
+    function save() {
+      var data = {
+        code: form.elements["code"].value, name: form.elements["name"].value,
+        pm: form.elements["pm"].value, phase: form.elements["phase"].value,
+        start: form.elements["start"].value, end: form.elements["end"].value,
+        percent: form.elements["percent"].value, status: form.elements["status"].value,
+        section: form.elements["section"].value, progress: form.elements["progress"].value,
+        remarks: form.elements["remarks"].value
+      };
+      var res = editingCode ? PPS.updateProject(editingCode, data) : PPS.addProject(data);
+      if (!res.ok) { showErr(res.error); return; }
+      closeModal();
+      render();
+    }
+
+    document.getElementById("addProjectBtn").addEventListener("click", function () { openModal("add"); });
+    document.getElementById("pmSave").addEventListener("click", save);
+    document.getElementById("pmCancel").addEventListener("click", closeModal);
+    document.getElementById("pmClose").addEventListener("click", closeModal);
+    overlay.addEventListener("click", function (e) { if (e.target === overlay) closeModal(); });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && overlay.classList.contains("open")) closeModal();
+    });
+    form.addEventListener("submit", function (e) { e.preventDefault(); save(); });
+
+    /* Row actions (delegated, because rows re-render) */
+    document.querySelector("table.grid").addEventListener("click", function (e) {
+      var btn = e.target.closest ? e.target.closest("button[data-code]") : null;
+      if (!btn) return;
+      var code = btn.getAttribute("data-code");
+      if (btn.classList.contains("edit")) {
+        var proj = PPS.getProject(code);
+        if (proj) openModal("edit", proj);
+      } else if (btn.classList.contains("del")) {
+        var proj = PPS.getProject(code);
+        var label = proj ? (proj.name + " (" + proj.code + ")") : code;
+        if (window.confirm("Delete " + label + "?\n\nThis also removes its scorecard detail and cannot be undone.")) {
+          var res = PPS.deleteProject(code);
+          if (res.ok) render(); else window.alert(res.error);
+        }
+      }
+    });
 
     render();
     window.addEventListener("storage", function (e) {

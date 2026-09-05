@@ -24,6 +24,8 @@
     register:   "crSubmissionsLog",
     portfolio:  "ppsPortfolio",
     scorecards: "ppsScorecards",
+    risks:      "ppsRisks",
+    decisions:  "ppsDecisions",
     seeded:     "ppsSeededV1"
   };
 
@@ -37,6 +39,12 @@
   function write(key, value) {
     try { localStorage.setItem(key, JSON.stringify(value)); return true; }
     catch (e) { return false; }
+  }
+  function assign(a, b) {
+    var o = {}, k;
+    if (a) { for (k in a) { if (a.hasOwnProperty(k)) o[k] = a[k]; } }
+    if (b) { for (k in b) { if (b.hasOwnProperty(k)) o[k] = b[k]; } }
+    return o;
   }
 
   /* ---------- date helper (shared "Report Date") ---------- */
@@ -139,6 +147,43 @@
     }
   };
 
+  // --- Risk / Issue log (tagged to the flagship project) ---
+  var FLAGSHIP = "P2606-01";
+  var SEED_RISKS = [
+    { id:1,  project:FLAGSHIP, desc:"Delay in hardware delivery & infrastructure readiness", type:"Issue", prob:"High",   impact:"High",   action:"Development started in a temporary environment to minimize impact; full impact to be reassessed after hardware commissioning at the client data center. Critical path item, ~1 month impact across workstreams.", by:"Client IT",        date:"5-Mar-22",  status:"Open" },
+    { id:2,  project:FLAGSHIP, desc:"Delay in resource onboarding", type:"Risk", prob:"Low",    impact:"Medium", action:"Delivery squads mobilized and operational; hiring for remaining slots in progress.", by:"Client / Vendor", date:"On-going", status:"Open" },
+    { id:3,  project:FLAGSHIP, desc:"Design language for backend web interfaces", type:"Risk", prob:"Low", impact:"Medium", action:"Art direction (CX/UI) for back-office systems agreed between client and vendor.", by:"Client / Vendor", date:"31-Jan-22", status:"Closed" },
+    { id:4,  project:FLAGSHIP, desc:"Native vs hybrid app decision", type:"Risk", prob:"High", impact:"Medium", action:"Decision taken; see Decision Log.", by:"Client", date:"31-Jan-22", status:"Closed" },
+    { id:5,  project:FLAGSHIP, desc:"Backend API architecture and development", type:"Risk", prob:"Low", impact:"High", action:"Identification and prioritization of APIs jointly agreed, aligned to critical path.", by:"Client / Vendor", date:"18-Mar-22", status:"Open" },
+    { id:6,  project:FLAGSHIP, desc:"Document management system upgrade dependency", type:"Risk", prob:"Low", impact:"High", action:"Client upgrading its document management system; any delay directly impacts downstream workstreams. APIs to be made available by end of March to de-risk timeline.", by:"Client", date:"31-Mar-22", status:"Open" },
+    { id:7,  project:FLAGSHIP, desc:"Data migration strategy", type:"Risk", prob:"Medium", impact:"Medium", action:"Slightly behind schedule; fast-tracking stakeholder engagement to formalize strategy and plan.", by:"Client / Vendor", date:"31-Mar-22", status:"Open" },
+    { id:8,  project:FLAGSHIP, desc:"Training & rollout strategy and plan", type:"Risk", prob:"Medium", impact:"Medium", action:"Slightly behind schedule; fast-tracking stakeholder engagement to formalize strategy and plan.", by:"Client / Vendor", date:"31-Mar-22", status:"Open" },
+    { id:9,  project:FLAGSHIP, desc:"Software architecture per workstream", type:"Risk", prob:"Medium", impact:"Medium", action:"Core platform supports a microservices approach; architecture for each workstream still needs to be finalized with the client.", by:"Client / Vendor", date:"1-Aug-22", status:"Open" },
+    { id:10, project:FLAGSHIP, desc:"CI/CD pipelining", type:"Risk", prob:"Medium", impact:"Medium", action:"Implementation of CI/CD in progress to enable automated deployment.", by:"Client", date:"1-Aug-22", status:"Open" },
+    { id:11, project:FLAGSHIP, desc:"Stress testing", type:"Risk", prob:"Medium", impact:"Medium", action:"Approach needs finalizing so application performance can be validated ahead of production deployment.", by:"Client", date:"1-Aug-22", status:"Open" },
+    { id:12, project:FLAGSHIP, desc:"Scope creep across workstreams", type:"Risk", prob:"Medium", impact:"Medium", action:"Additional requirements identified across workstreams during UAT; being centrally logged and managed by the core team rather than absorbed silently.", by:"Client", date:"1-Aug-22", status:"Open" },
+    { id:13, project:FLAGSHIP, desc:"SDK limitations for a responsive onboarding app", type:"Risk", prob:"Medium", impact:"High", action:"The onboarding solution's web-responsive approach introduced challenges accessing device-native biometric and camera hardware on tablets.", by:"Client", date:"23-Aug-22", status:"Open" },
+    { id:14, project:FLAGSHIP, desc:"UAT timeline slippage", type:"Risk", prob:"Medium", impact:"Medium", action:"UAT start delayed due to stakeholder availability; original start date pushed back roughly one week.", by:"Client", date:"5-Sep-22", status:"Open" }
+  ];
+
+  var SEED_DECISIONS = [
+    { id:1,  project:FLAGSHIP, point:"Hardware sizing", owner:"Core Platform Vendor", comments:"Hardware sizing concluded with the client team; current hardware confirmed sufficient for the application, including test environments.", date:"10-Mar-22", status:"Closed" },
+    { id:2,  project:FLAGSHIP, point:"Test environment / API access to vendor dev cloud", owner:"Client (InfoSec)", comments:"InfoSec requires data masking before approval. Site-to-site VPN request submitted for dev environment API access.", date:"", status:"Open" },
+    { id:3,  project:FLAGSHIP, point:"Active-Active architecture", owner:"Core Platform Vendor", comments:"Two application and fabric deployments across separate locations to enable active-active at the application layer.", date:"10-Mar-22", status:"Closed" },
+    { id:4,  project:FLAGSHIP, point:"Prioritization and delivery of backend APIs", owner:"Client / Vendor", comments:"Discussion underway to align on API delivery priority order.", date:"", status:"Open" },
+    { id:5,  project:FLAGSHIP, point:"Tooling selection and implementation", owner:"Client", comments:"Tool list finalized; procurement to be initiated by the client where applicable.", date:"", status:"Open" },
+    { id:6,  project:FLAGSHIP, point:"Identity management for external customers", owner:"Client", comments:"Client to confirm whether to use the platform's built-in identity module or a third-party provider for consumer-facing apps.", date:"", status:"Open" },
+    { id:7,  project:FLAGSHIP, point:"SSO for back-office users", owner:"Core Platform Vendor", comments:"SSO to be used as identity broker with the client's directory service; customization handled by the delivery vendor with no timeline impact.", date:"11-Mar-22", status:"Closed" },
+    { id:8,  project:FLAGSHIP, point:"Master app scope (retail + omni-channel)", owner:"Client Steering Committee", comments:"Decided at steering committee review.", date:"7-Sep-21", status:"Closed" },
+    { id:9,  project:FLAGSHIP, point:"Branchless additional sales app", owner:"Client Steering Committee", comments:"Decided at steering committee review.", date:"14-Jan-22", status:"Closed" },
+    { id:10, project:FLAGSHIP, point:"OCR approach", owner:"Client Steering Committee", comments:"Decided at steering committee review.", date:"25-Feb-22", status:"Closed" },
+    { id:11, project:FLAGSHIP, point:"Tablet vs. responsive web for onboarding", owner:"Client", comments:"Client accepted the web-based approach for tablet onboarding, conditional on smooth customer experience, biometric verification support, rooted-device detection, and reliable image capture.", date:"13-May-22", status:"Closed" },
+    { id:12, project:FLAGSHIP, point:"Core transaction engine scope", owner:"Client", comments:"Core engine to handle all transactions going forward; general ledger entries forwarded to the client's core banking system.", date:"10-May-22", status:"Closed" },
+    { id:13, project:FLAGSHIP, point:"Development code access for client resources", owner:"Client", comments:"Client resources granted the same code access as the delivery vendor's development team, in line with a one-team delivery model.", date:"3-Jul-22", status:"Closed" },
+    { id:14, project:FLAGSHIP, point:"Architecture finalization", owner:"Client / Core Platform Vendor / Delivery Vendor", comments:"Architecture submitted by the platform vendor; a joint technical review is still required to formally close this item.", date:"", status:"Open" },
+    { id:15, project:FLAGSHIP, point:"Multi-factor authentication approach", owner:"Client", comments:"To be presented at the technical review committee, since it falls outside current scope; design vs. MFA trade-off needs sign-off.", date:"7-Jul-22", status:"Closed" }
+  ];
+
   /* ============================================================
      SEEDING  (runs once; never wipes real submissions)
      ============================================================ */
@@ -153,12 +198,14 @@
     if (read(KEYS.register, null) === null)  write(KEYS.register, SEED_REGISTER);
     if (read(KEYS.portfolio, null) === null) write(KEYS.portfolio, SEED_PORTFOLIO);
     if (read(KEYS.scorecards, null) === null) write(KEYS.scorecards, SEED_SCORECARDS);
+    if (read(KEYS.risks, null) === null)     write(KEYS.risks, SEED_RISKS);
+    if (read(KEYS.decisions, null) === null) write(KEYS.decisions, SEED_DECISIONS);
     if (Number(read(KEYS.counter, 0)) < SEED_REGISTER.length) write(KEYS.counter, SEED_REGISTER.length);
     write(KEYS.seeded, true);
   }
 
   function resetAll() {
-    [KEYS.counter, KEYS.register, KEYS.portfolio, KEYS.scorecards, KEYS.seeded]
+    [KEYS.counter, KEYS.register, KEYS.portfolio, KEYS.scorecards, KEYS.risks, KEYS.decisions, KEYS.seeded]
       .forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
     ensureSeed();
   }
@@ -182,6 +229,195 @@
     return all[code] || null;
   }
 
+  /* ============================================================
+     PORTFOLIO WRITE API  (add / edit / delete projects)
+     Backs the editable Portfolio Review page. Code is the primary
+     key that links a project to its scorecard, so it is set once
+     at creation and never changes on edit. Deleting a project also
+     drops its scorecard detail so nothing is left orphaned.
+     ============================================================ */
+  var STATUS_ORDER = ["notStarted", "onTrack", "atRisk", "delayed", "onHold", "completed"];
+  function statusList() {
+    return STATUS_ORDER.map(function (k) {
+      var s = PORTFOLIO_STATUS[k] || {};
+      return { value: k, label: s.label || k, dot: s.dot || "dot-grey" };
+    });
+  }
+
+  var PROJECT_FIELDS = ["code","name","pm","phase","start","end","percent","progress","remarks","status","section","sourceRequestId"];
+
+  function savePortfolio(arr) { return write(KEYS.portfolio, arr); }
+
+  function cleanProject(input) {
+    input = input || {};
+    var p = {};
+    PROJECT_FIELDS.forEach(function (f) {
+      p[f] = (input[f] === undefined || input[f] === null) ? "" : input[f];
+    });
+    ["code","name","pm","phase","start","end","progress","remarks","sourceRequestId"].forEach(function (f) {
+      p[f] = String(p[f]).trim();
+    });
+    var pct = parseInt(p.percent, 10);
+    if (isNaN(pct)) pct = 0;
+    p.percent = Math.max(0, Math.min(100, pct));
+    if (!PORTFOLIO_STATUS[p.status]) p.status = "notStarted";
+    p.section = (p.section === "completed") ? "completed" : "active";
+    return p;
+  }
+
+  function addProject(input) {
+    var p = cleanProject(input);
+    if (!p.code) return { ok: false, error: "A project code is required." };
+    if (!p.name) return { ok: false, error: "A project name is required." };
+    var clash = getPortfolio().some(function (x) { return x.code === p.code; });
+    if (clash) return { ok: false, error: "Project code \"" + p.code + "\" already exists. Codes must be unique." };
+    var arr = getPortfolio();
+    arr.push(p);
+    if (!savePortfolio(arr)) return { ok: false, error: "Could not save. Browser storage may be full." };
+    return { ok: true, project: p };
+  }
+
+  function updateProject(code, input) {
+    var arr = getPortfolio();
+    var idx = -1;
+    for (var i = 0; i < arr.length; i++) { if (arr[i].code === code) { idx = i; break; } }
+    if (idx === -1) return { ok: false, error: "Project \"" + code + "\" was not found." };
+    var merged = cleanProject(assign(arr[idx], input));
+    merged.code = code;                 // code is immutable once created
+    if (!merged.name) return { ok: false, error: "A project name is required." };
+    arr[idx] = merged;
+    if (!savePortfolio(arr)) return { ok: false, error: "Could not save. Browser storage may be full." };
+    return { ok: true, project: merged };
+  }
+
+  function deleteProject(code) {
+    var arr = getPortfolio().filter(function (p) { return p.code !== code; });
+    if (!savePortfolio(arr)) return { ok: false, error: "Could not save. Browser storage may be full." };
+    var sc = read(KEYS.scorecards, {}) || {};
+    if (sc && sc[code]) { delete sc[code]; write(KEYS.scorecards, sc); }
+    return { ok: true };
+  }
+
+  /* Intake -> Portfolio promotion helpers */
+  function getPortfolioByRequest(requestId) {
+    if (!requestId) return null;
+    return getPortfolio().filter(function (p) { return p.sourceRequestId === requestId; })[0] || null;
+  }
+  function suggestProjectCode() {
+    var d = new Date();
+    var yy = ("0" + (d.getFullYear() % 100)).slice(-2);
+    var mm = ("0" + (d.getMonth() + 1)).slice(-2);
+    var prefix = "P" + yy + mm + "-";
+    var arr = getPortfolio();
+    var codes = arr.map(function (p) { return p.code; });
+    var maxSeq = 0;
+    arr.forEach(function (p) {
+      var m = /-(\d+)\s*$/.exec(p.code || "");
+      if (m) { var v = parseInt(m[1], 10); if (!isNaN(v) && v > maxSeq) maxSeq = v; }
+    });
+    var seq = maxSeq + 1, code;
+    do { code = prefix + ("0" + seq).slice(-2); seq++; } while (codes.indexOf(code) !== -1);
+    return code;
+  }
+
+  /* ============================================================
+     RISK / ISSUE + DECISION LOG WRITE API
+     Persisted to localStorage; each entry is tagged with a project
+     code. Ids are per-log auto-increment and never reused.
+     ============================================================ */
+  function getRisks()     { var a = read(KEYS.risks, []);     return Array.isArray(a) ? a : []; }
+  function getDecisions() { var a = read(KEYS.decisions, []); return Array.isArray(a) ? a : []; }
+  function nextId(arr) {
+    var max = 0;
+    arr.forEach(function (x) { var n = Number(x.id); if (!isNaN(n) && n > max) max = n; });
+    return max + 1;
+  }
+  function normStatus(s) { return String(s).toLowerCase().indexOf("closed") > -1 ? "Closed" : "Open"; }
+  function oneOf(v, list, dflt) {
+    v = String(v || "").trim();
+    for (var i = 0; i < list.length; i++) { if (list[i].toLowerCase() === v.toLowerCase()) return list[i]; }
+    return dflt;
+  }
+
+  function cleanRisk(input) {
+    input = input || {};
+    return {
+      project: String(input.project || "").trim(),
+      desc:    String(input.desc || "").trim(),
+      type:    oneOf(input.type, ["Risk","Issue"], "Risk"),
+      prob:    oneOf(input.prob, ["Low","Medium","High"], "Medium"),
+      impact:  oneOf(input.impact, ["Low","Medium","High"], "Medium"),
+      action:  String(input.action || "").trim(),
+      by:      String(input.by || "").trim(),
+      date:    String(input.date || "").trim(),
+      status:  normStatus(input.status)
+    };
+  }
+  function addRisk(input) {
+    var r = cleanRisk(input);
+    if (!r.desc) return { ok:false, error:"A description is required." };
+    var arr = getRisks();
+    r.id = nextId(arr);
+    arr.push(r);
+    if (!write(KEYS.risks, arr)) return { ok:false, error:"Could not save. Browser storage may be full." };
+    return { ok:true, risk:r };
+  }
+  function updateRisk(id, input) {
+    var arr = getRisks(), idx = -1;
+    for (var i = 0; i < arr.length; i++) { if (String(arr[i].id) === String(id)) { idx = i; break; } }
+    if (idx === -1) return { ok:false, error:"Risk not found." };
+    var merged = cleanRisk(assign(arr[idx], input));
+    if (!merged.desc) return { ok:false, error:"A description is required." };
+    merged.id = arr[idx].id;
+    arr[idx] = merged;
+    if (!write(KEYS.risks, arr)) return { ok:false, error:"Could not save. Browser storage may be full." };
+    return { ok:true, risk:merged };
+  }
+  function setRiskStatus(id, status) { return updateRisk(id, { status: status }); }
+  function deleteRisk(id) {
+    var arr = getRisks().filter(function (x) { return String(x.id) !== String(id); });
+    if (!write(KEYS.risks, arr)) return { ok:false, error:"Could not save." };
+    return { ok:true };
+  }
+
+  function cleanDecision(input) {
+    input = input || {};
+    return {
+      project:  String(input.project || "").trim(),
+      point:    String(input.point || "").trim(),
+      owner:    String(input.owner || "").trim(),
+      comments: String(input.comments || "").trim(),
+      date:     String(input.date || "").trim(),
+      status:   normStatus(input.status)
+    };
+  }
+  function addDecision(input) {
+    var d = cleanDecision(input);
+    if (!d.point) return { ok:false, error:"A decision point is required." };
+    var arr = getDecisions();
+    d.id = nextId(arr);
+    arr.push(d);
+    if (!write(KEYS.decisions, arr)) return { ok:false, error:"Could not save. Browser storage may be full." };
+    return { ok:true, decision:d };
+  }
+  function updateDecision(id, input) {
+    var arr = getDecisions(), idx = -1;
+    for (var i = 0; i < arr.length; i++) { if (String(arr[i].id) === String(id)) { idx = i; break; } }
+    if (idx === -1) return { ok:false, error:"Decision not found." };
+    var merged = cleanDecision(assign(arr[idx], input));
+    if (!merged.point) return { ok:false, error:"A decision point is required." };
+    merged.id = arr[idx].id;
+    arr[idx] = merged;
+    if (!write(KEYS.decisions, arr)) return { ok:false, error:"Could not save. Browser storage may be full." };
+    return { ok:true, decision:merged };
+  }
+  function setDecisionStatus(id, status) { return updateDecision(id, { status: status }); }
+  function deleteDecision(id) {
+    var arr = getDecisions().filter(function (x) { return String(x.id) !== String(id); });
+    if (!write(KEYS.decisions, arr)) return { ok:false, error:"Could not save." };
+    return { ok:true };
+  }
+
   /* Small DOM helper used by the pages */
   function esc(s) {
     return String(s === undefined || s === null ? "" : s)
@@ -202,6 +438,22 @@
     getPortfolio: getPortfolio,
     getProject: getProject,
     getScorecardDetail: getScorecardDetail,
+    statusList: statusList,
+    addProject: addProject,
+    updateProject: updateProject,
+    deleteProject: deleteProject,
+    getPortfolioByRequest: getPortfolioByRequest,
+    suggestProjectCode: suggestProjectCode,
+    getRisks: getRisks,
+    addRisk: addRisk,
+    updateRisk: updateRisk,
+    setRiskStatus: setRiskStatus,
+    deleteRisk: deleteRisk,
+    getDecisions: getDecisions,
+    addDecision: addDecision,
+    updateDecision: updateDecision,
+    setDecisionStatus: setDecisionStatus,
+    deleteDecision: deleteDecision,
     resetAll: resetAll,
     esc: esc,
     _seedRegisterCount: SEED_REGISTER.length

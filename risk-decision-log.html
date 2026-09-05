@@ -70,23 +70,26 @@
 <!-- ==================== RISK / ISSUE LOG ==================== -->
 <div class="pps-tabpanel active" id="panel-risk">
 
-  <div class="crm-legend" aria-label="Risk status legend">
-    <span class="li"><span class="dot dot-yellow"></span> Open</span>
-    <span class="li"><span class="dot dot-green"></span> Closed</span>
-    <span class="li"><span class="sev sev-low">Low</span> Probability / Impact</span>
-    <span class="li"><span class="sev sev-medium">Medium</span></span>
-    <span class="li"><span class="sev sev-high">High</span></span>
+  <div class="pm-toolbar">
+    <div class="crm-legend" aria-label="Risk status legend" style="margin:0;">
+      <span class="li"><span class="dot dot-yellow"></span> Open</span>
+      <span class="li"><span class="dot dot-green"></span> Closed</span>
+      <span class="li"><span class="sev sev-low">Low</span> Probability / Impact</span>
+      <span class="li"><span class="sev sev-medium">Medium</span></span>
+      <span class="li"><span class="sev sev-high">High</span></span>
+    </div>
+    <button type="button" class="pps-btn" id="addRiskBtn">+ Add risk / issue</button>
   </div>
 
   <table class="grid">
     <colgroup>
-      <col style="width:3%"><col style="width:19%"><col style="width:7%"><col style="width:9%">
-      <col style="width:9%"><col style="width:26%"><col style="width:11%"><col style="width:8%"><col style="width:8%">
+      <col style="width:3%"><col style="width:8%"><col style="width:17%"><col style="width:6%"><col style="width:8%">
+      <col style="width:8%"><col style="width:20%"><col style="width:9%"><col style="width:8%"><col style="width:4%"><col style="width:9%">
     </colgroup>
     <thead class="col-head">
       <tr>
-        <td>#</td><td>Description</td><td>Type</td><td>Probability</td><td>Impact</td>
-        <td>Mitigating Actions / Status</td><td>Action By</td><td>Target Date</td><td>Status</td>
+        <td>#</td><td>Project</td><td>Description</td><td>Type</td><td>Probability</td><td>Impact</td>
+        <td>Mitigating Actions / Status</td><td>Action By</td><td>Target Date</td><td>Status</td><td>Actions</td>
       </tr>
     </thead>
     <tbody id="riskBody"><!-- injected by JS --></tbody>
@@ -96,86 +99,110 @@
 <!-- ==================== DECISION LOG ==================== -->
 <div class="pps-tabpanel" id="panel-decision">
 
-  <div class="crm-legend" aria-label="Decision status legend">
-    <span class="li"><span class="dot dot-yellow"></span> Open</span>
-    <span class="li"><span class="dot dot-green"></span> Closed</span>
+  <div class="pm-toolbar">
+    <div class="crm-legend" aria-label="Decision status legend" style="margin:0;">
+      <span class="li"><span class="dot dot-yellow"></span> Open</span>
+      <span class="li"><span class="dot dot-green"></span> Closed</span>
+    </div>
+    <button type="button" class="pps-btn" id="addDecisionBtn">+ Record decision</button>
   </div>
 
   <table class="grid">
     <colgroup>
-      <col style="width:22%"><col style="width:16%"><col style="width:38%"><col style="width:12%"><col style="width:12%">
+      <col style="width:8%"><col style="width:20%"><col style="width:14%"><col style="width:32%"><col style="width:10%"><col style="width:6%"><col style="width:10%">
     </colgroup>
     <thead class="col-head">
       <tr>
-        <td>Decision Point</td><td>Ownership</td><td>Comments</td><td>Decision Date</td><td>Status</td>
+        <td>Project</td><td>Decision Point</td><td>Ownership</td><td>Comments</td><td>Decision Date</td><td>Status</td><td>Actions</td>
       </tr>
     </thead>
     <tbody id="decisionBody"><!-- injected by JS --></tbody>
   </table>
 </div>
 
+<!-- Risk / Issue modal -->
+<div class="pm-overlay" id="riskOverlay" aria-hidden="true">
+  <div class="pm-modal" role="dialog" aria-modal="true" aria-labelledby="riskTitle">
+    <div class="pm-modal-head">
+      <span class="pm-modal-title" id="riskTitle">Add risk / issue</span>
+      <button type="button" class="pm-close" data-close="risk" aria-label="Close">&times;</button>
+    </div>
+    <form class="pm-form" id="riskForm">
+      <div class="pm-grid">
+        <div class="pm-field"><label for="rk_project">Project</label><select id="rk_project" name="project"></select></div>
+        <div class="pm-field"><label for="rk_type">Type</label><select id="rk_type" name="type"><option>Risk</option><option>Issue</option></select></div>
+        <div class="pm-field full"><label for="rk_desc">Description <span class="req">*</span></label><textarea id="rk_desc" name="desc" rows="2"></textarea></div>
+        <div class="pm-field"><label for="rk_prob">Probability</label><select id="rk_prob" name="prob"><option>Low</option><option>Medium</option><option>High</option></select></div>
+        <div class="pm-field"><label for="rk_impact">Impact</label><select id="rk_impact" name="impact"><option>Low</option><option>Medium</option><option>High</option></select></div>
+        <div class="pm-field"><label for="rk_by">Action by</label><input id="rk_by" name="by" type="text" autocomplete="off"></div>
+        <div class="pm-field"><label for="rk_date">Target date</label><input id="rk_date" name="date" type="text" placeholder="e.g. 30-Sep-26 or On-going" autocomplete="off"></div>
+        <div class="pm-field"><label for="rk_status">Status</label><select id="rk_status" name="status"><option>Open</option><option>Closed</option></select></div>
+        <div class="pm-field full"><label for="rk_action">Mitigating actions / status</label><textarea id="rk_action" name="action" rows="3"></textarea></div>
+      </div>
+      <div class="pm-error" id="riskError"></div>
+    </form>
+    <div class="pm-actions">
+      <button type="button" class="pps-btn secondary" data-close="risk">Cancel</button>
+      <button type="button" class="pps-btn" id="riskSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Decision modal -->
+<div class="pm-overlay" id="decOverlay" aria-hidden="true">
+  <div class="pm-modal" role="dialog" aria-modal="true" aria-labelledby="decTitle">
+    <div class="pm-modal-head">
+      <span class="pm-modal-title" id="decTitle">Record decision</span>
+      <button type="button" class="pm-close" data-close="dec" aria-label="Close">&times;</button>
+    </div>
+    <form class="pm-form" id="decForm">
+      <div class="pm-grid">
+        <div class="pm-field"><label for="dc_project">Project</label><select id="dc_project" name="project"></select></div>
+        <div class="pm-field"><label for="dc_status">Status</label><select id="dc_status" name="status"><option>Open</option><option>Closed</option></select></div>
+        <div class="pm-field full"><label for="dc_point">Decision point <span class="req">*</span></label><input id="dc_point" name="point" type="text" autocomplete="off"></div>
+        <div class="pm-field"><label for="dc_owner">Ownership</label><input id="dc_owner" name="owner" type="text" autocomplete="off"></div>
+        <div class="pm-field"><label for="dc_date">Decision date</label><input id="dc_date" name="date" type="text" placeholder="e.g. 10-Mar-26 (blank if open)" autocomplete="off"></div>
+        <div class="pm-field full"><label for="dc_comments">Comments</label><textarea id="dc_comments" name="comments" rows="3"></textarea></div>
+      </div>
+      <div class="pm-error" id="decError"></div>
+    </form>
+    <div class="pm-actions">
+      <button type="button" class="pps-btn secondary" data-close="dec">Cancel</button>
+      <button type="button" class="pps-btn" id="decSave">Save</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function () {
   document.getElementById("reportDate").textContent = PPS.today();
-
-  /* ============================================================
-     Sample data, adapted from a real Risk/Issue & Decision log:
-     structure and tone preserved, entries trimmed to a
-     representative set, and any individually-identifying detail
-     generalized for a public demo.
-     ============================================================ */
-  var RISKS = [
-    { id: 1,  desc: "Delay in hardware delivery & infrastructure readiness", type: "Issue", prob: "High", impact: "High", action: "Development started in a temporary environment to minimize impact; full impact to be reassessed after hardware commissioning at the client data center. Critical path item, ~1 month impact across workstreams.", by: "Client IT", date: "5-Mar-22", status: "Open" },
-    { id: 2,  desc: "Delay in resource onboarding", type: "Risk", prob: "Low", impact: "Medium", action: "Delivery squads mobilized and operational; hiring for remaining slots in progress.", by: "Client / Vendor", date: "On-going", status: "Open" },
-    { id: 3,  desc: "Design language for backend web interfaces", type: "Risk", prob: "Low", impact: "Medium", action: "Art direction (CX/UI) for back-office systems agreed between client and vendor.", by: "Client / Vendor", date: "31-Jan-22", status: "Closed" },
-    { id: 4,  desc: "Native vs hybrid app decision", type: "Risk", prob: "High", impact: "Medium", action: "Decision taken; see Decision Log.", by: "Client", date: "31-Jan-22", status: "Closed" },
-    { id: 5,  desc: "Backend API architecture and development", type: "Risk", prob: "Low", impact: "High", action: "Identification and prioritization of APIs jointly agreed, aligned to critical path.", by: "Client / Vendor", date: "18-Mar-22", status: "Open" },
-    { id: 6,  desc: "Document management system upgrade dependency", type: "Risk", prob: "Low", impact: "High", action: "Client upgrading its document management system; any delay directly impacts downstream workstreams. APIs to be made available by end of March to de-risk timeline.", by: "Client", date: "31-Mar-22", status: "Open" },
-    { id: 7,  desc: "Data migration strategy", type: "Risk", prob: "Medium", impact: "Medium", action: "Slightly behind schedule; fast-tracking stakeholder engagement to formalize strategy and plan.", by: "Client / Vendor", date: "31-Mar-22", status: "Open" },
-    { id: 8,  desc: "Training & rollout strategy and plan", type: "Risk", prob: "Medium", impact: "Medium", action: "Slightly behind schedule; fast-tracking stakeholder engagement to formalize strategy and plan.", by: "Client / Vendor", date: "31-Mar-22", status: "Open" },
-    { id: 9,  desc: "Software architecture per workstream", type: "Risk", prob: "Medium", impact: "Medium", action: "Core platform supports a microservices approach; architecture for each workstream still needs to be finalized with the client.", by: "Client / Vendor", date: "1-Aug-22", status: "Open" },
-    { id: 10, desc: "CI/CD pipelining", type: "Risk", prob: "Medium", impact: "Medium", action: "Implementation of CI/CD in progress to enable automated deployment.", by: "Client", date: "1-Aug-22", status: "Open" },
-    { id: 11, desc: "Stress testing", type: "Risk", prob: "Medium", impact: "Medium", action: "Approach needs finalizing so application performance can be validated ahead of production deployment.", by: "Client", date: "1-Aug-22", status: "Open" },
-    { id: 12, desc: "Scope creep across workstreams", type: "Risk", prob: "Medium", impact: "Medium", action: "Additional requirements identified across workstreams during UAT; being centrally logged and managed by the core team rather than absorbed silently.", by: "Client", date: "1-Aug-22", status: "Open" },
-    { id: 13, desc: "SDK limitations for a responsive onboarding app", type: "Risk", prob: "Medium", impact: "High", action: "The onboarding solution's web-responsive approach introduced challenges accessing device-native biometric and camera hardware on tablets.", by: "Client", date: "23-Aug-22", status: "Open" },
-    { id: 14, desc: "UAT timeline slippage", type: "Risk", prob: "Medium", impact: "Medium", action: "UAT start delayed due to stakeholder availability; original start date pushed back roughly one week.", by: "Client", date: "5-Sep-22", status: "Open" }
-  ];
-
-  var DECISIONS = [
-    { point: "Hardware sizing", owner: "Core Platform Vendor", comments: "Hardware sizing concluded with the client team; current hardware confirmed sufficient for the application, including test environments.", date: "10-Mar-22", status: "Closed" },
-    { point: "Test environment / API access to vendor dev cloud", owner: "Client (InfoSec)", comments: "InfoSec requires data masking before approval. Site-to-site VPN request submitted for dev environment API access.", date: "", status: "Open" },
-    { point: "Active-Active architecture", owner: "Core Platform Vendor", comments: "Two application and fabric deployments across separate locations to enable active-active at the application layer.", date: "10-Mar-22", status: "Closed" },
-    { point: "Prioritization and delivery of backend APIs", owner: "Client / Vendor", comments: "Discussion underway to align on API delivery priority order.", date: "", status: "Open" },
-    { point: "Tooling selection and implementation", owner: "Client", comments: "Tool list finalized; procurement to be initiated by the client where applicable.", date: "", status: "Open" },
-    { point: "Identity management for external customers", owner: "Client", comments: "Client to confirm whether to use the platform's built-in identity module or a third-party provider for consumer-facing apps.", date: "", status: "Open" },
-    { point: "SSO for back-office users", owner: "Core Platform Vendor", comments: "SSO to be used as identity broker with the client's directory service; customization handled by the delivery vendor with no timeline impact.", date: "11-Mar-22", status: "Closed" },
-    { point: "Master app scope (retail + omni-channel)", owner: "Client Steering Committee", comments: "Decided at steering committee review.", date: "7-Sep-21", status: "Closed" },
-    { point: "Branchless additional sales app", owner: "Client Steering Committee", comments: "Decided at steering committee review.", date: "14-Jan-22", status: "Closed" },
-    { point: "OCR approach", owner: "Client Steering Committee", comments: "Decided at steering committee review.", date: "25-Feb-22", status: "Closed" },
-    { point: "Tablet vs. responsive web for onboarding", owner: "Client", comments: "Client accepted the web-based approach for tablet onboarding, conditional on smooth customer experience, biometric verification support, rooted-device detection, and reliable image capture.", date: "13-May-22", status: "Closed" },
-    { point: "Core transaction engine scope", owner: "Client", comments: "Core engine to handle all transactions going forward; general ledger entries forwarded to the client's core banking system.", date: "10-May-22", status: "Closed" },
-    { point: "Development code access for client resources", owner: "Client", comments: "Client resources granted the same code access as the delivery vendor's development team, in line with a one-team delivery model.", date: "3-Jul-22", status: "Closed" },
-    { point: "Architecture finalization", owner: "Client / Core Platform Vendor / Delivery Vendor", comments: "Architecture submitted by the platform vendor; a joint technical review is still required to formally close this item.", date: "", status: "Open" },
-    { point: "Multi-factor authentication approach", owner: "Client", comments: "To be presented at the technical review committee, since it falls outside current scope; design vs. MFA trade-off needs sign-off.", date: "7-Jul-22", status: "Closed" }
-  ];
+  var esc = PPS.esc;
+  function attr(s) { return esc(s).replace(/"/g, "&quot;"); }
 
   function statusDot(status) {
-    var s = String(status || "").toLowerCase();
-    if (s.indexOf("closed") > -1) return "dot-green";
-    return "dot-yellow";
+    return String(status || "").toLowerCase().indexOf("closed") > -1 ? "dot-green" : "dot-yellow";
   }
   function sevPill(level) {
     var s = String(level || "").toLowerCase();
     var cls = s === "high" ? "sev-high" : (s === "medium" ? "sev-medium" : "sev-low");
-    return '<span class="sev ' + cls + '">' + PPS.esc(level) + '</span>';
+    return '<span class="sev ' + cls + '">' + esc(level) + '</span>';
+  }
+  function projLabel(code) { return code ? esc(code) : '<span class="muted">Unassigned</span>'; }
+  function actionsCell(id, status) {
+    var toggle = String(status).toLowerCase().indexOf("closed") > -1 ? "Reopen" : "Close";
+    return '<td class="row-actions">' +
+      '<button type="button" class="edit" data-id="' + attr(id) + '">Edit</button>' +
+      '<button type="button" class="toggle" data-id="' + attr(id) + '">' + toggle + '</button>' +
+      '<button type="button" class="del" data-id="' + attr(id) + '">Delete</button>' +
+    '</td>';
   }
 
   function renderRisks() {
-    var body = document.getElementById("riskBody");
-    var esc = PPS.esc;
-    body.innerHTML = RISKS.map(function (r) {
+    var rows = PPS.getRisks();
+    document.getElementById("riskBody").innerHTML = rows.length ? rows.map(function (r) {
       return '<tr>' +
-        '<td class="center">' + r.id + '</td>' +
+        '<td class="center">' + esc(r.id) + '</td>' +
+        '<td class="center">' + projLabel(r.project) + '</td>' +
         '<td class="desc-cell">' + esc(r.desc) + '</td>' +
         '<td class="center">' + esc(r.type) + '</td>' +
         '<td class="center">' + sevPill(r.prob) + '</td>' +
@@ -184,34 +211,157 @@
         '<td class="center">' + esc(r.by) + '</td>' +
         '<td class="center">' + esc(r.date) + '</td>' +
         '<td class="status-cell"><span class="dot ' + statusDot(r.status) + '" title="' + esc(r.status) + '"></span></td>' +
+        actionsCell(r.id, r.status) +
       '</tr>';
-    }).join("");
-    var open = RISKS.filter(function (r) { return statusDot(r.status) === "dot-yellow"; }).length;
-    document.getElementById("openCount").textContent = open + " of " + RISKS.length;
-    document.getElementById("riskCountLabel").textContent = "(" + RISKS.length + ")";
+    }).join("") : '<tr><td colspan="11" class="pps-empty">No risks or issues logged yet. Use "Add risk / issue" to create one.</td></tr>';
+    var open = rows.filter(function (r) { return statusDot(r.status) === "dot-yellow"; }).length;
+    document.getElementById("openCount").textContent = open + " of " + rows.length;
+    document.getElementById("riskCountLabel").textContent = "(" + rows.length + ")";
   }
 
   function renderDecisions() {
-    var body = document.getElementById("decisionBody");
-    var esc = PPS.esc;
-    body.innerHTML = DECISIONS.map(function (d) {
+    var rows = PPS.getDecisions();
+    document.getElementById("decisionBody").innerHTML = rows.length ? rows.map(function (d) {
       return '<tr>' +
+        '<td class="center">' + projLabel(d.project) + '</td>' +
         '<td>' + esc(d.point) + '</td>' +
         '<td>' + esc(d.owner) + '</td>' +
         '<td class="action-cell" style="max-width:none;">' + esc(d.comments) + '</td>' +
         '<td class="center">' + (d.date ? esc(d.date) : '&mdash;') + '</td>' +
         '<td class="status-cell"><span class="dot ' + statusDot(d.status) + '" title="' + esc(d.status) + '"></span></td>' +
+        actionsCell(d.id, d.status) +
       '</tr>';
-    }).join("");
-    var open = DECISIONS.filter(function (d) { return statusDot(d.status) === "dot-yellow"; }).length;
-    document.getElementById("openDecisionCount").textContent = open + " of " + DECISIONS.length;
-    document.getElementById("decisionCountLabel").textContent = "(" + DECISIONS.length + ")";
+    }).join("") : '<tr><td colspan="7" class="pps-empty">No decisions recorded yet. Use "Record decision" to add one.</td></tr>';
+    var open = rows.filter(function (d) { return statusDot(d.status) === "dot-yellow"; }).length;
+    document.getElementById("openDecisionCount").textContent = open + " of " + rows.length;
+    document.getElementById("decisionCountLabel").textContent = "(" + rows.length + ")";
   }
 
-  renderRisks();
-  renderDecisions();
+  function renderAll() { renderRisks(); renderDecisions(); }
 
-  /* ---- Tab switching ---- */
+  function projectOptions(selected) {
+    var portfolio = PPS.getPortfolio();
+    var codes = portfolio.map(function (p) { return p.code; });
+    var opts = portfolio.map(function (p) {
+      return '<option value="' + attr(p.code) + '">' + esc(p.code) + ' \u2014 ' + esc(p.name) + '</option>';
+    });
+    if (selected && codes.indexOf(selected) === -1) {
+      opts.unshift('<option value="' + attr(selected) + '">' + esc(selected) + ' (not in portfolio)</option>');
+    }
+    opts.push('<option value="">Unassigned</option>');
+    return opts.join("");
+  }
+  function defaultProject() {
+    var codes = PPS.getPortfolio().map(function (p) { return p.code; });
+    if (codes.indexOf("P2606-01") > -1) return "P2606-01";
+    return codes.length ? codes[0] : "";
+  }
+  function clearGuard() { if (window.PPS && PPS.navGuard) PPS.navGuard.markClean(); }
+  function isClosed(s) { return String(s).toLowerCase().indexOf("closed") > -1; }
+
+  var riskOverlay = document.getElementById("riskOverlay");
+  var riskForm = document.getElementById("riskForm");
+  var riskError = document.getElementById("riskError");
+  var editingRiskId = null;
+
+  function openRisk(entry) {
+    editingRiskId = entry ? entry.id : null;
+    riskError.classList.remove("show"); riskError.textContent = "";
+    document.getElementById("riskTitle").textContent = entry ? "Edit risk / issue" : "Add risk / issue";
+    document.getElementById("rk_project").innerHTML = projectOptions(entry ? entry.project : "");
+    var f = riskForm.elements;
+    f["project"].value = entry ? (entry.project || "") : defaultProject();
+    f["type"].value = entry ? entry.type : "Risk";
+    f["desc"].value = entry ? entry.desc : "";
+    f["prob"].value = entry ? entry.prob : "Medium";
+    f["impact"].value = entry ? entry.impact : "Medium";
+    f["by"].value = entry ? entry.by : "";
+    f["date"].value = entry ? entry.date : "";
+    f["status"].value = entry ? (isClosed(entry.status) ? "Closed" : "Open") : "Open";
+    f["action"].value = entry ? entry.action : "";
+    riskOverlay.classList.add("open"); riskOverlay.setAttribute("aria-hidden", "false");
+    clearGuard();
+    setTimeout(function () { f["desc"].focus(); }, 30);
+  }
+  function closeRisk() { riskOverlay.classList.remove("open"); riskOverlay.setAttribute("aria-hidden","true"); editingRiskId = null; clearGuard(); }
+  function saveRisk() {
+    var f = riskForm.elements;
+    var data = { project:f["project"].value, desc:f["desc"].value, type:f["type"].value, prob:f["prob"].value,
+      impact:f["impact"].value, action:f["action"].value, by:f["by"].value, date:f["date"].value, status:f["status"].value };
+    var res = editingRiskId ? PPS.updateRisk(editingRiskId, data) : PPS.addRisk(data);
+    if (!res.ok) { riskError.textContent = res.error; riskError.classList.add("show"); return; }
+    closeRisk(); renderRisks();
+  }
+
+  var decOverlay = document.getElementById("decOverlay");
+  var decForm = document.getElementById("decForm");
+  var decError = document.getElementById("decError");
+  var editingDecId = null;
+
+  function openDec(entry) {
+    editingDecId = entry ? entry.id : null;
+    decError.classList.remove("show"); decError.textContent = "";
+    document.getElementById("decTitle").textContent = entry ? "Edit decision" : "Record decision";
+    document.getElementById("dc_project").innerHTML = projectOptions(entry ? entry.project : "");
+    var f = decForm.elements;
+    f["project"].value = entry ? (entry.project || "") : defaultProject();
+    f["status"].value = entry ? (isClosed(entry.status) ? "Closed" : "Open") : "Open";
+    f["point"].value = entry ? entry.point : "";
+    f["owner"].value = entry ? entry.owner : "";
+    f["date"].value = entry ? entry.date : "";
+    f["comments"].value = entry ? entry.comments : "";
+    decOverlay.classList.add("open"); decOverlay.setAttribute("aria-hidden","false");
+    clearGuard();
+    setTimeout(function () { f["point"].focus(); }, 30);
+  }
+  function closeDec() { decOverlay.classList.remove("open"); decOverlay.setAttribute("aria-hidden","true"); editingDecId = null; clearGuard(); }
+  function saveDec() {
+    var f = decForm.elements;
+    var data = { project:f["project"].value, point:f["point"].value, owner:f["owner"].value,
+      comments:f["comments"].value, date:f["date"].value, status:f["status"].value };
+    var res = editingDecId ? PPS.updateDecision(editingDecId, data) : PPS.addDecision(data);
+    if (!res.ok) { decError.textContent = res.error; decError.classList.add("show"); return; }
+    closeDec(); renderDecisions();
+  }
+
+  document.getElementById("addRiskBtn").addEventListener("click", function () { openRisk(null); });
+  document.getElementById("riskSave").addEventListener("click", saveRisk);
+  riskForm.addEventListener("submit", function (e) { e.preventDefault(); saveRisk(); });
+  document.getElementById("addDecisionBtn").addEventListener("click", function () { openDec(null); });
+  document.getElementById("decSave").addEventListener("click", saveDec);
+  decForm.addEventListener("submit", function (e) { e.preventDefault(); saveDec(); });
+
+  document.querySelectorAll('[data-close="risk"]').forEach(function (b) { b.addEventListener("click", closeRisk); });
+  document.querySelectorAll('[data-close="dec"]').forEach(function (b) { b.addEventListener("click", closeDec); });
+  riskOverlay.addEventListener("click", function (e) { if (e.target === riskOverlay) closeRisk(); });
+  decOverlay.addEventListener("click", function (e) { if (e.target === decOverlay) closeDec(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    if (riskOverlay.classList.contains("open")) closeRisk();
+    if (decOverlay.classList.contains("open")) closeDec();
+  });
+
+  document.getElementById("riskBody").addEventListener("click", function (e) {
+    var btn = e.target.closest ? e.target.closest("button[data-id]") : null; if (!btn) return;
+    var id = btn.getAttribute("data-id");
+    var entry = PPS.getRisks().filter(function (x) { return String(x.id) === String(id); })[0];
+    if (!entry) return;
+    if (btn.classList.contains("edit")) openRisk(entry);
+    else if (btn.classList.contains("toggle")) { PPS.setRiskStatus(id, isClosed(entry.status) ? "Open" : "Closed"); renderRisks(); }
+    else if (btn.classList.contains("del")) { if (window.confirm("Delete this risk/issue? This cannot be undone.")) { PPS.deleteRisk(id); renderRisks(); } }
+  });
+  document.getElementById("decisionBody").addEventListener("click", function (e) {
+    var btn = e.target.closest ? e.target.closest("button[data-id]") : null; if (!btn) return;
+    var id = btn.getAttribute("data-id");
+    var entry = PPS.getDecisions().filter(function (x) { return String(x.id) === String(id); })[0];
+    if (!entry) return;
+    if (btn.classList.contains("edit")) openDec(entry);
+    else if (btn.classList.contains("toggle")) { PPS.setDecisionStatus(id, isClosed(entry.status) ? "Open" : "Closed"); renderDecisions(); }
+    else if (btn.classList.contains("del")) { if (window.confirm("Delete this decision? This cannot be undone.")) { PPS.deleteDecision(id); renderDecisions(); } }
+  });
+
+  renderAll();
+
   var tabs = document.querySelectorAll(".pps-tab");
   var panels = { risk: document.getElementById("panel-risk"), decision: document.getElementById("panel-decision") };
   tabs.forEach(function (tab) {
@@ -221,6 +371,12 @@
       tab.classList.add("active");
       panels[tab.getAttribute("data-tab")].classList.add("active");
     });
+  });
+
+  window.addEventListener("storage", function (e) {
+    if (e.key === PPS.KEYS.risks) renderRisks();
+    else if (e.key === PPS.KEYS.decisions) renderDecisions();
+    else if (e.key === PPS.KEYS.portfolio) renderAll();
   });
 })();
 </script>
