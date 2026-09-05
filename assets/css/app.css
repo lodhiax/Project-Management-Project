@@ -88,7 +88,9 @@ a:hover { color: var(--link-dark); text-decoration: underline; }
   text-transform: uppercase;
   margin-right: 12px;
   white-space: nowrap;
+  cursor: pointer;
 }
+.pps-nav .pps-brand:hover { color: var(--ink); text-decoration: none; }
 .pps-nav .pps-brand::before {         /* small app tile, stands in for the CRM icon */
   content: "";
   width: 20px; height: 20px;
