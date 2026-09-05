@@ -915,6 +915,170 @@
     };
   }
 
+  /* ============================================================
+     FINANCIAL METRICS — WRITE API  (backs the Project Financials page)
+     ------------------------------------------------------------
+     Enforces the same invariants the seed guarantees, so provenance
+     survives human edits:
+       - costReduction is DERIVED (sum of the category rows), never typed
+       - procurementCost is tied to costOfPurchase (as in the seed)
+       - each metric's 4-quarter trend is regenerated to end exactly on
+         its headline, so sparkline and headline never disagree
+       - supplier attribution may not exceed the derived costReduction
+     Records are keyed by project code (must be a real portfolio code).
+     ============================================================ */
+  var FIN_CATEGORY_LIST = ["Software Licenses", "Integration & Dev", "Infrastructure", "Vendor Services", "Internal Labor"];
+  function finNum(v)   { var n = parseFloat(String(v == null ? "" : v).replace(/[^0-9.\-]/g, "")); return isNaN(n) ? 0 : n; }
+  function finMoney(v) { return Math.max(0, Math.round(finNum(v))); }
+  function finPct(v)   { return Math.max(0, Math.min(100, Math.round(finNum(v)))); }
+  function finCap(v)   { return Math.max(0, Math.min(400, Math.round(finNum(v)))); }
+
+  var RAMP = [[0.55,0.72,0.88],[0.60,0.74,0.90],[0.52,0.70,0.86],[0.58,0.78,0.91],
+              [0.50,0.68,0.84],[0.62,0.80,0.93],[0.57,0.75,0.89],[0.54,0.71,0.87]];
+  function rampSeries(scalar, idx) {
+    scalar = Number(scalar) || 0;
+    if (!scalar) return [0, 0, 0, 0];
+    var f = RAMP[((idx >= 0 ? idx : 0) % RAMP.length)];
+    return [Math.round(scalar * f[0]), Math.round(scalar * f[1]), Math.round(scalar * f[2]), scalar];
+  }
+  function portfolioIndex(code) {
+    var arr = getPortfolio();
+    for (var i = 0; i < arr.length; i++) { if (arr[i].code === code) return i; }
+    return 0;
+  }
+  function financialCategoryList() { return FIN_CATEGORY_LIST.slice(); }
+
+  function cleanFinancials(input, idx) {
+    input = input || {};
+    var cats = (input.categories || []).map(function (c) {
+      return { name:String(c.name || "").trim(), costReduction:finMoney(c.costReduction),
+               savingsPct:finPct(c.savingsPct), avoidancePct:finPct(c.avoidancePct), roiPct:finPct(c.roiPct) };
+    }).filter(function (c) { return c.name; });
+    var sups = (input.suppliers || []).map(function (s) {
+      return { name:String(s.name || "").trim(), costReduction:finMoney(s.costReduction) };
+    }).filter(function (s) { return s.name; });
+
+    var costOfPurchase = finMoney(input.costOfPurchase);
+    var costReduction = cats.reduce(function (a, c) { return a + c.costReduction; }, 0);  // derived
+    var rec = {
+      costOfPurchase: costOfPurchase,
+      costReduction: costReduction,
+      costSaving: finMoney(input.costSaving),
+      costAvoidance: finMoney(input.costAvoidance),
+      procurementCost: costOfPurchase,            // tied to purchase, matching the seed
+      procurementReturn: finMoney(input.procurementReturn),
+      categories: cats,
+      suppliers: sups,
+      trend: {}
+    };
+    FIN_METRICS.forEach(function (m) { rec.trend[m] = rampSeries(rec[m], idx); });
+    return rec;
+  }
+
+  function saveFinancials(code, input) {
+    code = String(code || "").trim();
+    if (!code) return { ok:false, error:"A project must be selected." };
+    var rec = cleanFinancials(input, portfolioIndex(code));
+    var supSum = rec.suppliers.reduce(function (a, s) { return a + s.costReduction; }, 0);
+    if (supSum > rec.costReduction) {
+      return { ok:false, error:"Supplier cost reduction ($" + supSum.toLocaleString() +
+        ") exceeds the total from categories ($" + rec.costReduction.toLocaleString() +
+        "). Lower a supplier figure or raise a category reduction." };
+    }
+    var all = read(KEYS.financials, {}) || {};
+    all[code] = rec;
+    if (!write(KEYS.financials, all)) return { ok:false, error:"Could not save. Browser storage may be full." };
+    return { ok:true, financials:rec };
+  }
+  function deleteFinancials(code) {
+    var all = read(KEYS.financials, {}) || {};
+    if (all[code]) { delete all[code]; if (!write(KEYS.financials, all)) return { ok:false, error:"Could not save." }; }
+    return { ok:true };
+  }
+
+  /* ============================================================
+     RESOURCES + ALLOCATIONS — WRITE API  (backs Resource Management)
+     ------------------------------------------------------------
+     Resources are identified by name (the same key allocations join
+     on). Renaming a resource cascades into its allocations; deleting
+     a resource removes its allocations so nothing is orphaned. An
+     allocation is unique per (project, resource) pair.
+     ============================================================ */
+  function saveResources(arr)   { return write(KEYS.resources, arr); }
+  function saveAllocations(arr)  { return write(KEYS.allocations, arr); }
+
+  function cleanResource(input) {
+    input = input || {};
+    return { name:String(input.name || "").trim(), role:String(input.role || "").trim() || "Team", capacity:finCap(input.capacity) };
+  }
+  function addResource(input) {
+    var r = cleanResource(input);
+    if (!r.name) return { ok:false, error:"A resource name is required." };
+    var arr = getResources();
+    if (arr.some(function (x) { return x.name.toLowerCase() === r.name.toLowerCase(); }))
+      return { ok:false, error:"A resource named \"" + r.name + "\" already exists." };
+    arr.push(r);
+    if (!saveResources(arr)) return { ok:false, error:"Could not save. Browser storage may be full." };
+    return { ok:true, resource:r };
+  }
+  function updateResource(oldName, input) {
+    var arr = getResources(), idx = -1;
+    for (var i = 0; i < arr.length; i++) { if (arr[i].name === oldName) { idx = i; break; } }
+    if (idx === -1) return { ok:false, error:"Resource not found." };
+    var r = cleanResource(input);
+    if (!r.name) return { ok:false, error:"A resource name is required." };
+    if (r.name.toLowerCase() !== oldName.toLowerCase() &&
+        arr.some(function (x) { return x.name.toLowerCase() === r.name.toLowerCase(); }))
+      return { ok:false, error:"A resource named \"" + r.name + "\" already exists." };
+    arr[idx] = r;
+    if (!saveResources(arr)) return { ok:false, error:"Could not save." };
+    if (r.name !== oldName) {
+      var al = getAllocations(), changed = false;
+      al.forEach(function (a) { if (a.resource === oldName) { a.resource = r.name; changed = true; } });
+      if (changed) saveAllocations(al);
+    }
+    return { ok:true, resource:r };
+  }
+  function deleteResource(name) {
+    var arr = getResources().filter(function (x) { return x.name !== name; });
+    if (!saveResources(arr)) return { ok:false, error:"Could not save." };
+    saveAllocations(getAllocations().filter(function (a) { return a.resource !== name; }));
+    return { ok:true };
+  }
+
+  function cleanAllocation(input) {
+    input = input || {};
+    return { project:String(input.project || "").trim(), resource:String(input.resource || "").trim(), hours:finCap(input.hours) };
+  }
+  function addAllocation(input) {
+    var a = cleanAllocation(input);
+    if (!a.project)  return { ok:false, error:"Choose a project." };
+    if (!a.resource) return { ok:false, error:"Choose a resource." };
+    var arr = getAllocations();
+    if (arr.some(function (x) { return x.project === a.project && x.resource === a.resource; }))
+      return { ok:false, error:"That resource is already allocated to that project. Edit the existing row instead." };
+    arr.push(a);
+    if (!saveAllocations(arr)) return { ok:false, error:"Could not save." };
+    return { ok:true, allocation:a };
+  }
+  function updateAllocation(project, resource, input) {
+    var arr = getAllocations(), idx = -1;
+    for (var i = 0; i < arr.length; i++) { if (arr[i].project === project && arr[i].resource === resource) { idx = i; break; } }
+    if (idx === -1) return { ok:false, error:"Allocation not found." };
+    var a = cleanAllocation(input);
+    if (!a.project || !a.resource) return { ok:false, error:"Project and resource are required." };
+    if ((a.project !== project || a.resource !== resource) &&
+        arr.some(function (x) { return x.project === a.project && x.resource === a.resource; }))
+      return { ok:false, error:"That resource is already allocated to that project." };
+    arr[idx] = a;
+    if (!saveAllocations(arr)) return { ok:false, error:"Could not save." };
+    return { ok:true, allocation:a };
+  }
+  function deleteAllocation(project, resource) {
+    saveAllocations(getAllocations().filter(function (a) { return !(a.project === project && a.resource === resource); }));
+    return { ok:true };
+  }
+
   function getProjectGovernance(code) {
     var risks = getRisksByProject(code);
     var decisions = getDecisionsByProject(code);
@@ -981,6 +1145,15 @@
     capacityBand: capacityBand,
     getFinancials: getFinancials,
     getAllFinancials: getAllFinancials,
+    saveFinancials: saveFinancials,
+    deleteFinancials: deleteFinancials,
+    financialCategoryList: financialCategoryList,
+    addResource: addResource,
+    updateResource: updateResource,
+    deleteResource: deleteResource,
+    addAllocation: addAllocation,
+    updateAllocation: updateAllocation,
+    deleteAllocation: deleteAllocation,
     esc: esc,
     _seedRegisterCount: SEED_REGISTER.length
   };
@@ -1092,7 +1265,9 @@
     "project scorecard": "scorecard.html",
     "risk & decision": "risk-decision-log.html",
     "repository": "repository.html",
-    "change request": "change-request-form.html"
+    "change request": "change-request-form.html",
+    "project financials": "financials.html",
+    "resource management": "resources.html"
   };
   function normStageLabel(s) {
     return (s || "").replace(/\s+/g, " ").trim().toLowerCase();

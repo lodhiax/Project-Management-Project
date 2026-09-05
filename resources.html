@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resource Management</title>
+<link rel="stylesheet" href="assets/css/app.css">
+<style>
+  table.grid td, table.grid th { font-size: 12.5px; padding: 7px 9px; }
+  table.grid { border: 1px solid var(--line); }
+  .rm-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 14px 0 18px; }
+  @media (max-width: 900px) { .rm-tiles { grid-template-columns: 1fr 1fr; } }
+  .rm-tile { border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; background: var(--surface); }
+  .rm-tile .t-label { font-size: 10px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--ink-soft); }
+  .rm-tile .t-num { font-size: 22px; font-weight: 700; color: var(--ink); margin-top: 3px; }
+  .rm-tile .t-sub { font-size: 11px; color: var(--ink-soft); margin-top: 1px; }
+  .muted { color: var(--ink-faint); }
+  .num { text-align: right; }
+</style>
+</head>
+<body>
+
+<nav class="pps-nav">
+  <span class="pps-brand">PMO Suite</span>
+  <a href="index.html">Home</a>
+  <div class="pps-dropdown">
+    <button type="button" class="pps-dropdown-toggle">Project Intake Process</button>
+    <div class="pps-dropdown-menu">
+      <a href="intake-form.html">1. Intake Form</a>
+      <a href="intake-report.html">2. Intake Report</a>
+    </div>
+  </div>
+  <a href="portfolio-review.html">Portfolio Review</a>
+  <a href="capacity.html">Resource Capacity</a>
+  <a href="financial-dashboard.html">Financial Dashboard</a>
+  <div class="pps-dropdown">
+    <button type="button" class="pps-dropdown-toggle active">Project Status</button>
+    <div class="pps-dropdown-menu">
+      <a href="scorecard.html">1. Project Scorecard</a>
+      <a href="risk-decision-log.html">2. Risk &amp; Decision</a>
+      <a href="repository.html">3. Repository</a>
+      <a href="change-request-form.html">4. Change Request</a>
+      <a href="financials.html">5. Project Financials</a>
+      <a href="resources.html" class="active">6. Resource Management</a>
+    </div>
+  </div>
+</nav>
+
+<header class="crm-head">
+  <div class="crm-id">
+    <span class="crm-eyebrow">Project Status</span>
+    <div class="crm-title">Resource Management</div>
+  </div>
+  <div class="crm-fields">
+    <div class="crm-field"><span class="crm-flabel">Report Date</span><span class="crm-fvalue" id="reportDate">&mdash;</span></div>
+    <div class="crm-field"><span class="crm-flabel">Resources</span><span class="crm-fvalue" id="resCount">&mdash;</span></div>
+    <div class="crm-field"><span class="crm-flabel">Allocations</span><span class="crm-fvalue" id="allocCount">&mdash;</span></div>
+  </div>
+</header>
+
+<div class="crm-flow" aria-label="Project Status">
+  <div class="crm-stage is-todo"><span class="crm-stage-mark">1</span><span class="crm-stage-label">Project Scorecard</span></div>
+  <div class="crm-stage is-todo"><span class="crm-stage-mark">2</span><span class="crm-stage-label">Risk &amp; Decision</span></div>
+  <div class="crm-stage is-todo"><span class="crm-stage-mark">3</span><span class="crm-stage-label">Repository</span></div>
+  <div class="crm-stage is-todo"><span class="crm-stage-mark">4</span><span class="crm-stage-label">Change Request</span></div>
+  <div class="crm-stage is-todo"><span class="crm-stage-mark">5</span><span class="crm-stage-label">Project Financials</span></div>
+  <div class="crm-stage is-active"><span class="crm-stage-mark">6</span><span class="crm-stage-label">Resource Management</span></div>
+</div>
+
+<script src="assets/js/store.js"></script>
+
+<p class="pps-note">
+  <span class="pps-live">Live</span>
+  &nbsp;The roster and allocations here are the source for <a href="capacity.html">Resource Capacity vs. Demand</a>. Weekly hours; demand rolls up only across <strong>active</strong> projects, so completed or on-hold work drops off automatically.
+</p>
+
+<div class="rm-tiles" id="tiles"><!-- injected --></div>
+
+<div class="pps-tabs" role="tablist">
+  <div class="pps-tab active" data-tab="roster" role="tab">Team Roster <span class="count" id="rosterCount"></span></div>
+  <div class="pps-tab" data-tab="alloc" role="tab">Allocations <span class="count" id="allocCountLabel"></span></div>
+</div>
+
+<!-- ==================== ROSTER ==================== -->
+<div class="pps-tabpanel active" id="panel-roster">
+  <div class="pm-toolbar">
+    <span class="pm-hint">Named delivery leads and shared pools, with the weekly hours each has available.</span>
+    <button type="button" class="pps-btn" id="addResBtn">+ Add resource</button>
+  </div>
+  <table class="grid">
+    <colgroup><col style="width:6%"><col style="width:34%"><col style="width:22%"><col style="width:16%"><col style="width:22%"></colgroup>
+    <thead class="col-head"><tr><td>#</td><td>Resource</td><td>Role</td><td class="num">Capacity (hrs/wk)</td><td>Actions</td></tr></thead>
+    <tbody id="resBody"><!-- injected --></tbody>
+  </table>
+</div>
+
+<!-- ==================== ALLOCATIONS ==================== -->
+<div class="pps-tabpanel" id="panel-alloc">
+  <div class="pm-toolbar">
+    <span class="pm-hint">Weekly hours a resource is committed to a project. One row per resource per project.</span>
+    <button type="button" class="pps-btn" id="addAllocBtn">+ Add allocation</button>
+  </div>
+  <table class="grid">
+    <colgroup><col style="width:6%"><col style="width:30%"><col style="width:30%"><col style="width:14%"><col style="width:20%"></colgroup>
+    <thead class="col-head"><tr><td>#</td><td>Project</td><td>Resource</td><td class="num">Hours/wk</td><td>Actions</td></tr></thead>
+    <tbody id="allocBody"><!-- injected --></tbody>
+  </table>
+</div>
+
+<!-- Resource modal -->
+<div class="pm-overlay" id="resOverlay" aria-hidden="true">
+  <div class="pm-modal" role="dialog" aria-modal="true" aria-labelledby="resTitle">
+    <div class="pm-modal-head">
+      <span class="pm-modal-title" id="resTitle">Add resource</span>
+      <button type="button" class="pm-close" data-close="res" aria-label="Close">&times;</button>
+    </div>
+    <form class="pm-form" id="resForm">
+      <div class="pm-grid">
+        <div class="pm-field full"><label for="rs_name">Name <span class="req">*</span></label><input id="rs_name" name="name" type="text" autocomplete="off"></div>
+        <div class="pm-field"><label for="rs_role">Role</label>
+          <select id="rs_role" name="role"><option>Delivery Lead</option><option>Shared Pool</option><option>Team</option><option>Analyst</option><option>Contractor</option></select>
+        </div>
+        <div class="pm-field"><label for="rs_cap">Capacity (hrs/wk)</label><input id="rs_cap" name="capacity" type="number" min="0" max="400" step="1" value="40"></div>
+      </div>
+      <div class="pm-error" id="resError"></div>
+    </form>
+    <div class="pm-actions">
+      <button type="button" class="pps-btn secondary" data-close="res">Cancel</button>
+      <button type="button" class="pps-btn" id="resSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Allocation modal -->
+<div class="pm-overlay" id="allocOverlay" aria-hidden="true">
+  <div class="pm-modal" role="dialog" aria-modal="true" aria-labelledby="allocTitle">
+    <div class="pm-modal-head">
+      <span class="pm-modal-title" id="allocTitle">Add allocation</span>
+      <button type="button" class="pm-close" data-close="alloc" aria-label="Close">&times;</button>
+    </div>
+    <form class="pm-form" id="allocForm">
+      <div class="pm-grid">
+        <div class="pm-field full"><label for="al_project">Project <span class="req">*</span></label><select id="al_project" name="project"></select></div>
+        <div class="pm-field full"><label for="al_resource">Resource <span class="req">*</span></label><select id="al_resource" name="resource"></select></div>
+        <div class="pm-field"><label for="al_hours">Hours/wk</label><input id="al_hours" name="hours" type="number" min="0" max="400" step="1" value="10"></div>
+      </div>
+      <div class="pm-error" id="allocError"></div>
+    </form>
+    <div class="pm-actions">
+      <button type="button" class="pps-btn secondary" data-close="alloc">Cancel</button>
+      <button type="button" class="pps-btn" id="allocSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var esc = PPS.esc;
+  function attr(s) { return esc(s).replace(/"/g, "&quot;"); }
+  document.getElementById("reportDate").textContent = PPS.today();
+
+  /* ---------- summary tiles (reuse the capacity roll-up) ---------- */
+  function renderTiles() {
+    var v = PPS.getCapacityView();
+    var totalCap = v.byResource.reduce(function (s, r) { return s + r.capacity; }, 0);
+    var totalDem = v.byResource.reduce(function (s, r) { return s + r.demand; }, 0);
+    var pct = totalCap > 0 ? Math.round(totalDem / totalCap * 100) : 0;
+    document.getElementById("tiles").innerHTML =
+      tile("Total Resources", v.byResource.length, "named leads + pools") +
+      tile("Load Overall", totalDem + " / " + totalCap, pct + "% of capacity") +
+      tile("Over-allocated", v.overCount, v.overCount ? "past 100%" : "none over") +
+      tile("Capacity Available", v.availableCount, "under 70%");
+  }
+  function tile(label, num, sub) {
+    return '<div class="rm-tile"><div class="t-label">' + label + '</div><div class="t-num">' + num + '</div><div class="t-sub">' + sub + '</div></div>';
+  }
+
+  /* ---------- roster ---------- */
+  function renderResources() {
+    var rows = PPS.getResources();
+    document.getElementById("resCount").textContent = rows.length;
+    document.getElementById("rosterCount").textContent = "(" + rows.length + ")";
+    document.getElementById("resBody").innerHTML = rows.length ? rows.map(function (r, i) {
+      return '<tr>' +
+        '<td class="center">' + (i + 1) + '</td>' +
+        '<td>' + esc(r.name) + '</td>' +
+        '<td>' + esc(r.role) + '</td>' +
+        '<td class="num">' + esc(r.capacity) + '</td>' +
+        '<td class="row-actions">' +
+          '<button type="button" class="edit" data-name="' + attr(r.name) + '">Edit</button>' +
+          '<button type="button" class="del" data-name="' + attr(r.name) + '">Delete</button>' +
+        '</td></tr>';
+    }).join("") : '<tr><td colspan="5" class="pps-empty">No resources yet. Add your first one.</td></tr>';
+  }
+
+  /* ---------- allocations ---------- */
+  function projectName(code) {
+    var p = PPS.getProject(code);
+    return p ? p.name : code;
+  }
+  function renderAllocations() {
+    var rows = PPS.getAllocations();
+    document.getElementById("allocCount").textContent = rows.length;
+    document.getElementById("allocCountLabel").textContent = "(" + rows.length + ")";
+    document.getElementById("allocBody").innerHTML = rows.length ? rows.map(function (a, i) {
+      var inPortfolio = !!PPS.getProject(a.project);
+      var projCell = esc(a.project) + ' <span class="muted">' + esc(projectName(a.project)) + '</span>' +
+        (inPortfolio ? "" : ' <span class="muted">(not in portfolio)</span>');
+      return '<tr>' +
+        '<td class="center">' + (i + 1) + '</td>' +
+        '<td>' + projCell + '</td>' +
+        '<td>' + esc(a.resource) + '</td>' +
+        '<td class="num">' + esc(a.hours) + '</td>' +
+        '<td class="row-actions">' +
+          '<button type="button" class="edit" data-p="' + attr(a.project) + '" data-r="' + attr(a.resource) + '">Edit</button>' +
+          '<button type="button" class="del" data-p="' + attr(a.project) + '" data-r="' + attr(a.resource) + '">Delete</button>' +
+        '</td></tr>';
+    }).join("") : '<tr><td colspan="5" class="pps-empty">No allocations yet. Add one to create demand.</td></tr>';
+  }
+
+  function renderAll() { renderTiles(); renderResources(); renderAllocations(); }
+
+  /* ---------- resource modal ---------- */
+  var resOverlay = document.getElementById("resOverlay"), resForm = document.getElementById("resForm"), resError = document.getElementById("resError");
+  var editingResName = null;
+  function openRes(entry) {
+    editingResName = entry ? entry.name : null;
+    resError.classList.remove("show"); resError.textContent = "";
+    document.getElementById("resTitle").textContent = entry ? "Edit resource" : "Add resource";
+    var f = resForm.elements;
+    f["name"].value = entry ? entry.name : "";
+    f["role"].value = entry ? entry.role : "Delivery Lead";
+    f["capacity"].value = entry ? entry.capacity : 40;
+    resOverlay.classList.add("open"); resOverlay.setAttribute("aria-hidden", "false");
+    setTimeout(function () { f["name"].focus(); }, 30);
+  }
+  function closeRes() { resOverlay.classList.remove("open"); resOverlay.setAttribute("aria-hidden", "true"); editingResName = null; }
+  function saveRes() {
+    var f = resForm.elements;
+    var data = { name: f["name"].value, role: f["role"].value, capacity: f["capacity"].value };
+    var res = editingResName ? PPS.updateResource(editingResName, data) : PPS.addResource(data);
+    if (!res.ok) { resError.textContent = res.error; resError.classList.add("show"); return; }
+    closeRes(); renderAll();
+  }
+
+  /* ---------- allocation modal ---------- */
+  var allocOverlay = document.getElementById("allocOverlay"), allocForm = document.getElementById("allocForm"), allocError = document.getElementById("allocError");
+  var editingAlloc = null;   // { project, resource }
+  function projectOptions(selected) {
+    var opts = PPS.getPortfolio().map(function (p) {
+      return '<option value="' + attr(p.code) + '">' + esc(p.code) + ' \u2014 ' + esc(p.name) + '</option>';
+    });
+    if (selected && !PPS.getProject(selected)) opts.unshift('<option value="' + attr(selected) + '">' + esc(selected) + ' (not in portfolio)</option>');
+    return opts.join("");
+  }
+  function resourceOptions(selected) {
+    var names = PPS.getResources().map(function (r) { return r.name; });
+    var opts = names.map(function (n) { return '<option value="' + attr(n) + '">' + esc(n) + '</option>'; });
+    if (selected && names.indexOf(selected) === -1) opts.unshift('<option value="' + attr(selected) + '">' + esc(selected) + ' (removed)</option>');
+    return opts.join("");
+  }
+  function openAlloc(entry) {
+    editingAlloc = entry ? { project: entry.project, resource: entry.resource } : null;
+    allocError.classList.remove("show"); allocError.textContent = "";
+    document.getElementById("allocTitle").textContent = entry ? "Edit allocation" : "Add allocation";
+    document.getElementById("al_project").innerHTML = projectOptions(entry ? entry.project : "");
+    document.getElementById("al_resource").innerHTML = resourceOptions(entry ? entry.resource : "");
+    var f = allocForm.elements;
+    if (entry) { f["project"].value = entry.project; f["resource"].value = entry.resource; f["hours"].value = entry.hours; }
+    else {
+      var firstProj = PPS.getPortfolio()[0]; var firstRes = PPS.getResources()[0];
+      f["project"].value = firstProj ? firstProj.code : "";
+      f["resource"].value = firstRes ? firstRes.name : "";
+      f["hours"].value = 10;
+    }
+    allocOverlay.classList.add("open"); allocOverlay.setAttribute("aria-hidden", "false");
+    setTimeout(function () { f["hours"].focus(); }, 30);
+  }
+  function closeAlloc() { allocOverlay.classList.remove("open"); allocOverlay.setAttribute("aria-hidden", "true"); editingAlloc = null; }
+  function saveAlloc() {
+    var f = allocForm.elements;
+    var data = { project: f["project"].value, resource: f["resource"].value, hours: f["hours"].value };
+    var res = editingAlloc ? PPS.updateAllocation(editingAlloc.project, editingAlloc.resource, data) : PPS.addAllocation(data);
+    if (!res.ok) { allocError.textContent = res.error; allocError.classList.add("show"); return; }
+    closeAlloc(); renderAll();
+  }
+
+  /* ---------- wire up ---------- */
+  document.getElementById("addResBtn").addEventListener("click", function () { openRes(null); });
+  document.getElementById("resSave").addEventListener("click", saveRes);
+  resForm.addEventListener("submit", function (e) { e.preventDefault(); saveRes(); });
+  document.getElementById("addAllocBtn").addEventListener("click", function () {
+    if (!PPS.getResources().length) { openRes(null); return; }
+    openAlloc(null);
+  });
+  document.getElementById("allocSave").addEventListener("click", saveAlloc);
+  allocForm.addEventListener("submit", function (e) { e.preventDefault(); saveAlloc(); });
+
+  document.querySelectorAll('[data-close="res"]').forEach(function (b) { b.addEventListener("click", closeRes); });
+  document.querySelectorAll('[data-close="alloc"]').forEach(function (b) { b.addEventListener("click", closeAlloc); });
+  resOverlay.addEventListener("click", function (e) { if (e.target === resOverlay) closeRes(); });
+  allocOverlay.addEventListener("click", function (e) { if (e.target === allocOverlay) closeAlloc(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    if (resOverlay.classList.contains("open")) closeRes();
+    if (allocOverlay.classList.contains("open")) closeAlloc();
+  });
+
+  document.getElementById("resBody").addEventListener("click", function (e) {
+    var btn = e.target.closest ? e.target.closest("button[data-name]") : null; if (!btn) return;
+    var name = btn.getAttribute("data-name");
+    var entry = PPS.getResources().filter(function (x) { return x.name === name; })[0];
+    if (!entry) return;
+    if (btn.classList.contains("edit")) openRes(entry);
+    else if (btn.classList.contains("del")) {
+      if (window.confirm('Delete "' + name + '"? This also removes its allocations.')) { PPS.deleteResource(name); renderAll(); }
+    }
+  });
+  document.getElementById("allocBody").addEventListener("click", function (e) {
+    var btn = e.target.closest ? e.target.closest("button[data-p]") : null; if (!btn) return;
+    var p = btn.getAttribute("data-p"), r = btn.getAttribute("data-r");
+    var entry = PPS.getAllocations().filter(function (x) { return x.project === p && x.resource === r; })[0];
+    if (!entry) return;
+    if (btn.classList.contains("edit")) openAlloc(entry);
+    else if (btn.classList.contains("del")) {
+      if (window.confirm("Delete this allocation?")) { PPS.deleteAllocation(p, r); renderAll(); }
+    }
+  });
+
+  var tabs = document.querySelectorAll(".pps-tab");
+  var panels = { roster: document.getElementById("panel-roster"), alloc: document.getElementById("panel-alloc") };
+  tabs.forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      tabs.forEach(function (t) { t.classList.remove("active"); });
+      Object.keys(panels).forEach(function (k) { panels[k].classList.remove("active"); });
+      tab.classList.add("active");
+      panels[tab.getAttribute("data-tab")].classList.add("active");
+    });
+  });
+
+  renderAll();
+
+  window.addEventListener("storage", function (e) {
+    if (e.key === PPS.KEYS.resources || e.key === PPS.KEYS.allocations || e.key === PPS.KEYS.portfolio) renderAll();
+  });
+})();
+</script>
+
+</body>
+</html>
