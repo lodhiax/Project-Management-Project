@@ -418,6 +418,132 @@
     return { ok:true };
   }
 
+  /* ============================================================
+     DASHBOARD ROLLUP  (Home page KPI tiles)
+     ------------------------------------------------------------
+     Pure read-side aggregation over the same four stores used
+     elsewhere (portfolio, register, risks). Nothing here writes
+     data; it just summarizes what's already there so the home
+     page can show live counts instead of static copy.
+     ============================================================ */
+
+  // "D-Mon-YY" (e.g. "30-Sep-26") -> Date, or null if not a real date
+  // (handles blanks and placeholders like "TBD" the same way: no date).
+  function parseDMY(s) {
+    s = String(s || "").trim();
+    var m = /^(\d{1,2})-([A-Za-z]{3})-(\d{2})$/.exec(s);
+    if (!m) return null;
+    var monIdx = MONTHS.indexOf(m[2].charAt(0).toUpperCase() + m[2].slice(1).toLowerCase());
+    if (monIdx === -1) return null;
+    var d = new Date(2000 + parseInt(m[3], 10), monIdx, parseInt(m[1], 10));
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function getDashboardStats() {
+    var portfolio = getPortfolio();
+    var register  = getRegister();
+    var risks     = getRisks();
+    var now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    // --- Projects by status (same order/colors as the shared legend) ---
+    var counts = {};
+    STATUS_ORDER.forEach(function (k) { counts[k] = 0; });
+    portfolio.forEach(function (p) {
+      counts[p.status] = (counts[p.status] || 0) + 1;
+    });
+    var statusBreakdown = statusList().map(function (s) {
+      return { value: s.value, label: s.label, dot: s.dot, count: counts[s.value] || 0 };
+    });
+
+    // --- Open risks & issues ---
+    var openRisks  = risks.filter(function (r) { return r.status === "Open" && r.type === "Risk"; }).length;
+    var openIssues = risks.filter(function (r) { return r.status === "Open" && r.type === "Issue"; }).length;
+
+    // --- Pending intakes: anything not yet decided either way ---
+    var pending = register.filter(function (r) {
+      var label = intakeStatus(r.status).label;
+      return label !== "Approved" && label !== "Rejected";
+    });
+
+    // --- Overdue: active (not completed, not on hold) projects whose
+    //     end date is a real, parseable date that has already passed ---
+    var overdueProjects = portfolio.filter(function (p) {
+      if (p.section === "completed" || p.status === "onHold") return false;
+      var end = parseDMY(p.end);
+      return end !== null && end < now;
+    });
+
+    return {
+      statusBreakdown: statusBreakdown,
+      totalActive:    portfolio.filter(function (p) { return p.section === "active"; }).length,
+      totalCompleted: portfolio.filter(function (p) { return p.section === "completed"; }).length,
+      openRisks:       openRisks,
+      openIssues:      openIssues,
+      openRisksTotal:  openRisks + openIssues,
+      pendingIntakes:  pending.length,
+      overdueProjects: overdueProjects,
+      overdueCount:    overdueProjects.length
+    };
+  }
+
+  /* ============================================================
+     PROJECT LINKAGE  (risks, decisions, change requests -> project)
+     ------------------------------------------------------------
+     Risks and decisions already carry a `project` code (set from
+     the Add/Edit modals on the Risk & Decision Log page). Change
+     Requests are logged by the CIF form under its own key
+     (kept as-is, since that form owns its own CSV export flow);
+     this section just gives the rest of the app a read-only way
+     to pull that same data by project code, so one project's
+     full governance picture — risks, decisions, and change
+     requests — can be viewed together.
+     ============================================================ */
+  var CIF_LOG_KEY = "cifSubmissionsLog";
+
+  function getChangeRequests() {
+    var arr = read(CIF_LOG_KEY, []);
+    return Array.isArray(arr) ? arr : [];
+  }
+  function byProject(arr, code, field) {
+    code = String(code || "");
+    return arr.filter(function (x) { return String(x[field] || "") === code; });
+  }
+  function getRisksByProject(code)          { return byProject(getRisks(), code, "project"); }
+  function getDecisionsByProject(code)      { return byProject(getDecisions(), code, "project"); }
+  function getChangeRequestsByProject(code) { return byProject(getChangeRequests(), code, "projectCode"); }
+
+  // CIFs have no single "status" the way risks/decisions do: they're
+  // "open" (not yet implemented) until Part D's implementation status
+  // is recorded as Successful or Rollback.
+  function isCrOpen(c) { return !c.implStatus; }
+
+  // Every project code that shows up anywhere (portfolio, or tagged on
+  // a risk/decision/CIF even if that project isn't in the portfolio),
+  // for building "by project" filter dropdowns consistently.
+  function allProjectCodesInUse() {
+    var set = {};
+    getPortfolio().forEach(function (p) { if (p.code) set[p.code] = true; });
+    getRisks().forEach(function (r) { if (r.project) set[r.project] = true; });
+    getDecisions().forEach(function (d) { if (d.project) set[d.project] = true; });
+    getChangeRequests().forEach(function (c) { if (c.projectCode) set[c.projectCode] = true; });
+    return Object.keys(set).sort();
+  }
+
+  function getProjectGovernance(code) {
+    var risks = getRisksByProject(code);
+    var decisions = getDecisionsByProject(code);
+    var crs = getChangeRequestsByProject(code);
+    return {
+      risks: risks,
+      decisions: decisions,
+      changeRequests: crs,
+      openRisks: risks.filter(function (r) { return r.status === "Open"; }).length,
+      openDecisions: decisions.filter(function (d) { return d.status === "Open"; }).length,
+      openChangeRequests: crs.filter(isCrOpen).length
+    };
+  }
+
   /* Small DOM helper used by the pages */
   function esc(s) {
     return String(s === undefined || s === null ? "" : s)
@@ -455,6 +581,15 @@
     setDecisionStatus: setDecisionStatus,
     deleteDecision: deleteDecision,
     resetAll: resetAll,
+    parseDMY: parseDMY,
+    getDashboardStats: getDashboardStats,
+    getChangeRequests: getChangeRequests,
+    getRisksByProject: getRisksByProject,
+    getDecisionsByProject: getDecisionsByProject,
+    getChangeRequestsByProject: getChangeRequestsByProject,
+    isCrOpen: isCrOpen,
+    allProjectCodesInUse: allProjectCodesInUse,
+    getProjectGovernance: getProjectGovernance,
     esc: esc,
     _seedRegisterCount: SEED_REGISTER.length
   };

@@ -62,6 +62,14 @@
   &nbsp;Sample Risk/Issue and Decision registers for the flagship portfolio project, in the same format used to run weekly governance reviews. Switch tabs to move between the two logs.
 </p>
 
+<div class="pps-toolbar" style="justify-content:space-between;align-items:center;">
+  <span class="pps-note" style="margin:0;" id="filterNote">Showing all projects.</span>
+  <label style="font-weight:600;color:var(--ink);font-size:12.5px;">
+    Project:&nbsp;
+    <select id="projectFilter" class="pps-select"></select>
+  </label>
+</div>
+
 <div class="pps-tabs" role="tablist">
   <div class="pps-tab active" data-tab="risk" role="tab">Risk / Issue Log <span class="count" id="riskCountLabel"></span></div>
   <div class="pps-tab" data-tab="decision" role="tab">Decision Log <span class="count" id="decisionCountLabel"></span></div>
@@ -197,8 +205,56 @@
     '</td>';
   }
 
+  /* ---------- "by project" filter (drives both tabs) ---------- */
+  var FILTER_ALL = "__all", FILTER_UNASSIGNED = "__unassigned";
+  var projectFilter = document.getElementById("projectFilter");
+  var filterNote = document.getElementById("filterNote");
+
+  function buildProjectFilter() {
+    var portfolio = PPS.getPortfolio();
+    var nameByCode = {};
+    portfolio.forEach(function (p) { nameByCode[p.code] = p.name; });
+    var codes = PPS.allProjectCodesInUse();
+    var current = projectFilter.value || FILTER_ALL;
+    var opts = ['<option value="' + FILTER_ALL + '">All Projects</option>'];
+    codes.forEach(function (code) {
+      var label = nameByCode[code] ? (code + " \u2014 " + nameByCode[code]) : (code + " (not in portfolio)");
+      opts.push('<option value="' + attr(code) + '">' + esc(label) + '</option>');
+    });
+    opts.push('<option value="' + FILTER_UNASSIGNED + '">Unassigned</option>');
+    projectFilter.innerHTML = opts.join("");
+
+    var params = new URLSearchParams(location.search);
+    var fromUrl = params.get("project");
+    if (fromUrl && (codes.indexOf(fromUrl) > -1 || fromUrl === FILTER_UNASSIGNED)) current = fromUrl;
+    projectFilter.value = (codes.indexOf(current) > -1 || current === FILTER_ALL || current === FILTER_UNASSIGNED)
+      ? current : FILTER_ALL;
+  }
+
+  function currentFilterValue() { return projectFilter.value || FILTER_ALL; }
+  function matchesFilter(projectCode, filterVal) {
+    if (filterVal === FILTER_ALL) return true;
+    if (filterVal === FILTER_UNASSIGNED) return !projectCode;
+    return projectCode === filterVal;
+  }
+  function updateFilterNote() {
+    var v = currentFilterValue();
+    if (v === FILTER_ALL) { filterNote.textContent = "Showing all projects."; return; }
+    if (v === FILTER_UNASSIGNED) { filterNote.textContent = "Showing entries not tagged to a project."; return; }
+    var p = PPS.getProject(v);
+    filterNote.textContent = "Showing " + (p ? (p.name + " (" + v + ")") : v) + " only.";
+  }
+  function syncFilterToUrl() {
+    var v = currentFilterValue();
+    var url = new URL(location.href);
+    if (v === FILTER_ALL) url.searchParams.delete("project");
+    else url.searchParams.set("project", v);
+    history.replaceState(null, "", url.pathname + url.search);
+  }
+
   function renderRisks() {
-    var rows = PPS.getRisks();
+    var filterVal = currentFilterValue();
+    var rows = PPS.getRisks().filter(function (r) { return matchesFilter(r.project, filterVal); });
     document.getElementById("riskBody").innerHTML = rows.length ? rows.map(function (r) {
       return '<tr>' +
         '<td class="center">' + esc(r.id) + '</td>' +
@@ -213,14 +269,18 @@
         '<td class="status-cell"><span class="dot ' + statusDot(r.status) + '" title="' + esc(r.status) + '"></span></td>' +
         actionsCell(r.id, r.status) +
       '</tr>';
-    }).join("") : '<tr><td colspan="11" class="pps-empty">No risks or issues logged yet. Use "Add risk / issue" to create one.</td></tr>';
+    }).join("") : '<tr><td colspan="11" class="pps-empty">' +
+        (filterVal === FILTER_ALL ? 'No risks or issues logged yet. Use "Add risk / issue" to create one.'
+                                   : 'No risks or issues match this project filter.') +
+      '</td></tr>';
     var open = rows.filter(function (r) { return statusDot(r.status) === "dot-yellow"; }).length;
     document.getElementById("openCount").textContent = open + " of " + rows.length;
     document.getElementById("riskCountLabel").textContent = "(" + rows.length + ")";
   }
 
   function renderDecisions() {
-    var rows = PPS.getDecisions();
+    var filterVal = currentFilterValue();
+    var rows = PPS.getDecisions().filter(function (d) { return matchesFilter(d.project, filterVal); });
     document.getElementById("decisionBody").innerHTML = rows.length ? rows.map(function (d) {
       return '<tr>' +
         '<td class="center">' + projLabel(d.project) + '</td>' +
@@ -231,13 +291,16 @@
         '<td class="status-cell"><span class="dot ' + statusDot(d.status) + '" title="' + esc(d.status) + '"></span></td>' +
         actionsCell(d.id, d.status) +
       '</tr>';
-    }).join("") : '<tr><td colspan="7" class="pps-empty">No decisions recorded yet. Use "Record decision" to add one.</td></tr>';
+    }).join("") : '<tr><td colspan="7" class="pps-empty">' +
+        (filterVal === FILTER_ALL ? 'No decisions recorded yet. Use "Record decision" to add one.'
+                                   : 'No decisions match this project filter.') +
+      '</td></tr>';
     var open = rows.filter(function (d) { return statusDot(d.status) === "dot-yellow"; }).length;
     document.getElementById("openDecisionCount").textContent = open + " of " + rows.length;
     document.getElementById("decisionCountLabel").textContent = "(" + rows.length + ")";
   }
 
-  function renderAll() { renderRisks(); renderDecisions(); }
+  function renderAll() { renderRisks(); renderDecisions(); updateFilterNote(); }
 
   function projectOptions(selected) {
     var portfolio = PPS.getPortfolio();
@@ -360,7 +423,9 @@
     else if (btn.classList.contains("del")) { if (window.confirm("Delete this decision? This cannot be undone.")) { PPS.deleteDecision(id); renderDecisions(); } }
   });
 
+  buildProjectFilter();
   renderAll();
+  projectFilter.addEventListener("change", function () { renderAll(); syncFilterToUrl(); });
 
   var tabs = document.querySelectorAll(".pps-tab");
   var panels = { risk: document.getElementById("panel-risk"), decision: document.getElementById("panel-decision") };
@@ -376,7 +441,7 @@
   window.addEventListener("storage", function (e) {
     if (e.key === PPS.KEYS.risks) renderRisks();
     else if (e.key === PPS.KEYS.decisions) renderDecisions();
-    else if (e.key === PPS.KEYS.portfolio) renderAll();
+    else if (e.key === PPS.KEYS.portfolio) { buildProjectFilter(); renderAll(); }
   });
 })();
 </script>

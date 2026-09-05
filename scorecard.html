@@ -302,15 +302,49 @@
         '<tr class="sec-head"><td colspan="5">Change Request Details <span class="note">(current cycle)</span></td></tr>' +
         '<tr class="col-head"><td>Sr #</td><td>Description</td><td>Raised By</td><td>Date</td><td>Status</td></tr>' +
         crRows(d) +
+      '</table>' +
+
+      // Linked Governance Records (live, cross-page)
+      linkedGovernancePanel(p);
+    }
+
+    function linkedGovernancePanel(p) {
+      var gov = PPS.getProjectGovernance(p.code);
+      var q = "?project=" + encodeURIComponent(p.code);
+      return '<table class="section">' +
+        '<colgroup><col style="width:34%"><col style="width:22%"><col style="width:22%"><col style="width:22%"></colgroup>' +
+        '<tr class="sec-head"><td colspan="4">Linked Governance Records <span class="note">(live \u2014 tagged to this project code)</span></td></tr>' +
+        '<tr class="col-head"><td>Project</td><td>Open Risks / Issues</td><td>Open Decisions</td><td>Open Change Requests</td></tr>' +
+        '<tr>' +
+          '<td class="val-hl">' + esc(p.code) + '</td>' +
+          '<td>' + esc(gov.openRisks) + ' of ' + esc(gov.risks.length) + '</td>' +
+          '<td>' + esc(gov.openDecisions) + ' of ' + esc(gov.decisions.length) + '</td>' +
+          '<td>' + esc(gov.openChangeRequests) + ' of ' + esc(gov.changeRequests.length) + '</td>' +
+        '</tr>' +
+        '<tr><td colspan="4" style="text-align:right;padding:9px 10px;">' +
+          '<a class="pps-btn secondary" href="risk-decision-log.html' + q + '">View Risks &amp; Decisions &rarr;</a>&nbsp; ' +
+          '<a class="pps-btn secondary" href="change-request-form.html' + q + '">View Change Requests &rarr;</a>' +
+        '</td></tr>' +
       '</table>';
     }
 
     buildPicker();
+    var preselect = new URLSearchParams(location.search).get("project");
+    if (preselect && PPS.getProject(preselect)) picker.value = preselect;
     render(picker.value);
-    picker.addEventListener("change", function () { render(picker.value); });
+    picker.addEventListener("change", function () {
+      var url = new URL(location.href);
+      url.searchParams.set("project", picker.value);
+      history.replaceState(null, "", url.pathname + url.search);
+      render(picker.value);
+    });
     window.addEventListener("storage", function (e) {
       if (e.key === PPS.KEYS.portfolio) { buildPicker(); render(picker.value); }
+      else if (e.key === PPS.KEYS.risks || e.key === PPS.KEYS.decisions || e.key === "cifSubmissionsLog") {
+        render(picker.value);
+      }
     });
+    window.addEventListener("cif:updated", function () { render(picker.value); });
   })();
 </script>
 

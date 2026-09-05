@@ -23,7 +23,7 @@
   table.cif td.label { width: 210px; font-weight: 600; color: var(--ink); background: #fafbfc; }
   table.cif td.label .sub { display: block; font-weight: 400; font-style: italic; color: var(--ink-soft); font-size: 11px; margin-top: 2px; }
   table.cif td.field { background: #fff; }
-  table.cif input[type="text"], table.cif input[type="datetime-local"], table.cif input[type="date"] {
+  table.cif input[type="text"], table.cif input[type="datetime-local"], table.cif input[type="date"], table.cif select {
     width: 100%; border: none; border-bottom: 1px dotted var(--line);
     background: transparent; font-family: inherit; font-size: 13px; color: var(--ink); padding: 3px 2px;
   }
@@ -129,7 +129,7 @@
         <td class="label">NIR / RFC Number(s)</td>
         <td class="field"><input type="text" id="nirRfc" placeholder="Only in case of RFC"></td>
         <td class="label">Project Code</td>
-        <td class="field"><input type="text" id="projectCode" placeholder="Only in case of project, e.g. P2606-01"></td>
+        <td class="field"><select id="projectCode"><option value="">&mdash; Not project-specific &mdash;</option></select></td>
       </tr>
       <tr>
         <td class="label">Brief Description <span class="required">*</span></td>
@@ -266,6 +266,111 @@
   <div id="formStatus"></div>
 </form>
 
+<div class="dash-section" style="margin:26px 0 8px;">
+  <div class="pps-toolbar" style="justify-content:space-between;align-items:center;">
+    <span class="pps-note" style="margin:0;" id="cifFilterNote">Showing all projects.</span>
+    <label style="font-weight:600;color:var(--ink);font-size:12.5px;">
+      Project:&nbsp;
+      <select id="cifProjectFilter" class="pps-select"></select>
+    </label>
+  </div>
+  <table class="grid" style="width:100%;border-collapse:collapse;border:1px solid var(--line);margin-top:8px;">
+    <colgroup>
+      <col style="width:14%"><col style="width:12%"><col style="width:34%">
+      <col style="width:10%"><col style="width:12%"><col style="width:18%">
+    </colgroup>
+    <thead class="col-head">
+      <tr>
+        <td style="padding:7px 9px;font-size:12.5px;">CIF Number</td>
+        <td style="padding:7px 9px;font-size:12.5px;">Project</td>
+        <td style="padding:7px 9px;font-size:12.5px;">Brief Description</td>
+        <td style="padding:7px 9px;font-size:12.5px;">Priority</td>
+        <td style="padding:7px 9px;font-size:12.5px;">Status</td>
+        <td style="padding:7px 9px;font-size:12.5px;">Requested</td>
+      </tr>
+    </thead>
+    <tbody id="cifLogBody"><!-- injected by JS --></tbody>
+  </table>
+</div>
+
+<script>
+(function () {
+  var FILTER_ALL = "__all", FILTER_UNASSIGNED = "__unassigned";
+  var filterEl = document.getElementById("cifProjectFilter");
+  var noteEl = document.getElementById("cifFilterNote");
+  var bodyEl = document.getElementById("cifLogBody");
+  var esc = PPS.esc;
+
+  function buildFilter() {
+    var portfolio = PPS.getPortfolio();
+    var nameByCode = {};
+    portfolio.forEach(function (p) { nameByCode[p.code] = p.name; });
+    var codes = PPS.allProjectCodesInUse();
+    var current = filterEl.value || FILTER_ALL;
+    var opts = ['<option value="' + FILTER_ALL + '">All Projects</option>'];
+    codes.forEach(function (code) {
+      var label = nameByCode[code] ? (code + " \u2014 " + nameByCode[code]) : (code + " (not in portfolio)");
+      opts.push('<option value="' + esc(code) + '">' + esc(label) + '</option>');
+    });
+    opts.push('<option value="' + FILTER_UNASSIGNED + '">Not project-specific</option>');
+    filterEl.innerHTML = opts.join("");
+
+    var params = new URLSearchParams(location.search);
+    var fromUrl = params.get("project");
+    if (fromUrl && (codes.indexOf(fromUrl) > -1 || fromUrl === FILTER_UNASSIGNED)) current = fromUrl;
+    filterEl.value = (codes.indexOf(current) > -1 || current === FILTER_ALL || current === FILTER_UNASSIGNED)
+      ? current : FILTER_ALL;
+  }
+
+  function matches(code, filterVal) {
+    if (filterVal === FILTER_ALL) return true;
+    if (filterVal === FILTER_UNASSIGNED) return !code;
+    return code === filterVal;
+  }
+
+  function renderLog() {
+    var filterVal = filterEl.value || FILTER_ALL;
+    var rows = PPS.getChangeRequests().filter(function (c) { return matches(c.projectCode, filterVal); });
+    bodyEl.innerHTML = rows.length ? rows.slice().reverse().map(function (c) {
+      var implLabel = c.implStatus ? c.implStatus : (c.status || "Submitted");
+      return '<tr>' +
+        '<td style="padding:7px 9px;font-size:12.5px;">' + esc(c.cifNumber) + '</td>' +
+        '<td style="padding:7px 9px;font-size:12.5px;">' + (c.projectCode ? esc(c.projectCode) : '<span class="muted">&mdash;</span>') + '</td>' +
+        '<td style="padding:7px 9px;font-size:12.5px;">' + esc(c.briefDesc) + '</td>' +
+        '<td style="padding:7px 9px;font-size:12.5px;">' + esc(c.priority) + '</td>' +
+        '<td style="padding:7px 9px;font-size:12.5px;">' + esc(implLabel) + '</td>' +
+        '<td style="padding:7px 9px;font-size:12.5px;">' + esc(c.requestDate) + '</td>' +
+      '</tr>';
+    }).join("") : '<tr><td colspan="6" class="pps-empty">' +
+        (filterVal === FILTER_ALL ? 'No CIFs logged yet on this device. Submit the form above to add one.'
+                                   : 'No CIFs match this project filter.') +
+      '</td></tr>';
+
+    if (filterVal === FILTER_ALL) noteEl.textContent = "Showing all projects.";
+    else if (filterVal === FILTER_UNASSIGNED) noteEl.textContent = "Showing CIFs not tied to a project.";
+    else {
+      var p = PPS.getProject(filterVal);
+      noteEl.textContent = "Showing " + (p ? (p.name + " (" + filterVal + ")") : filterVal) + " only.";
+    }
+  }
+
+  buildFilter();
+  renderLog();
+  filterEl.addEventListener("change", function () {
+    var url = new URL(location.href);
+    if (filterEl.value === FILTER_ALL) url.searchParams.delete("project");
+    else url.searchParams.set("project", filterEl.value);
+    history.replaceState(null, "", url.pathname + url.search);
+    renderLog();
+  });
+  window.addEventListener("cif:updated", renderLog);
+  window.addEventListener("storage", function (e) {
+    if (e.key === "cifSubmissionsLog") renderLog();
+    else if (e.key === PPS.KEYS.portfolio) { buildFilter(); renderLog(); }
+  });
+})();
+</script>
+
 <script>
 (function () {
   var COUNTER_KEY = "cifCounter";
@@ -295,6 +400,19 @@
   var requestDateField = document.getElementById("requestDate");
   var initiatedByDateField = document.getElementById("initiatedByDate");
   var statusBadge = document.getElementById("statusBadge");
+
+  // Populate the Project Code dropdown from the shared portfolio so
+  // CIFs tag a real project code (and so the log below can filter by it).
+  (function populateProjectCode() {
+    var sel = document.getElementById("projectCode");
+    var opts = ['<option value="">&mdash; Not project-specific &mdash;</option>'];
+    PPS.getPortfolio().forEach(function (p) {
+      opts.push('<option value="' + PPS.esc(p.code) + '">' + PPS.esc(p.code) + ' \u2014 ' + PPS.esc(p.name) + '</option>');
+    });
+    sel.innerHTML = opts.join("");
+    var pre = new URLSearchParams(location.search).get("project");
+    if (pre && PPS.getProject(pre)) sel.value = pre;
+  })();
 
   // Preview CIF number + today's date before submission
   cifNumberField.value = formatCifNumber(getCounter() + 1);
@@ -419,6 +537,7 @@
     var record = buildRecord("Submitted");
     var log = upsert(record);
     downloadCsv(buildCsv(log), "cif-submissions-log.csv");
+    window.dispatchEvent(new CustomEvent("cif:updated"));
 
     formStatus.textContent = "CIF " + cifNumberField.value + " submitted and logged to CSV.";
     formStatus.className = "success";

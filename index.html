@@ -8,6 +8,34 @@
 <style>
   .hub-sub { color: var(--ink-soft); margin: 16px 0 18px; font-size: 13px; max-width: 70ch; }
 
+  .dash-section { margin: 24px 0 8px; }
+  .dash-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .dash-head h2 {
+    font-size: 12.5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+    color: var(--ink-soft); margin: 0;
+  }
+  .dash-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  @media (max-width: 900px) { .dash-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px) { .dash-grid { grid-template-columns: 1fr; } }
+  .dash-tile {
+    border: 1px solid var(--line); border-radius: 6px; padding: 16px 17px;
+    background: var(--surface); text-decoration: none; color: inherit;
+    display: flex; flex-direction: column; gap: 6px;
+    transition: border-color .12s ease, box-shadow .12s ease;
+  }
+  .dash-tile:hover { border-color: #b9c6d2; box-shadow: 0 2px 10px rgba(27,39,51,0.09); text-decoration: none; }
+  .dash-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--ink-soft); }
+  .dash-num { font-size: 28px; font-weight: 700; color: var(--ink); line-height: 1.1; }
+  .dash-num.is-zero { color: var(--ink-faint); }
+  .dash-sub { font-size: 11.5px; color: var(--ink-soft); }
+  .dash-rows { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+  .dash-row { display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; }
+  .dash-row-label { display: flex; align-items: center; gap: 6px; color: var(--ink-soft); }
+  .dash-row-count { font-weight: 600; color: var(--ink); }
+  .dash-list { margin: 4px 0 0; padding: 0; list-style: none; font-size: 11.5px; color: var(--ink-soft); }
+  .dash-list li { padding: 3px 0; border-top: 1px solid var(--line-soft); }
+  .dash-list li:first-child { border-top: none; }
+
   .group-block { margin: 26px 0 6px; }
   .group-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
   .group-head h2 {
@@ -80,7 +108,37 @@
   </div>
 </header>
 
-<p class="hub-sub">Three groups, seven views: the Project Intake Process, a standalone Portfolio Review, and Project Status governance tools. Pick a page below to begin.</p>
+<p class="hub-sub">Three groups, seven views: the Project Intake Process, a standalone Portfolio Review, and Project Status governance tools.</p>
+
+<div class="dash-section">
+  <div class="dash-head"><h2>Portfolio at a Glance</h2><span class="muted" id="dashUpdated"></span></div>
+  <div class="dash-grid">
+    <a class="dash-tile" href="portfolio-review.html">
+      <span class="dash-label">Projects by Status</span>
+      <span class="dash-num" id="dashProjTotal">&ndash;</span>
+      <span class="dash-sub" id="dashProjSub"></span>
+      <div class="dash-rows" id="dashProjRows"></div>
+    </a>
+    <a class="dash-tile" href="risk-decision-log.html">
+      <span class="dash-label">Open Risks &amp; Issues</span>
+      <span class="dash-num" id="dashRiskNum">&ndash;</span>
+      <span class="dash-sub" id="dashRiskSub"></span>
+    </a>
+    <a class="dash-tile" href="intake-report.html">
+      <span class="dash-label">Pending Intakes</span>
+      <span class="dash-num" id="dashIntakeNum">&ndash;</span>
+      <span class="dash-sub" id="dashIntakeSub"></span>
+    </a>
+    <a class="dash-tile" href="portfolio-review.html">
+      <span class="dash-label">Overdue Items</span>
+      <span class="dash-num" id="dashOverdueNum">&ndash;</span>
+      <span class="dash-sub" id="dashOverdueSub"></span>
+      <ul class="dash-list" id="dashOverdueList"></ul>
+    </a>
+  </div>
+</div>
+
+<p class="hub-sub" style="margin-top:22px;">Pick a page below to begin.</p>
 
 <div class="group-block">
   <div class="group-head"><h2>Project Intake Process</h2><span class="group-sub">2 linked steps</span></div>
@@ -153,8 +211,62 @@
     if (confirm("Reset all data back to the seeded demo set? This clears any intake requests you submitted on this device.")) {
       PPS.resetAll();
       alert("Data has been reset to the demo set.");
+      renderDashboard();
     }
   });
+
+  function renderDashboard() {
+    var stats = PPS.getDashboardStats();
+
+    // Projects by status
+    var total = stats.totalActive + stats.totalCompleted;
+    document.getElementById("dashProjTotal").textContent = total;
+    document.getElementById("dashProjSub").textContent =
+      stats.totalActive + " active \u00b7 " + stats.totalCompleted + " completed";
+    document.getElementById("dashProjRows").innerHTML = stats.statusBreakdown
+      .filter(function (s) { return s.count > 0; })
+      .map(function (s) {
+        return '<div class="dash-row"><span class="dash-row-label"><span class="dot ' + s.dot + '"></span>' +
+               PPS.esc(s.label) + '</span><span class="dash-row-count">' + s.count + '</span></div>';
+      }).join("");
+
+    // Open risks & issues
+    var riskNumEl = document.getElementById("dashRiskNum");
+    riskNumEl.textContent = stats.openRisksTotal;
+    riskNumEl.classList.toggle("is-zero", stats.openRisksTotal === 0);
+    document.getElementById("dashRiskSub").textContent = stats.openRisksTotal
+      ? (stats.openRisks + " risk" + (stats.openRisks === 1 ? "" : "s") + " \u00b7 " +
+         stats.openIssues + " issue" + (stats.openIssues === 1 ? "" : "s"))
+      : "Nothing open right now";
+
+    // Pending intakes
+    var intakeNumEl = document.getElementById("dashIntakeNum");
+    intakeNumEl.textContent = stats.pendingIntakes;
+    intakeNumEl.classList.toggle("is-zero", stats.pendingIntakes === 0);
+    document.getElementById("dashIntakeSub").textContent = stats.pendingIntakes
+      ? "Awaiting review or decision"
+      : "Register is fully processed";
+
+    // Overdue items
+    var overdueNumEl = document.getElementById("dashOverdueNum");
+    overdueNumEl.textContent = stats.overdueCount;
+    overdueNumEl.classList.toggle("is-zero", stats.overdueCount === 0);
+    document.getElementById("dashOverdueSub").textContent = stats.overdueCount
+      ? "Past end date, not yet closed"
+      : "All projects on schedule";
+    var listEl = document.getElementById("dashOverdueList");
+    var shown = stats.overdueProjects.slice(0, 4).map(function (p) {
+      return "<li>" + PPS.esc(p.code) + " &mdash; " + PPS.esc(p.name) + "</li>";
+    });
+    if (stats.overdueProjects.length > 4) {
+      shown.push("<li>+" + (stats.overdueProjects.length - 4) + " more</li>");
+    }
+    listEl.innerHTML = shown.join("");
+
+    document.getElementById("dashUpdated").textContent = "as of " + PPS.today();
+  }
+
+  renderDashboard();
 </script>
 
 </body>
