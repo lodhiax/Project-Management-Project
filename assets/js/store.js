@@ -398,18 +398,17 @@
      SEEDING  (runs once; never wipes real submissions)
      ============================================================ */
   function ensureSeed() {
-    if (read(KEYS.seeded, false) === true) {
-      // Already seeded — just make sure the ID counter never regresses.
-      if (Number(read(KEYS.counter, 0)) < SEED_REGISTER.length) {
-        write(KEYS.counter, SEED_REGISTER.length);
-      }
-      return;
-    }
-    if (read(KEYS.register, null) === null)  write(KEYS.register, SEED_REGISTER);
-    if (read(KEYS.portfolio, null) === null) write(KEYS.portfolio, SEED_PORTFOLIO);
+    // Per-key backfill. Each guard writes ONLY when its key is absent, so it
+    // never clobbers real data you've entered — and, crucially, seed blocks
+    // ADDED in a later version (resources, allocations, financials, ...) still
+    // reach existing users whose global "seeded" flag was set on an earlier
+    // visit. A key emptied on purpose via the UI is stored as [] (not null),
+    // so intentional deletions are respected and never re-seeded.
+    if (read(KEYS.register, null) === null)   write(KEYS.register, SEED_REGISTER);
+    if (read(KEYS.portfolio, null) === null)  write(KEYS.portfolio, SEED_PORTFOLIO);
     if (read(KEYS.scorecards, null) === null) write(KEYS.scorecards, SEED_SCORECARDS);
-    if (read(KEYS.risks, null) === null)     write(KEYS.risks, SEED_RISKS);
-    if (read(KEYS.decisions, null) === null) write(KEYS.decisions, SEED_DECISIONS);
+    if (read(KEYS.risks, null) === null)      write(KEYS.risks, SEED_RISKS);
+    if (read(KEYS.decisions, null) === null)  write(KEYS.decisions, SEED_DECISIONS);
     if (read(KEYS.resources, null) === null)   write(KEYS.resources, SEED_RESOURCES);
     if (read(KEYS.allocations, null) === null) write(KEYS.allocations, SEED_ALLOCATIONS);
     if (read(KEYS.financials, null) === null)  write(KEYS.financials, SEED_FINANCIALS);
