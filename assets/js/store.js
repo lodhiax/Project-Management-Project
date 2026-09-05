@@ -1083,13 +1083,22 @@
     var risks = getRisksByProject(code);
     var decisions = getDecisionsByProject(code);
     var crs = getChangeRequestsByProject(code);
+    var finRec = getFinancials(code);
+    var capRec = getCapacityView().byProject.filter(function (p) { return p.code === code; })[0] || null;
     return {
       risks: risks,
       decisions: decisions,
       changeRequests: crs,
       openRisks: risks.filter(function (r) { return r.status === "Open"; }).length,
       openDecisions: decisions.filter(function (d) { return d.status === "Open"; }).length,
-      openChangeRequests: crs.filter(isCrOpen).length
+      openChangeRequests: crs.filter(isCrOpen).length,
+      // Added so the Scorecard's linked-records panel can show the same
+      // project's procurement/cost-reduction figures (from Project Financials)
+      // and weekly resource demand (from Resource Management) alongside its
+      // risks, decisions and change requests -- read-only, same shared data.
+      financials: finRec,
+      financialsRoiPct: finRec ? roiPct(finRec.procurementReturn, finRec.procurementCost) : null,
+      capacity: capRec
     };
   }
 

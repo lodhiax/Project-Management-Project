@@ -202,7 +202,7 @@
       var st = PPS.portfolioStatus(p.status);
       return '<tr>' +
         '<td class="center">' + (i + 1) + '</td>' +
-        '<td>' + esc(p.name) + ' <span class="muted">(' + esc(p.code) + ')</span></td>' +
+        '<td><a href="scorecard.html?project=' + encodeURIComponent(p.code) + '" title="View Scorecard">' + esc(p.name) + '</a> <span class="muted">(' + esc(p.code) + ')</span></td>' +
         '<td class="status-cell"><span class="dot ' + st.dot + '" title="' + esc(st.label) + '"></span></td>' +
         '<td class="center">' + esc(p.demand) + '</td>' +
         '<td>' + projectChips(p.allocations) + '</td>' +
@@ -214,14 +214,17 @@
 
   var tabs = document.querySelectorAll(".pps-tab");
   var panels = { byResource: document.getElementById("panel-byResource"), byProject: document.getElementById("panel-byProject") };
+  function activateTab(name) {
+    if (!panels[name]) return;
+    tabs.forEach(function (t) { t.classList.toggle("active", t.getAttribute("data-tab") === name); });
+    Object.keys(panels).forEach(function (k) { panels[k].classList.toggle("active", k === name); });
+  }
   tabs.forEach(function (tab) {
-    tab.addEventListener("click", function () {
-      tabs.forEach(function (t) { t.classList.remove("active"); });
-      Object.keys(panels).forEach(function (k) { panels[k].classList.remove("active"); });
-      tab.classList.add("active");
-      panels[tab.getAttribute("data-tab")].classList.add("active");
-    });
+    tab.addEventListener("click", function () { activateTab(tab.getAttribute("data-tab")); });
   });
+  // Deep link: capacity.html#byProject opens straight on the By Project tab
+  // (used by the Scorecard's Linked Governance Records panel).
+  if (location.hash === "#byProject") activateTab("byProject");
 
   window.addEventListener("storage", function (e) {
     if (e.key === PPS.KEYS.resources || e.key === PPS.KEYS.allocations || e.key === PPS.KEYS.portfolio) render();

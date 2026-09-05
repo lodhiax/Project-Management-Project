@@ -200,6 +200,19 @@
       }).join("");
     }
 
+    // Procurement figures (Cost Reduction / ROI) live on the Project Financials
+    // page, a separate metric from the Budgeted/Spent/ETC row above -- shown
+    // here as an additional row (not a replacement) so both are visible
+    // side by side, with a link through to the full Financial Dashboard.
+    function procurementRows(gov) {
+      if (!gov.financials) {
+        return '<tr><td class="panel-lbl">Procurement (Project Financials)</td><td class="panel-val" style="color:var(--ink-faint);font-weight:400;font-style:italic;">Not entered yet</td></tr>';
+      }
+      var money = function (n) { return "$" + (Number(n) || 0).toLocaleString(); };
+      return '<tr><td class="panel-lbl">Cost Reduction (Procurement)</td><td class="panel-val">' + money(gov.financials.costReduction) + '</td></tr>' +
+        '<tr><td class="panel-lbl">Procurement ROI</td><td class="panel-val">' + Math.round(gov.financialsRoiPct) + '%</td></tr>';
+    }
+
     function render(code) {
       var p = PPS.getProject(code);
       if (!p) { mount.innerHTML = '<p class="pps-empty">Project not found.</p>'; return; }
@@ -214,6 +227,7 @@
 
       var cr  = (d && d.changeRequests) || { approved: 0, rejected: 0, lastCycle: 0 };
       var fin = (d && d.financials) || { budgeted: "\u2014", spent: "\u2014", etc: "\u2014" };
+      var gov = PPS.getProjectGovernance(p.code);
 
       /* update the record-header strip */
       document.getElementById("scProjectName").textContent = p.name;
@@ -266,6 +280,7 @@
             '<tr><td class="panel-lbl">Budgeted</td><td class="panel-val">' + esc(fin.budgeted) + '</td></tr>' +
             '<tr><td class="panel-lbl">Spent to date</td><td class="panel-val">' + esc(fin.spent) + '</td></tr>' +
             '<tr><td class="panel-lbl">Estimate to Complete</td><td class="panel-val">' + esc(fin.etc) + '</td></tr>' +
+            procurementRows(gov) +
           '</table>' +
         '</div>' +
       '</div>' +
@@ -311,25 +326,35 @@
       '</table>' +
 
       // Linked Governance Records (live, cross-page)
-      linkedGovernancePanel(p);
+      linkedGovernancePanel(p, gov);
     }
 
-    function linkedGovernancePanel(p) {
-      var gov = PPS.getProjectGovernance(p.code);
+    function linkedGovernancePanel(p, gov) {
       var q = "?project=" + encodeURIComponent(p.code);
+      var money = function (n) { return "$" + (Number(n) || 0).toLocaleString(); };
+      var costCell = gov.financials
+        ? money(gov.financials.costReduction) + ' <span class="note">(' + Math.round(gov.financialsRoiPct) + '% ROI)</span>'
+        : '<span style="color:var(--ink-faint);">Not entered</span>';
+      var demandCell = gov.capacity
+        ? esc(gov.capacity.demand) + ' hrs/wk <span class="note">(' + esc(gov.capacity.allocations.length) + ' allocated)</span>'
+        : '<span style="color:var(--ink-faint);">No demand logged</span>';
       return '<table class="section">' +
-        '<colgroup><col style="width:34%"><col style="width:22%"><col style="width:22%"><col style="width:22%"></colgroup>' +
-        '<tr class="sec-head"><td colspan="4">Linked Governance Records <span class="note">(live \u2014 tagged to this project code)</span></td></tr>' +
-        '<tr class="col-head"><td>Project</td><td>Open Risks / Issues</td><td>Open Decisions</td><td>Open Change Requests</td></tr>' +
+        '<colgroup><col style="width:20%"><col style="width:16%"><col style="width:16%"><col style="width:16%"><col style="width:16%"><col style="width:16%"></colgroup>' +
+        '<tr class="sec-head"><td colspan="6">Linked Governance Records <span class="note">(live \u2014 tagged to this project code)</span></td></tr>' +
+        '<tr class="col-head"><td>Project</td><td>Open Risks / Issues</td><td>Open Decisions</td><td>Open Change Requests</td><td>Cost Reduction</td><td>Resource Demand</td></tr>' +
         '<tr>' +
           '<td class="val-hl">' + esc(p.code) + '</td>' +
           '<td>' + esc(gov.openRisks) + ' of ' + esc(gov.risks.length) + '</td>' +
           '<td>' + esc(gov.openDecisions) + ' of ' + esc(gov.decisions.length) + '</td>' +
           '<td>' + esc(gov.openChangeRequests) + ' of ' + esc(gov.changeRequests.length) + '</td>' +
+          '<td>' + costCell + '</td>' +
+          '<td>' + demandCell + '</td>' +
         '</tr>' +
-        '<tr><td colspan="4" style="text-align:right;padding:9px 10px;">' +
+        '<tr><td colspan="6" style="text-align:right;padding:9px 10px;">' +
           '<a class="pps-btn secondary" href="risk-decision-log.html' + q + '">View Risks &amp; Decisions &rarr;</a>&nbsp; ' +
-          '<a class="pps-btn secondary" href="change-request-form.html' + q + '">View Change Requests &rarr;</a>' +
+          '<a class="pps-btn secondary" href="change-request-form.html' + q + '">View Change Requests &rarr;</a>&nbsp; ' +
+          '<a class="pps-btn secondary" href="financial-dashboard.html' + q + '">View Financial Dashboard &rarr;</a>&nbsp; ' +
+          '<a class="pps-btn secondary" href="capacity.html#byProject">View Resource Capacity &rarr;</a>' +
         '</td></tr>' +
       '</table>';
     }
@@ -346,7 +371,8 @@
     });
     window.addEventListener("storage", function (e) {
       if (e.key === PPS.KEYS.portfolio) { buildPicker(); render(picker.value); }
-      else if (e.key === PPS.KEYS.risks || e.key === PPS.KEYS.decisions || e.key === "cifSubmissionsLog") {
+      else if (e.key === PPS.KEYS.risks || e.key === PPS.KEYS.decisions || e.key === "cifSubmissionsLog" ||
+               e.key === PPS.KEYS.financials || e.key === PPS.KEYS.resources || e.key === PPS.KEYS.allocations) {
         render(picker.value);
       }
     });
