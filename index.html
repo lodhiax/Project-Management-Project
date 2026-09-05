@@ -14,7 +14,7 @@
     font-size: 12.5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
     color: var(--ink-soft); margin: 0;
   }
-  .dash-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .dash-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
   @media (max-width: 900px) { .dash-grid { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 560px) { .dash-grid { grid-template-columns: 1fr; } }
   .dash-tile {
@@ -106,13 +106,13 @@
   </div>
   <div class="crm-fields">
     <div class="crm-field"><span class="crm-flabel">Groups</span><span class="crm-fvalue">3</span></div>
-    <div class="crm-field"><span class="crm-flabel">Views</span><span class="crm-fvalue">8</span></div>
+    <div class="crm-field"><span class="crm-flabel">Views</span><span class="crm-fvalue">11</span></div>
     <div class="crm-field"><span class="crm-flabel">Data</span><span class="crm-fvalue">Local</span></div>
     <div class="crm-field"><span class="crm-flabel">Status</span><span class="crm-fvalue"><span class="dot dot-green"></span>Ready</span></div>
   </div>
 </header>
 
-<p class="hub-sub">Three groups, eight views: the Project Intake Process, Portfolio Review &amp; Resource Capacity, and Project Status governance tools.</p>
+<p class="hub-sub">Three groups, eleven views: the Project Intake Process, portfolio-wide rollups (review, capacity, financials), and the Project Status governance tools that drive them.</p>
 
 <div class="dash-section">
   <div class="dash-head"><h2>Portfolio at a Glance</h2><span class="muted" id="dashUpdated"></span></div>
@@ -139,6 +139,16 @@
       <span class="dash-sub" id="dashOverdueSub"></span>
       <ul class="dash-list" id="dashOverdueList"></ul>
     </a>
+    <a class="dash-tile" href="financial-dashboard.html">
+      <span class="dash-label">Cost Reduction (YTD)</span>
+      <span class="dash-num" id="dashFinNum">&ndash;</span>
+      <span class="dash-sub" id="dashFinSub"></span>
+    </a>
+    <a class="dash-tile" href="capacity.html">
+      <span class="dash-label">Resource Load</span>
+      <span class="dash-num" id="dashCapNum">&ndash;</span>
+      <span class="dash-sub" id="dashCapSub"></span>
+    </a>
   </div>
 </div>
 
@@ -161,7 +171,7 @@
 </div>
 
 <div class="group-block">
-  <div class="group-head"><h2>Portfolio Review</h2><span class="group-sub">2 views</span></div>
+  <div class="group-head"><h2>Portfolio Review</h2><span class="group-sub">3 views</span></div>
   <div class="grid">
     <a class="card" href="portfolio-review.html">
       <div class="step">1. Portfolio Review</div>
@@ -173,11 +183,16 @@
       <h3>Resource Capacity vs. Demand</h3>
       <p>Weekly hours committed against each person or team's capacity, rolled up across every active project. Flags who's stretched thin before it becomes a schedule risk.</p>
     </a>
+    <a class="card" href="financial-dashboard.html">
+      <div class="step">3. Financial Dashboard</div>
+      <h3>Project Financial Dashboard</h3>
+      <p>Cost reduction, savings, avoidance and procurement ROI rolled up across the active portfolio, with category and supplier breakdowns and a quarterly trend.</p>
+    </a>
   </div>
 </div>
 
 <div class="group-block">
-  <div class="group-head"><h2>Project Status</h2><span class="group-sub">4 governance views</span></div>
+  <div class="group-head"><h2>Project Status</h2><span class="group-sub">6 governance views</span></div>
   <div class="grid">
     <a class="card" href="scorecard.html">
       <div class="step">1. Project Scorecard</div>
@@ -199,6 +214,16 @@
       <h3>Change Implementation Form</h3>
       <p>A CIF-style deployment change form: requestor details, change &amp; rollback plan, IT systems and networks sign-off, and implementation status &mdash; all logged locally.</p>
     </a>
+    <a class="card" href="financials.html">
+      <div class="step">5. Project Financials</div>
+      <h3>Project Financials</h3>
+      <p>Per-project cost of purchase, cost reduction, savings and avoidance, entered by category and supplier. Feeds the Financial Dashboard directly &mdash; nothing re-entered.</p>
+    </a>
+    <a class="card" href="resources.html">
+      <div class="step">6. Resource Management</div>
+      <h3>Resource Management</h3>
+      <p>The roster of people and shared pools, plus their weekly project allocations. This is the source data behind Resource Capacity vs. Demand.</p>
+    </a>
   </div>
 </div>
 
@@ -206,8 +231,9 @@
   <strong>How the groups are linked</strong><br>
   Intake Form <span class="arrow">&rarr;</span> Intake Report &nbsp;&nbsp;(submissions populate the read-only register)<br>
   Portfolio Review <span class="arrow">&rarr;</span> Project Scorecard &nbsp;&nbsp;(portfolio data drives every derived scorecard value)<br>
-  Risk &amp; Decision, Repository, and Change Request are standalone governance and document-control tools on the same shared data layer.<br>
-  Resource Capacity reads the same active-project list as the Portfolio Review, plus a lightweight allocation layer, to flag over- or under-committed people and teams.
+  Resource Management <span class="arrow">&rarr;</span> Resource Capacity vs. Demand &nbsp;&nbsp;(roster and allocations roll up automatically for active projects)<br>
+  Project Financials <span class="arrow">&rarr;</span> Financial Dashboard &nbsp;&nbsp;(per-project cost entries roll up into the portfolio's savings, avoidance and ROI view)<br>
+  Risk &amp; Decision, Repository, and Change Request are standalone governance and document-control tools on the same shared data layer.
 </div>
 
 <div class="footer">
@@ -272,6 +298,25 @@
       shown.push("<li>+" + (stats.overdueProjects.length - 4) + " more</li>");
     }
     listEl.innerHTML = shown.join("");
+
+    // Cost reduction (YTD), rolled up across the active portfolio
+    var fin = PPS.getAllFinancials();
+    var finNumEl = document.getElementById("dashFinNum");
+    var costReduction = fin.totals.costReduction || 0;
+    finNumEl.textContent = "$" + costReduction.toLocaleString();
+    finNumEl.classList.toggle("is-zero", costReduction === 0);
+    document.getElementById("dashFinSub").textContent = fin.count
+      ? Math.round(fin.roiPct) + "% procurement ROI \u00b7 " + fin.count + " project" + (fin.count === 1 ? "" : "s")
+      : "No financials recorded yet";
+
+    // Resource load: over-allocated / fully loaded people & pools
+    var cap = PPS.getCapacityView();
+    var capNumEl = document.getElementById("dashCapNum");
+    capNumEl.textContent = cap.overCount;
+    capNumEl.classList.toggle("is-zero", cap.overCount === 0);
+    document.getElementById("dashCapSub").textContent = cap.byResource.length
+      ? "over-allocated \u00b7 " + cap.fullCount + " fully loaded \u00b7 " + cap.availableCount + " available"
+      : "No resources on the roster yet";
 
     document.getElementById("dashUpdated").textContent = "as of " + PPS.today();
   }
