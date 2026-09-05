@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Financial Dashboard</title>
+<link rel="stylesheet" href="assets/css/app.css">
+<style>
+  /* ---- layout: charts on the left/centre, KPI rail on the right ---- */
+  .fin-grid { display: grid; grid-template-columns: 1.05fr 1.15fr 0.9fr; gap: 14px; align-items: start; }
+  @media (max-width: 1080px) { .fin-grid { grid-template-columns: 1fr 1fr; } .fin-rail { grid-column: 1 / -1; } .fin-rail-tiles { grid-template-columns: repeat(3,1fr); } }
+  @media (max-width: 720px)  { .fin-grid { grid-template-columns: 1fr; } .fin-rail-tiles { grid-template-columns: 1fr 1fr; } }
+
+  .fin-card { border: 1px solid var(--line); border-radius: 6px; background: var(--surface); padding: 14px 16px; }
+  .fin-card + .fin-card { margin-top: 14px; }
+  .fin-card h3 {
+    margin: 0 0 12px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.5px;
+    text-transform: uppercase; color: var(--ink-soft); padding-bottom: 7px; border-bottom: 1px solid var(--line-soft);
+  }
+  .fin-card h3 .sub { float: right; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--ink); }
+
+  /* donut + legend */
+  .fin-donut-wrap { display: flex; gap: 14px; align-items: center; }
+  .fin-donut-center { font-size: 12px; fill: var(--ink-soft); }
+  .fin-donut-total  { font-size: 15px; font-weight: 700; fill: var(--ink); }
+  .fin-legend { display: grid; gap: 6px; font-size: 12px; color: var(--ink); flex: 1; }
+  .fin-legend .row { display: flex; align-items: center; gap: 7px; justify-content: space-between; }
+  .fin-legend .lhs { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .fin-legend .sw { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+  .fin-legend .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fin-legend .vl { font-weight: 600; color: var(--ink); white-space: nowrap; }
+
+  /* horizontal bar rows (savings / avoidance) */
+  .fin-hbar { display: grid; grid-template-columns: 108px 1fr 42px; align-items: center; gap: 8px; margin: 7px 0; font-size: 12px; }
+  .fin-hbar .lab { color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fin-hbar .track { height: 12px; background: var(--fill); border-radius: 3px; overflow: hidden; }
+  .fin-hbar .fill { height: 100%; border-radius: 3px; }
+  .fin-hbar .val { text-align: right; font-weight: 600; color: var(--ink); }
+
+  .fin-empty { color: var(--ink-faint); font-style: italic; font-size: 12.5px; padding: 10px 2px; }
+
+  /* KPI rail */
+  .fin-rail-tiles { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  .fin-kpi { border: 1px solid var(--line); border-radius: 6px; background: var(--surface); padding: 12px 14px; display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; }
+  .fin-kpi .k-label { grid-column: 1 / -1; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--ink-soft); }
+  .fin-kpi .k-val { font-size: 21px; font-weight: 700; color: var(--ink); line-height: 1.1; }
+  .fin-kpi .k-year { font-size: 11px; color: var(--ink-faint); }
+  .fin-kpi .k-spark { grid-row: 2 / 4; align-self: center; }
+  .fin-kpi .k-trend { font-size: 10.5px; color: var(--ink-soft); }
+
+  /* supplier table */
+  table.fin-tbl { width: 100%; border-collapse: collapse; }
+  table.fin-tbl td, table.fin-tbl th { border: 1px solid var(--line); padding: 7px 10px; font-size: 12.5px; text-align: left; }
+  table.fin-tbl thead td { background: var(--ribbon); font-weight: 700; color: var(--ink-soft); font-size: 11px; letter-spacing: 0.4px; text-transform: uppercase; }
+  table.fin-tbl td.num { text-align: right; font-weight: 600; color: var(--ink); white-space: nowrap; }
+  table.fin-tbl tbody tr:nth-child(even) { background: var(--line-soft); }
+
+  .chart-note { font-size: 11px; color: var(--ink-faint); margin-top: 8px; }
+  .axis-txt { font-size: 10.5px; fill: var(--ink-faint); }
+  .grid-line { stroke: var(--line-soft); stroke-width: 1; }
+  .bench-line { stroke: var(--warn); stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .bench-txt { font-size: 10px; fill: var(--warn); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<nav class="pps-nav">
+  <span class="pps-brand">PMO Suite</span>
+  <a href="index.html">Home</a>
+  <div class="pps-dropdown">
+    <button type="button" class="pps-dropdown-toggle">Project Intake Process</button>
+    <div class="pps-dropdown-menu">
+      <a href="intake-form.html">1. Intake Form</a>
+      <a href="intake-report.html">2. Intake Report</a>
+    </div>
+  </div>
+  <a href="portfolio-review.html">Portfolio Review</a>
+  <a href="capacity.html">Resource Capacity</a>
+  <a href="financial-dashboard.html" class="active">Financial Dashboard</a>
+  <div class="pps-dropdown">
+    <button type="button" class="pps-dropdown-toggle">Project Status</button>
+    <div class="pps-dropdown-menu">
+      <a href="scorecard.html">1. Project Scorecard</a>
+      <a href="risk-decision-log.html">2. Risk &amp; Decision</a>
+      <a href="repository.html">3. Repository</a>
+      <a href="change-request-form.html">4. Change Request</a>
+    </div>
+  </div>
+</nav>
+
+<header class="crm-head">
+  <div class="crm-id">
+    <span class="crm-eyebrow">Portfolio</span>
+    <div class="crm-title">Project Financial Dashboard</div>
+  </div>
+  <div class="crm-fields">
+    <div class="crm-field"><span class="crm-flabel">Report Date</span><span class="crm-fvalue" id="reportDate">&mdash;</span></div>
+    <div class="crm-field"><span class="crm-flabel">View</span><span class="crm-fvalue" id="viewLabel">&mdash;</span></div>
+    <div class="crm-field"><span class="crm-flabel">Projects Reporting</span><span class="crm-fvalue" id="projCount">&mdash;</span></div>
+  </div>
+</header>
+
+<div class="crm-flow single-stage" aria-label="Financial Dashboard">
+  <div class="crm-stage is-active"><span class="crm-stage-mark">1</span><span class="crm-stage-label">Financial Dashboard</span></div>
+</div>
+
+<div class="pps-toolbar" style="justify-content:space-between;align-items:center;">
+  <span class="pps-note" style="margin:0;">
+    <span class="pps-live">Live</span>
+    &nbsp;Cost reduction, procurement ROI, purchase cost and supplier savings, keyed to each project in the Portfolio Review. Figures are demo data for now and are not yet reconciled with the Scorecard's own budget/spend numbers.
+  </span>
+  <label style="font-weight:600;color:var(--ink);font-size:12.5px;">
+    Project:&nbsp;
+    <select id="projectPicker" class="pps-select"></select>
+  </label>
+</div>
+
+<script src="assets/js/store.js"></script>
+
+<div class="fin-grid">
+
+  <!-- ===================== LEFT COLUMN ===================== -->
+  <div class="fin-col">
+    <div class="fin-card">
+      <h3>Cost Reduction <span class="sub" id="donutHeadline">&mdash;</span></h3>
+      <div id="donutWrap" class="fin-donut-wrap"><!-- injected --></div>
+      <div class="chart-note">Reduction attributed by cost category. Segments sum to the headline.</div>
+    </div>
+
+    <div class="fin-card">
+      <h3>Procurement ROI <span class="sub" id="roiHeadline">&mdash;</span></h3>
+      <div id="roiBars"><!-- injected --></div>
+      <div class="chart-note">ROI by category vs. a 30% benchmark. ROI is derived from procurement cost and return.</div>
+    </div>
+  </div>
+
+  <!-- ===================== CENTRE COLUMN ===================== -->
+  <div class="fin-col">
+    <div class="fin-card">
+      <h3>Savings <span class="sub">% by category</span></h3>
+      <div id="savingsBars"><!-- injected --></div>
+    </div>
+
+    <div class="fin-card">
+      <h3>Cost Avoidance <span class="sub">% by category</span></h3>
+      <div id="avoidanceBars"><!-- injected --></div>
+    </div>
+
+    <div class="fin-card">
+      <h3>Top 5 Suppliers <span class="sub">by cost reduction</span></h3>
+      <table class="fin-tbl">
+        <thead><tr><td>Supplier</td><td style="text-align:right;">Cost Reduction</td></tr></thead>
+        <tbody id="supplierBody"><!-- injected --></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===================== RIGHT RAIL (KPIs) ===================== -->
+  <div class="fin-col fin-rail">
+    <div class="fin-rail-tiles" id="kpiTiles"><!-- injected --></div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var esc = PPS.esc;
+  var ALL = "__all__";
+  var YEAR = "2026";
+  var BENCHMARK = 30;   // % ROI reference line (fixed target, same idea as the model dashboard)
+
+  // Palette drawn from the app's own tokens so the page reads native.
+  var CAT_COLORS = ["#0f4f8c", "#1568b8", "#4a86c5", "#4d9a68", "#7fb086", "#b9c6d2", "#c9a24a"];
+  var C_LINK = "#1568b8", C_GREEN = "#4d9a68";
+
+  var picker = document.getElementById("projectPicker");
+  document.getElementById("reportDate").textContent = PPS.today();
+
+  function money(n) { return "$" + (Number(n) || 0).toLocaleString(); }
+  function pct(n) { return (Math.round((Number(n) || 0) * 10) / 10) + "%"; }
+
+  /* ---- normalise both "all projects" and a single project into one shape ---- */
+  function buildView(code) {
+    if (code === ALL) {
+      var a = PPS.getAllFinancials();
+      return {
+        isAll: true,
+        count: a.count,
+        kpis: {
+          costOfPurchase: a.totals.costOfPurchase,
+          costReduction:  a.totals.costReduction,
+          costSaving:     a.totals.costSaving,
+          costAvoidance:  a.totals.costAvoidance,
+          procurementROI: a.roiPct
+        },
+        trend: a.trend,
+        donut: a.donut,
+        roiBars:       a.categoryRates.map(function (c) { return { name:c.name, pct:c.roiPct }; }).sort(byPctDesc),
+        savingsBars:   a.categoryRates.map(function (c) { return { name:c.name, pct:c.savingsPct }; }).sort(byPctDesc),
+        avoidanceBars: a.categoryRates.map(function (c) { return { name:c.name, pct:c.avoidancePct }; }).sort(byPctDesc),
+        suppliers: a.topSuppliers
+      };
+    }
+    var r = PPS.getFinancials(code);
+    if (!r) return null;
+    function roiP(ret, cost) { return cost > 0 ? ((ret - cost) / cost * 100) : 0; }
+    var cats = (r.categories || []).slice();
+    var t = r.trend || {};
+    var roiTrend = [0,1,2,3].map(function (i) {
+      var c = (t.procurementCost || [0,0,0,0])[i], rr = (t.procurementReturn || [0,0,0,0])[i];
+      return roiP(rr, c);
+    });
+    return {
+      isAll: false,
+      count: 1,
+      kpis: {
+        costOfPurchase: r.costOfPurchase, costReduction: r.costReduction,
+        costSaving: r.costSaving, costAvoidance: r.costAvoidance,
+        procurementROI: roiP(r.procurementReturn, r.procurementCost)
+      },
+      trend: {
+        costOfPurchase: t.costOfPurchase || [0,0,0,0],
+        costReduction:  t.costReduction  || [0,0,0,0],
+        costSaving:     t.costSaving     || [0,0,0,0],
+        costAvoidance:  t.costAvoidance  || [0,0,0,0],
+        procurementROI: roiTrend
+      },
+      donut: cats.map(function (c) { return { name:c.name, value:c.costReduction }; }).sort(function (a,b){ return b.value-a.value; }),
+      roiBars:       cats.map(function (c) { return { name:c.name, pct:c.roiPct }; }).sort(byPctDesc),
+      savingsBars:   cats.map(function (c) { return { name:c.name, pct:c.savingsPct }; }).sort(byPctDesc),
+      avoidanceBars: cats.map(function (c) { return { name:c.name, pct:c.avoidancePct }; }).sort(byPctDesc),
+      suppliers: (r.suppliers || []).slice().sort(function (a,b){ return b.costReduction-a.costReduction; }).slice(0,5)
+    };
+  }
+  function byPctDesc(a, b) { return b.pct - a.pct; }
+
+  /* ---- donut (SVG, one arc per category) ---- */
+  function renderDonut(donut, headlineTotal) {
+    var wrap = document.getElementById("donutWrap");
+    document.getElementById("donutHeadline").textContent = money(headlineTotal);
+    if (!donut.length || headlineTotal <= 0) {
+      wrap.innerHTML = '<div class="fin-empty">No cost reduction recorded for this project yet.</div>';
+      return;
+    }
+    var size = 132, r = 52, cx = size/2, cy = size/2, C = 2 * Math.PI * r, sw = 20;
+    var total = donut.reduce(function (a, d) { return a + d.value; }, 0) || 1;
+    var offset = 0, arcs = "";
+    donut.forEach(function (d, i) {
+      var frac = d.value / total, len = frac * C;
+      var color = CAT_COLORS[i % CAT_COLORS.length];
+      arcs += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + color +
+              '" stroke-width="' + sw + '" stroke-dasharray="' + len.toFixed(2) + ' ' + (C - len).toFixed(2) +
+              '" stroke-dashoffset="' + (-offset).toFixed(2) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')"></circle>';
+      offset += len;
+    });
+    var svg = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '" role="img" aria-label="Cost reduction by category">' +
+      arcs +
+      '<text class="fin-donut-center" x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle">Total</text>' +
+      '<text class="fin-donut-total" x="' + cx + '" y="' + (cy + 13) + '" text-anchor="middle">' + money(headlineTotal) + '</text>' +
+    '</svg>';
+
+    var legend = '<div class="fin-legend">' + donut.map(function (d, i) {
+      var color = CAT_COLORS[i % CAT_COLORS.length];
+      var share = Math.round(d.value / total * 100);
+      return '<div class="row"><span class="lhs"><span class="sw" style="background:' + color + '"></span>' +
+             '<span class="nm">' + esc(d.name) + '</span></span>' +
+             '<span class="vl">' + money(d.value) + ' <span style="color:var(--ink-faint);font-weight:500;">(' + share + '%)</span></span></div>';
+    }).join("") + '</div>';
+
+    wrap.innerHTML = svg + legend;
+  }
+
+  /* ---- vertical bars + benchmark line (Procurement ROI) ---- */
+  function renderRoiBars(bars, headlinePct) {
+    document.getElementById("roiHeadline").textContent = pct(headlinePct);
+    var host = document.getElementById("roiBars");
+    if (!bars.length) { host.innerHTML = '<div class="fin-empty">No procurement ROI to break down yet.</div>'; return; }
+    var W = 300, H = 150, padL = 26, padB = 34, padT = 10, padR = 8;
+    var plotW = W - padL - padR, plotH = H - padT - padB;
+    var maxV = Math.max(BENCHMARK, bars.reduce(function (m, b) { return Math.max(m, b.pct); }, 0));
+    maxV = Math.ceil(maxV / 20) * 20 || 20;
+    var n = bars.length, gap = 10, bw = (plotW - gap * (n + 1)) / n;
+    var svg = '<svg width="100%" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Procurement ROI by category">';
+    // gridlines + y labels
+    for (var g = 0; g <= maxV; g += Math.max(20, Math.round(maxV/4/10)*10)) {
+      var gy = padT + plotH - (g / maxV) * plotH;
+      svg += '<line class="grid-line" x1="' + padL + '" y1="' + gy + '" x2="' + (W - padR) + '" y2="' + gy + '"></line>';
+      svg += '<text class="axis-txt" x="' + (padL - 4) + '" y="' + (gy + 3) + '" text-anchor="end">' + g + '</text>';
+    }
+    // bars
+    bars.forEach(function (b, i) {
+      var x = padL + gap + i * (bw + gap);
+      var h = (b.pct / maxV) * plotH, y = padT + plotH - h;
+      svg += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="2" fill="' + C_LINK + '"></rect>';
+      svg += '<text class="axis-txt" x="' + (x + bw/2).toFixed(1) + '" y="' + (y - 3).toFixed(1) + '" text-anchor="middle" style="fill:var(--ink);font-weight:600;">' + Math.round(b.pct) + '</text>';
+      svg += '<text class="axis-txt" x="' + (x + bw/2).toFixed(1) + '" y="' + (H - padB + 12) + '" text-anchor="middle">' + shortCat(b.name) + '</text>';
+    });
+    // benchmark line
+    var by = padT + plotH - (BENCHMARK / maxV) * plotH;
+    svg += '<line class="bench-line" x1="' + padL + '" y1="' + by + '" x2="' + (W - padR) + '" y2="' + by + '"></line>';
+    svg += '<text class="bench-txt" x="' + (W - padR) + '" y="' + (by - 3) + '" text-anchor="end">Benchmark ' + BENCHMARK + '%</text>';
+    svg += '</svg>';
+    host.innerHTML = svg;
+  }
+  function shortCat(name) {
+    var map = { "Software Licenses":"Licenses", "Integration & Dev":"Integ.", "Infrastructure":"Infra", "Vendor Services":"Vendors", "Internal Labor":"Labor" };
+    return map[name] || name;
+  }
+
+  /* ---- horizontal % bars (savings / avoidance) ---- */
+  function renderHBars(hostId, bars, color) {
+    var host = document.getElementById(hostId);
+    if (!bars.length) { host.innerHTML = '<div class="fin-empty">Nothing to show for this project yet.</div>'; return; }
+    var maxV = Math.max(100, bars.reduce(function (m, b) { return Math.max(m, b.pct); }, 0));
+    host.innerHTML = bars.map(function (b) {
+      var w = Math.max(0, Math.min(100, (b.pct / maxV) * 100));
+      return '<div class="fin-hbar">' +
+        '<span class="lab" title="' + esc(b.name) + '">' + esc(b.name) + '</span>' +
+        '<span class="track"><span class="fill" style="width:' + w.toFixed(1) + '%;background:' + color + '"></span></span>' +
+        '<span class="val">' + Math.round(b.pct) + '%</span>' +
+      '</div>';
+    }).join("");
+  }
+
+  /* ---- supplier table ---- */
+  function renderSuppliers(list) {
+    var body = document.getElementById("supplierBody");
+    if (!list.length) { body.innerHTML = '<tr><td colspan="2" class="pps-empty">No supplier savings recorded yet.</td></tr>'; return; }
+    body.innerHTML = list.map(function (s) {
+      return '<tr><td>' + esc(s.name) + '</td><td class="num">' + money(s.costReduction) + '</td></tr>';
+    }).join("");
+  }
+
+  /* ---- sparkline (SVG polyline over 4 quarters) ---- */
+  function sparkline(series, isPct) {
+    var w = 74, h = 26, pad = 3;
+    var vals = (series || [0,0,0,0]).map(function (v) { return Number(v) || 0; });
+    var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+    var span = (max - min) || 1;
+    var pts = vals.map(function (v, i) {
+      var x = pad + i * ((w - 2*pad) / (vals.length - 1));
+      var y = h - pad - ((v - min) / span) * (h - 2*pad);
+      return x.toFixed(1) + "," + y.toFixed(1);
+    });
+    var last = pts[pts.length - 1].split(",");
+    return '<svg class="k-spark" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" aria-hidden="true">' +
+      '<polyline points="' + pts.join(" ") + '" fill="none" stroke="' + C_LINK + '" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"></polyline>' +
+      '<circle cx="' + last[0] + '" cy="' + last[1] + '" r="2.4" fill="' + C_LINK + '"></circle>' +
+    '</svg>';
+  }
+
+  /* ---- KPI rail ---- */
+  function renderKpis(view) {
+    var k = view.kpis, t = view.trend;
+    var tiles = [
+      { label:"Cost of Purchase", val:money(k.costOfPurchase), series:t.costOfPurchase, isPct:false },
+      { label:"Cost Reduction",   val:money(k.costReduction),  series:t.costReduction,  isPct:false },
+      { label:"Cost Saving",      val:money(k.costSaving),     series:t.costSaving,     isPct:false },
+      { label:"Cost Avoidance",   val:money(k.costAvoidance),  series:t.costAvoidance,  isPct:false },
+      { label:"Procurement ROI",  val:pct(k.procurementROI),   series:t.procurementROI, isPct:true }
+    ];
+    document.getElementById("kpiTiles").innerHTML = tiles.map(function (tile) {
+      return '<div class="fin-kpi">' +
+        '<div class="k-label">' + tile.label + '</div>' +
+        '<div class="k-val">' + tile.val + '</div>' +
+        sparkline(tile.series, tile.isPct) +
+        '<div class="k-year">' + YEAR + '</div>' +
+        '<div class="k-trend">Quarterly trend</div>' +
+      '</div>';
+    }).join("");
+  }
+
+  /* ---- picker ---- */
+  function buildPicker() {
+    var projects = PPS.getPortfolio();
+    var opts = '<option value="' + ALL + '">All Projects (portfolio roll-up)</option>';
+    opts += projects.map(function (p) {
+      return '<option value="' + esc(p.code) + '">' + esc(p.name) + ' (' + esc(p.code) + ')</option>';
+    }).join("");
+    picker.innerHTML = opts;
+  }
+
+  /* ---- render ---- */
+  function render() {
+    var code = picker.value || ALL;
+    var view = buildView(code);
+
+    if (!view) {
+      document.getElementById("donutWrap").innerHTML = '<div class="fin-empty">No financial record for this project yet.</div>';
+      document.getElementById("roiBars").innerHTML = '';
+      document.getElementById("savingsBars").innerHTML = document.getElementById("avoidanceBars").innerHTML = '<div class="fin-empty">&mdash;</div>';
+      document.getElementById("supplierBody").innerHTML = '<tr><td colspan="2" class="pps-empty">&mdash;</td></tr>';
+      document.getElementById("kpiTiles").innerHTML = '';
+      document.getElementById("viewLabel").textContent = "No data";
+      document.getElementById("projCount").textContent = "0";
+      return;
+    }
+
+    document.getElementById("viewLabel").textContent = (code === ALL) ? "All Projects" : code;
+    document.getElementById("projCount").textContent = String(view.count);
+
+    renderDonut(view.donut, view.kpis.costReduction);
+    renderRoiBars(view.roiBars, view.kpis.procurementROI);
+    renderHBars("savingsBars", view.savingsBars, C_LINK);
+    renderHBars("avoidanceBars", view.avoidanceBars, C_GREEN);
+    renderSuppliers(view.suppliers);
+    renderKpis(view);
+  }
+
+  buildPicker();
+  render();
+
+  picker.addEventListener("change", render);
+
+  window.addEventListener("storage", function (e) {
+    if (e.key === PPS.KEYS.financials || e.key === PPS.KEYS.portfolio) { buildPicker(); render(); }
+  });
+})();
+</script>
+
+</body>
+</html>

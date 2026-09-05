@@ -84,6 +84,8 @@
     </div>
   </div>
   <a href="portfolio-review.html">Portfolio Review</a>
+  <a href="capacity.html">Resource Capacity</a>
+  <a href="financial-dashboard.html">Financial Dashboard</a>
   <div class="pps-dropdown">
     <button type="button" class="pps-dropdown-toggle">Project Status</button>
     <div class="pps-dropdown-menu">
@@ -102,13 +104,13 @@
   </div>
   <div class="crm-fields">
     <div class="crm-field"><span class="crm-flabel">Groups</span><span class="crm-fvalue">3</span></div>
-    <div class="crm-field"><span class="crm-flabel">Views</span><span class="crm-fvalue">7</span></div>
+    <div class="crm-field"><span class="crm-flabel">Views</span><span class="crm-fvalue">8</span></div>
     <div class="crm-field"><span class="crm-flabel">Data</span><span class="crm-fvalue">Local</span></div>
     <div class="crm-field"><span class="crm-flabel">Status</span><span class="crm-fvalue"><span class="dot dot-green"></span>Ready</span></div>
   </div>
 </header>
 
-<p class="hub-sub">Three groups, seven views: the Project Intake Process, a standalone Portfolio Review, and Project Status governance tools.</p>
+<p class="hub-sub">Three groups, eight views: the Project Intake Process, Portfolio Review &amp; Resource Capacity, and Project Status governance tools.</p>
 
 <div class="dash-section">
   <div class="dash-head"><h2>Portfolio at a Glance</h2><span class="muted" id="dashUpdated"></span></div>
@@ -157,12 +159,17 @@
 </div>
 
 <div class="group-block">
-  <div class="group-head"><h2>Portfolio Review</h2><span class="group-sub">standalone</span></div>
-  <div class="grid grid-1">
+  <div class="group-head"><h2>Portfolio Review</h2><span class="group-sub">2 views</span></div>
+  <div class="grid">
     <a class="card" href="portfolio-review.html">
       <div class="step">1. Portfolio Review</div>
       <h3>Weekly Portfolio Review</h3>
       <p>The current reporting cycle's project data set, and nothing else. This is the master source that drives the scorecard.</p>
+    </a>
+    <a class="card" href="capacity.html">
+      <div class="step">2. Resource Capacity</div>
+      <h3>Resource Capacity vs. Demand</h3>
+      <p>Weekly hours committed against each person or team's capacity, rolled up across every active project. Flags who's stretched thin before it becomes a schedule risk.</p>
     </a>
   </div>
 </div>
@@ -197,7 +204,8 @@
   <strong>How the groups are linked</strong><br>
   Intake Form <span class="arrow">&rarr;</span> Intake Report &nbsp;&nbsp;(submissions populate the read-only register)<br>
   Portfolio Review <span class="arrow">&rarr;</span> Project Scorecard &nbsp;&nbsp;(portfolio data drives every derived scorecard value)<br>
-  Risk &amp; Decision, Repository, and Change Request are standalone governance and document-control tools on the same shared data layer.
+  Risk &amp; Decision, Repository, and Change Request are standalone governance and document-control tools on the same shared data layer.<br>
+  Resource Capacity reads the same active-project list as the Portfolio Review, plus a lightweight allocation layer, to flag over- or under-committed people and teams.
 </div>
 
 <div class="footer">

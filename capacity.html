@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resource Capacity vs. Demand</title>
+<link rel="stylesheet" href="assets/css/app.css">
+<style>
+  table.grid td, table.grid th { font-size: 12.5px; padding: 7px 9px; }
+  table.grid { border: 1px solid var(--line); }
+
+  .cap-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 16px 0 20px; }
+  @media (max-width: 900px) { .cap-tiles { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px) { .cap-tiles { grid-template-columns: 1fr; } }
+  .cap-tile { border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; background: var(--surface); }
+  .cap-tile .cap-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--ink-soft); }
+  .cap-tile .cap-num { font-size: 26px; font-weight: 700; color: var(--ink); line-height: 1.2; margin-top: 4px; }
+  .cap-tile .cap-sub { font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; }
+
+  .cap-bar-track { position: relative; width: 100%; min-width: 90px; height: 8px; border-radius: 4px; background: var(--fill); overflow: hidden; }
+  .cap-bar-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
+  .cap-bar-fill.dot-green  { background: #4d9a68; }
+  .cap-bar-fill.dot-yellow { background: #d0a13f; }
+  .cap-bar-fill.dot-red    { background: var(--danger); }
+  .cap-pct-cell { min-width: 110px; }
+  .cap-pct-num { font-size: 11.5px; font-weight: 600; color: var(--ink); display: block; margin-bottom: 3px; }
+
+  .chip-list { display: flex; flex-wrap: wrap; gap: 5px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--ink-soft);
+    background: var(--fill); border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px;
+  }
+  .chip b { color: var(--ink); font-weight: 600; }
+  .muted { color: var(--ink-faint); }
+</style>
+</head>
+<body>
+
+<nav class="pps-nav">
+  <span class="pps-brand">PMO Suite</span>
+  <a href="index.html">Home</a>
+  <div class="pps-dropdown">
+    <button type="button" class="pps-dropdown-toggle">Project Intake Process</button>
+    <div class="pps-dropdown-menu">
+      <a href="intake-form.html">1. Intake Form</a>
+      <a href="intake-report.html">2. Intake Report</a>
+    </div>
+  </div>
+  <a href="portfolio-review.html">Portfolio Review</a>
+  <a href="capacity.html" class="active">Resource Capacity</a>
+  <a href="financial-dashboard.html">Financial Dashboard</a>
+  <div class="pps-dropdown">
+    <button type="button" class="pps-dropdown-toggle">Project Status</button>
+    <div class="pps-dropdown-menu">
+      <a href="scorecard.html">1. Project Scorecard</a>
+      <a href="risk-decision-log.html">2. Risk &amp; Decision</a>
+      <a href="repository.html">3. Repository</a>
+      <a href="change-request-form.html">4. Change Request</a>
+    </div>
+  </div>
+</nav>
+
+<header class="crm-head">
+  <div class="crm-id">
+    <span class="crm-eyebrow">Portfolio</span>
+    <div class="crm-title">Resource Capacity vs. Demand</div>
+  </div>
+  <div class="crm-fields">
+    <div class="crm-field"><span class="crm-flabel">Report Date</span><span class="crm-fvalue" id="reportDate">&mdash;</span></div>
+    <div class="crm-field"><span class="crm-flabel">Resources</span><span class="crm-fvalue" id="resourceCount">&mdash;</span></div>
+    <div class="crm-field"><span class="crm-flabel">Over-allocated</span><span class="crm-fvalue" id="overCount">&mdash;</span></div>
+  </div>
+</header>
+
+<div class="crm-flow single-stage" aria-label="Resource Capacity">
+  <div class="crm-stage is-active"><span class="crm-stage-mark">1</span><span class="crm-stage-label">Resource Capacity</span></div>
+</div>
+
+<p class="pps-note">
+  <span class="pps-live">Live</span>
+  &nbsp;Weekly hours committed vs. available, for named leads and shared delivery pools, rolled up only across <strong>active</strong> portfolio projects. A project moving to On Hold or Completed automatically drops off everyone's demand.
+</p>
+
+<div class="crm-legend" aria-label="Capacity band legend">
+  <span class="li"><span class="dot dot-green"></span> Capacity Available (&lt;70%)</span>
+  <span class="li"><span class="dot dot-yellow"></span> Fully Loaded (70&ndash;100%)</span>
+  <span class="li"><span class="dot dot-red"></span> Over-allocated (&gt;100%)</span>
+</div>
+
+<script src="assets/js/store.js"></script>
+
+<div class="cap-tiles" id="capTiles"><!-- injected by JS --></div>
+
+<div class="pps-tabs" role="tablist">
+  <div class="pps-tab active" data-tab="byResource" role="tab">By Resource <span class="count" id="resourceCountLabel"></span></div>
+  <div class="pps-tab" data-tab="byProject" role="tab">By Project <span class="count" id="projectCountLabel"></span></div>
+</div>
+
+<!-- ==================== BY RESOURCE ==================== -->
+<div class="pps-tabpanel active" id="panel-byResource">
+  <table class="grid">
+    <colgroup>
+      <col style="width:4%"><col style="width:20%"><col style="width:14%"><col style="width:9%">
+      <col style="width:9%"><col style="width:16%"><col style="width:8%"><col style="width:20%">
+    </colgroup>
+    <thead class="col-head">
+      <tr>
+        <td>#</td><td>Resource</td><td>Role</td><td>Capacity (hrs/wk)</td><td>Demand (hrs/wk)</td>
+        <td>Utilization</td><td>Status</td><td>Allocated To</td>
+      </tr>
+    </thead>
+    <tbody id="resourceBody"><!-- injected by JS --></tbody>
+  </table>
+</div>
+
+<!-- ==================== BY PROJECT ==================== -->
+<div class="pps-tabpanel" id="panel-byProject">
+  <table class="grid">
+    <colgroup>
+      <col style="width:4%"><col style="width:24%"><col style="width:10%"><col style="width:14%"><col style="width:48%">
+    </colgroup>
+    <thead class="col-head">
+      <tr>
+        <td>#</td><td>Project</td><td>Status</td><td>Total Demand (hrs/wk)</td><td>Resources Allocated</td>
+      </tr>
+    </thead>
+    <tbody id="projectBody"><!-- injected by JS --></tbody>
+  </table>
+</div>
+
+<script>
+(function () {
+  var esc = PPS.esc;
+  document.getElementById("reportDate").textContent = PPS.today();
+
+  function pctBar(pct, dot) {
+    var width = Math.max(0, Math.min(150, pct)) / 150 * 100;
+    return '<div class="cap-pct-cell">' +
+      '<span class="cap-pct-num">' + pct + '%</span>' +
+      '<div class="cap-bar-track"><div class="cap-bar-fill ' + dot + '" style="width:' + width + '%"></div></div>' +
+    '</div>';
+  }
+
+  function resourceChips(allocations) {
+    if (!allocations.length) return '<span class="muted">No active allocations</span>';
+    return '<div class="chip-list">' + allocations.map(function (a) {
+      return '<span class="chip">' + esc(a.project) + ' <b>' + esc(a.hours) + 'h</b></span>';
+    }).join("") + '</div>';
+  }
+
+  function projectChips(allocations) {
+    if (!allocations.length) return '<span class="muted">No resources allocated yet</span>';
+    return '<div class="chip-list">' + allocations.map(function (a) {
+      return '<span class="chip">' + esc(a.resource) + ' <b>' + esc(a.hours) + 'h</b></span>';
+    }).join("") + '</div>';
+  }
+
+  function render() {
+    var view = PPS.getCapacityView();
+
+    // Summary tiles
+    var totalCapacity = view.byResource.reduce(function (s, r) { return s + (Number(r.capacity) || 0); }, 0);
+    var totalDemand    = view.byResource.reduce(function (s, r) { return s + (Number(r.demand) || 0); }, 0);
+    var overallPct = totalCapacity > 0 ? Math.round((totalDemand / totalCapacity) * 100) : 0;
+    document.getElementById("capTiles").innerHTML =
+      '<div class="cap-tile"><div class="cap-label">Total Resources</div>' +
+        '<div class="cap-num">' + view.byResource.length + '</div>' +
+        '<div class="cap-sub">named leads + shared pools</div></div>' +
+      '<div class="cap-tile"><div class="cap-label">Capacity vs. Demand</div>' +
+        '<div class="cap-num">' + totalDemand + ' / ' + totalCapacity + '</div>' +
+        '<div class="cap-sub">hrs/wk &middot; ' + overallPct + '% loaded overall</div></div>' +
+      '<div class="cap-tile"><div class="cap-label">Over-allocated</div>' +
+        '<div class="cap-num">' + view.overCount + '</div>' +
+        '<div class="cap-sub">' + (view.overCount ? 'past 100% of capacity' : 'nobody over capacity') + '</div></div>' +
+      '<div class="cap-tile"><div class="cap-label">Fully Loaded</div>' +
+        '<div class="cap-num">' + view.fullCount + '</div>' +
+        '<div class="cap-sub">70&ndash;100% of capacity</div></div>';
+
+    document.getElementById("resourceCount").textContent = view.byResource.length;
+    document.getElementById("overCount").textContent = view.overCount;
+    document.getElementById("resourceCountLabel").textContent = "(" + view.byResource.length + ")";
+    document.getElementById("projectCountLabel").textContent = "(" + view.byProject.length + ")";
+
+    // By Resource
+    document.getElementById("resourceBody").innerHTML = view.byResource.length ? view.byResource.map(function (r, i) {
+      return '<tr>' +
+        '<td class="center">' + (i + 1) + '</td>' +
+        '<td>' + esc(r.name) + '</td>' +
+        '<td>' + esc(r.role) + '</td>' +
+        '<td class="center">' + esc(r.capacity) + '</td>' +
+        '<td class="center">' + esc(r.demand) + '</td>' +
+        '<td>' + pctBar(r.pct, r.band.dot) + '</td>' +
+        '<td class="status-cell"><span class="dot ' + r.band.dot + '" title="' + esc(r.band.label) + '"></span></td>' +
+        '<td>' + resourceChips(r.allocations) + '</td>' +
+      '</tr>';
+    }).join("") : '<tr><td colspan="8" class="pps-empty">No resources on the roster yet.</td></tr>';
+
+    // By Project
+    document.getElementById("projectBody").innerHTML = view.byProject.length ? view.byProject.map(function (p, i) {
+      var st = PPS.portfolioStatus(p.status);
+      return '<tr>' +
+        '<td class="center">' + (i + 1) + '</td>' +
+        '<td>' + esc(p.name) + ' <span class="muted">(' + esc(p.code) + ')</span></td>' +
+        '<td class="status-cell"><span class="dot ' + st.dot + '" title="' + esc(st.label) + '"></span></td>' +
+        '<td class="center">' + esc(p.demand) + '</td>' +
+        '<td>' + projectChips(p.allocations) + '</td>' +
+      '</tr>';
+    }).join("") : '<tr><td colspan="5" class="pps-empty">No active projects to show demand for.</td></tr>';
+  }
+
+  render();
+
+  var tabs = document.querySelectorAll(".pps-tab");
+  var panels = { byResource: document.getElementById("panel-byResource"), byProject: document.getElementById("panel-byProject") };
+  tabs.forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      tabs.forEach(function (t) { t.classList.remove("active"); });
+      Object.keys(panels).forEach(function (k) { panels[k].classList.remove("active"); });
+      tab.classList.add("active");
+      panels[tab.getAttribute("data-tab")].classList.add("active");
+    });
+  });
+
+  window.addEventListener("storage", function (e) {
+    if (e.key === PPS.KEYS.resources || e.key === PPS.KEYS.allocations || e.key === PPS.KEYS.portfolio) render();
+  });
+})();
+</script>
+
+</body>
+</html>

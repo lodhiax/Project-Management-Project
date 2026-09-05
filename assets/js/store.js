@@ -20,13 +20,16 @@
   "use strict";
 
   var KEYS = {
-    counter:    "crRequestCounter",
-    register:   "crSubmissionsLog",
-    portfolio:  "ppsPortfolio",
-    scorecards: "ppsScorecards",
-    risks:      "ppsRisks",
-    decisions:  "ppsDecisions",
-    seeded:     "ppsSeededV1"
+    counter:     "crRequestCounter",
+    register:    "crSubmissionsLog",
+    portfolio:   "ppsPortfolio",
+    scorecards:  "ppsScorecards",
+    risks:       "ppsRisks",
+    decisions:   "ppsDecisions",
+    resources:   "ppsResources",
+    allocations: "ppsAllocations",
+    financials:  "ppsFinancialMetrics",
+    seeded:      "ppsSeededV1"
   };
 
   /* ---------- low-level storage helpers (fail-safe) ---------- */
@@ -184,6 +187,213 @@
     { id:15, project:FLAGSHIP, point:"Multi-factor authentication approach", owner:"Client", comments:"To be presented at the technical review committee, since it falls outside current scope; design vs. MFA trade-off needs sign-off.", date:"7-Jul-22", status:"Closed" }
   ];
 
+  // --- Resource roster: named leads plus a few shared delivery pools.
+  //     "capacity" is weekly hours available for project work. ---
+  var SEED_RESOURCES = [
+    { name:"Michael Turner",             role:"Delivery Lead", capacity:40 },
+    { name:"James Carter",                role:"Delivery Lead", capacity:40 },
+    { name:"David Bennett",               role:"Delivery Lead", capacity:40 },
+    { name:"Emily Watson",                role:"Delivery Lead", capacity:40 },
+    { name:"Robert Hughes",               role:"Delivery Lead", capacity:40 },
+    { name:"Daniel Foster",               role:"Delivery Lead", capacity:40 },
+    { name:"Data & Integrations Team",    role:"Shared Pool",   capacity:60 },
+    { name:"Digital Platforms Team",      role:"Shared Pool",   capacity:60 },
+    { name:"Reporting Team",              role:"Shared Pool",   capacity:40 }
+  ];
+
+  // --- Allocations: weekly hours each resource is committed to a
+  //     project. Only projects in the "active" portfolio section
+  //     count toward demand (see getCapacityView below). ---
+  var SEED_ALLOCATIONS = [
+    { project:"P2606-01", resource:"Michael Turner",          hours:22 },
+    { project:"P2606-01", resource:"Data & Integrations Team", hours:30 },
+    { project:"P2607-02", resource:"James Carter",            hours:26 },
+    { project:"P2607-02", resource:"Digital Platforms Team",  hours:34 },
+    { project:"P2607-02", resource:"David Bennett",           hours:18 },
+    { project:"P2608-03", resource:"David Bennett",           hours:30 },
+    { project:"P2608-03", resource:"Reporting Team",          hours:22 },
+    { project:"P2608-04", resource:"Emily Watson",            hours:18 },
+    { project:"P2608-04", resource:"Data & Integrations Team", hours:14 },
+    { project:"P2607-05", resource:"Robert Hughes",           hours:6  },
+    { project:"P2609-06", resource:"Daniel Foster",           hours:8  }
+  ];
+
+  // --- Financial metrics, keyed by project code. Additive demo layer.
+  //     Every code here exists in SEED_PORTFOLIO, so each record joins
+  //     to a real project. Scalars are the latest (q4) values; the
+  //     trend arrays end exactly at each scalar so the sparkline and the
+  //     headline number always agree. categories[].costReduction sums to
+  //     the record's costReduction (feeds the donut); suppliers[] sum to
+  //     <= costReduction (feeds the Top-5 table). Flagship P2606-01 is
+  //     reconciled with its scorecard financials (costOfPurchase is the
+  //     procurement portion of the $96,000 spent). These are demo values,
+  //     not yet reconciled against other pages' actuals by design. ---
+  var SEED_FINANCIALS = {
+    "P2606-01": {
+      costOfPurchase:60000, costReduction:18000, costSaving:12000, costAvoidance:8300,
+      procurementCost:60000, procurementReturn:78000,
+      categories: [
+        { name:"Software Licenses", costReduction:7000, savingsPct:34, avoidancePct:22, roiPct:40 },
+        { name:"Integration & Dev", costReduction:5000, savingsPct:28, avoidancePct:18, roiPct:33 },
+        { name:"Infrastructure", costReduction:3500, savingsPct:24, avoidancePct:15, roiPct:30 },
+        { name:"Vendor Services", costReduction:2500, savingsPct:20, avoidancePct:12, roiPct:25 }
+      ],
+      suppliers: [
+        { name:"Nimbus Cloud Services", costReduction:6500 },
+        { name:"Datalink Integrators", costReduction:5200 },
+        { name:"TaxLogic Systems", costReduction:3100 }
+      ],
+      trend: {
+        costOfPurchase:[33000,43200,52800,60000],
+        costReduction:[9900,12960,15840,18000],
+        costSaving:[6600,8640,10560,12000],
+        costAvoidance:[4565,5976,7304,8300],
+        procurementCost:[33000,43200,52800,60000],
+        procurementReturn:[42900,56160,68640,78000]
+      }
+    },
+    "P2607-02": {
+      costOfPurchase:45000, costReduction:12500, costSaving:8000, costAvoidance:5400,
+      procurementCost:45000, procurementReturn:56000,
+      categories: [
+        { name:"Software Licenses", costReduction:4500, savingsPct:44, avoidancePct:24, roiPct:38 },
+        { name:"Integration & Dev", costReduction:4000, savingsPct:30, avoidancePct:20, roiPct:30 },
+        { name:"Vendor Services", costReduction:4000, savingsPct:26, avoidancePct:16, roiPct:26 }
+      ],
+      suppliers: [
+        { name:"Brightpath Software", costReduction:5000 },
+        { name:"Datalink Integrators", costReduction:3800 },
+        { name:"Optima Vendor Group", costReduction:2400 }
+      ],
+      trend: {
+        costOfPurchase:[27000,33300,40500,45000],
+        costReduction:[7500,9250,11250,12500],
+        costSaving:[4800,5920,7200,8000],
+        costAvoidance:[3240,3996,4860,5400],
+        procurementCost:[27000,33300,40500,45000],
+        procurementReturn:[33600,41440,50400,56000]
+      }
+    },
+    "P2608-03": {
+      costOfPurchase:28000, costReduction:6000, costSaving:3500, costAvoidance:2600,
+      procurementCost:28000, procurementReturn:32000,
+      categories: [
+        { name:"Integration & Dev", costReduction:3500, savingsPct:26, avoidancePct:16, roiPct:22 },
+        { name:"Vendor Services", costReduction:2500, savingsPct:22, avoidancePct:12, roiPct:18 }
+      ],
+      suppliers: [
+        { name:"Meridian Consulting", costReduction:3300 },
+        { name:"TaxLogic Systems", costReduction:1900 }
+      ],
+      trend: {
+        costOfPurchase:[14560,19600,24080,28000],
+        costReduction:[3120,4200,5160,6000],
+        costSaving:[1820,2450,3010,3500],
+        costAvoidance:[1352,1820,2236,2600],
+        procurementCost:[14560,19600,24080,28000],
+        procurementReturn:[16640,22400,27520,32000]
+      }
+    },
+    "P2608-04": {
+      costOfPurchase:22000, costReduction:4200, costSaving:2500, costAvoidance:1800,
+      procurementCost:22000, procurementReturn:25000,
+      categories: [
+        { name:"Integration & Dev", costReduction:2400, savingsPct:24, avoidancePct:15, roiPct:22 },
+        { name:"Infrastructure", costReduction:1800, savingsPct:20, avoidancePct:12, roiPct:18 }
+      ],
+      suppliers: [
+        { name:"Datalink Integrators", costReduction:2300 },
+        { name:"CoreServe Infra", costReduction:1400 }
+      ],
+      trend: {
+        costOfPurchase:[12760,17160,20020,22000],
+        costReduction:[2436,3276,3822,4200],
+        costSaving:[1450,1950,2275,2500],
+        costAvoidance:[1044,1404,1638,1800],
+        procurementCost:[12760,17160,20020,22000],
+        procurementReturn:[14500,19500,22750,25000]
+      }
+    },
+    "P2607-05": {
+      costOfPurchase:9000, costReduction:1500, costSaving:800, costAvoidance:600,
+      procurementCost:9000, procurementReturn:9800,
+      categories: [
+        { name:"Vendor Services", costReduction:900, savingsPct:16, avoidancePct:10, roiPct:14 },
+        { name:"Infrastructure", costReduction:600, savingsPct:14, avoidancePct:8, roiPct:12 }
+      ],
+      suppliers: [
+        { name:"Optima Vendor Group", costReduction:900 },
+        { name:"CoreServe Infra", costReduction:500 }
+      ],
+      trend: {
+        costOfPurchase:[4500,6120,7560,9000],
+        costReduction:[750,1020,1260,1500],
+        costSaving:[400,544,672,800],
+        costAvoidance:[300,408,504,600],
+        procurementCost:[4500,6120,7560,9000],
+        procurementReturn:[4900,6664,8232,9800]
+      }
+    },
+    "P2609-06": {
+      costOfPurchase:0, costReduction:0, costSaving:0, costAvoidance:0,
+      procurementCost:0, procurementReturn:0,
+      categories: [],
+      suppliers: [],
+      trend: {
+        costOfPurchase:[0,0,0,0],
+        costReduction:[0,0,0,0],
+        costSaving:[0,0,0,0],
+        costAvoidance:[0,0,0,0],
+        procurementCost:[0,0,0,0],
+        procurementReturn:[0,0,0,0]
+      }
+    },
+    "P2601-07": {
+      costOfPurchase:52000, costReduction:16000, costSaving:11000, costAvoidance:7200,
+      procurementCost:52000, procurementReturn:71000,
+      categories: [
+        { name:"Software Licenses", costReduction:6000, savingsPct:40, avoidancePct:24, roiPct:40 },
+        { name:"Integration & Dev", costReduction:5500, savingsPct:32, avoidancePct:20, roiPct:34 },
+        { name:"Infrastructure", costReduction:4500, savingsPct:28, avoidancePct:16, roiPct:30 }
+      ],
+      suppliers: [
+        { name:"Nimbus Cloud Services", costReduction:7000 },
+        { name:"CoreServe Infra", costReduction:4200 },
+        { name:"Brightpath Software", costReduction:3300 }
+      ],
+      trend: {
+        costOfPurchase:[32240,41600,48360,52000],
+        costReduction:[9920,12800,14880,16000],
+        costSaving:[6820,8800,10230,11000],
+        costAvoidance:[4464,5760,6696,7200],
+        procurementCost:[32240,41600,48360,52000],
+        procurementReturn:[44020,56800,66030,71000]
+      }
+    },
+    "P2602-08": {
+      costOfPurchase:38000, costReduction:10500, costSaving:7000, costAvoidance:4800,
+      procurementCost:38000, procurementReturn:49000,
+      categories: [
+        { name:"Software Licenses", costReduction:4000, savingsPct:38, avoidancePct:22, roiPct:36 },
+        { name:"Vendor Services", costReduction:3500, savingsPct:28, avoidancePct:16, roiPct:28 },
+        { name:"Internal Labor", costReduction:3000, savingsPct:22, avoidancePct:12, roiPct:22 }
+      ],
+      suppliers: [
+        { name:"TaxLogic Systems", costReduction:4500 },
+        { name:"Meridian Consulting", costReduction:3200 },
+        { name:"Optima Vendor Group", costReduction:2000 }
+      ],
+      trend: {
+        costOfPurchase:[21660,28500,33820,38000],
+        costReduction:[5985,7875,9345,10500],
+        costSaving:[3990,5250,6230,7000],
+        costAvoidance:[2736,3600,4272,4800],
+        procurementCost:[21660,28500,33820,38000],
+        procurementReturn:[27930,36750,43610,49000]
+      }
+    }
+  };
+
   /* ============================================================
      SEEDING  (runs once; never wipes real submissions)
      ============================================================ */
@@ -200,12 +410,16 @@
     if (read(KEYS.scorecards, null) === null) write(KEYS.scorecards, SEED_SCORECARDS);
     if (read(KEYS.risks, null) === null)     write(KEYS.risks, SEED_RISKS);
     if (read(KEYS.decisions, null) === null) write(KEYS.decisions, SEED_DECISIONS);
+    if (read(KEYS.resources, null) === null)   write(KEYS.resources, SEED_RESOURCES);
+    if (read(KEYS.allocations, null) === null) write(KEYS.allocations, SEED_ALLOCATIONS);
+    if (read(KEYS.financials, null) === null)  write(KEYS.financials, SEED_FINANCIALS);
     if (Number(read(KEYS.counter, 0)) < SEED_REGISTER.length) write(KEYS.counter, SEED_REGISTER.length);
     write(KEYS.seeded, true);
   }
 
   function resetAll() {
-    [KEYS.counter, KEYS.register, KEYS.portfolio, KEYS.scorecards, KEYS.risks, KEYS.decisions, KEYS.seeded]
+    [KEYS.counter, KEYS.register, KEYS.portfolio, KEYS.scorecards, KEYS.risks, KEYS.decisions,
+     KEYS.resources, KEYS.allocations, KEYS.financials, KEYS.seeded]
       .forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
     ensureSeed();
   }
@@ -530,6 +744,178 @@
     return Object.keys(set).sort();
   }
 
+  /* ============================================================
+     RESOURCE CAPACITY vs. DEMAND  (lightweight, read-only)
+     ------------------------------------------------------------
+     Weekly hours only. Demand is summed only from allocations
+     tagged to a project in the "active" portfolio section, so a
+     completed or removed project stops counting automatically.
+     Bands: <70% capacity free, 70-100% fully loaded, >100% over-
+     allocated. This is intentionally simple for a demo, not a
+     real resource-management system.
+     ============================================================ */
+  function getResources()   { var a = read(KEYS.resources, []);   return Array.isArray(a) ? a : []; }
+  function getAllocations() { var a = read(KEYS.allocations, []); return Array.isArray(a) ? a : []; }
+
+  function capacityBand(pct) {
+    if (pct > 100) return { key:"over",   label:"Over-allocated",   dot:"dot-red" };
+    if (pct >= 70)  return { key:"full",   label:"Fully Loaded",     dot:"dot-yellow" };
+    return             { key:"available", label:"Capacity Available", dot:"dot-green" };
+  }
+
+  function getCapacityView() {
+    var resources = getResources();
+    var allocations = getAllocations();
+    var activeCodes = {};
+    getPortfolio().forEach(function (p) { if (p.section === "active") activeCodes[p.code] = p; });
+
+    var byResource = resources.map(function (r) {
+      var mine = allocations.filter(function (a) {
+        return a.resource === r.name && activeCodes.hasOwnProperty(a.project);
+      });
+      var demand = mine.reduce(function (sum, a) { return sum + (Number(a.hours) || 0); }, 0);
+      var pct = r.capacity > 0 ? Math.round((demand / r.capacity) * 100) : 0;
+      return {
+        name: r.name,
+        role: r.role,
+        capacity: r.capacity,
+        demand: demand,
+        pct: pct,
+        band: capacityBand(pct),
+        allocations: mine.map(function (a) {
+          var p = activeCodes[a.project];
+          return { project: a.project, projectName: p ? p.name : a.project, hours: Number(a.hours) || 0 };
+        }).sort(function (x, y) { return y.hours - x.hours; })
+      };
+    }).sort(function (x, y) { return y.pct - x.pct; });
+
+    var byProject = Object.keys(activeCodes).map(function (code) {
+      var p = activeCodes[code];
+      var mine = allocations.filter(function (a) { return a.project === code; });
+      var demand = mine.reduce(function (sum, a) { return sum + (Number(a.hours) || 0); }, 0);
+      return {
+        code: code,
+        name: p.name,
+        status: p.status,
+        demand: demand,
+        allocations: mine.map(function (a) {
+          return { resource: a.resource, hours: Number(a.hours) || 0 };
+        }).sort(function (x, y) { return y.hours - x.hours; })
+      };
+    }).sort(function (x, y) { return y.demand - x.demand; });
+
+    return {
+      byResource: byResource,
+      byProject: byProject,
+      overCount:     byResource.filter(function (r) { return r.band.key === "over"; }).length,
+      fullCount:     byResource.filter(function (r) { return r.band.key === "full"; }).length,
+      availableCount:byResource.filter(function (r) { return r.band.key === "available"; }).length
+    };
+  }
+
+  /* ============================================================
+     FINANCIAL METRICS  (lightweight, read-only, additive)
+     ------------------------------------------------------------
+     Per-project records live under KEYS.financials, keyed by the
+     same project `code` used everywhere else. getFinancials(code)
+     returns one raw record; getAllFinancials() rolls the records
+     up over the CURRENT portfolio (so an added/removed project is
+     reflected automatically, exactly like the capacity view).
+
+     Consistency by construction (seeded and preserved on rollup):
+       - donut segments sum to each record's costReduction
+       - supplier contributions sum to <= costReduction
+       - a metric's headline == the last (q4) point of its trend
+       - Procurement ROI is DERIVED from cost & return, never stored
+         as a free-floating figure
+     These are demo values; they are not yet reconciled against the
+     scorecard's own budget/spend figures (deferred by design).
+     ============================================================ */
+  var FIN_METRICS = ["costOfPurchase","costReduction","costSaving","costAvoidance","procurementCost","procurementReturn"];
+
+  function getFinancials(code) {
+    var all = read(KEYS.financials, {}) || {};
+    return all[code] || null;
+  }
+
+  function roiPct(ret, cost) {
+    ret = Number(ret) || 0; cost = Number(cost) || 0;
+    return cost > 0 ? ((ret - cost) / cost * 100) : 0;
+  }
+
+  function getAllFinancials() {
+    var all = read(KEYS.financials, {}) || {};
+    var portfolio = getPortfolio();
+
+    var totals = {};  FIN_METRICS.forEach(function (m) { totals[m] = 0; });
+    var qTot   = {};  FIN_METRICS.forEach(function (m) { qTot[m] = [0,0,0,0]; });
+    var catRed = {};              // category -> summed costReduction (donut)
+    var catRate = {};             // category -> costReduction-weighted rate accumulators
+    var supRoll = {};             // supplier -> summed costReduction
+    var perProject = [];
+
+    portfolio.forEach(function (p) {
+      var r = all[p.code];
+      if (!r) return;
+      FIN_METRICS.forEach(function (m) {
+        totals[m] += Number(r[m]) || 0;
+        var t = (r.trend && r.trend[m]) || [0,0,0,0];
+        for (var i = 0; i < 4; i++) qTot[m][i] += Number(t[i]) || 0;
+      });
+      (r.categories || []).forEach(function (c) {
+        var w = Number(c.costReduction) || 0;
+        catRed[c.name] = (catRed[c.name] || 0) + w;
+        if (!catRate[c.name]) catRate[c.name] = { s:0, a:0, roi:0, w:0 };
+        catRate[c.name].s   += (Number(c.savingsPct)   || 0) * w;
+        catRate[c.name].a   += (Number(c.avoidancePct) || 0) * w;
+        catRate[c.name].roi += (Number(c.roiPct)       || 0) * w;
+        catRate[c.name].w   += w;
+      });
+      (r.suppliers || []).forEach(function (s) {
+        supRoll[s.name] = (supRoll[s.name] || 0) + (Number(s.costReduction) || 0);
+      });
+      perProject.push({
+        code: p.code, name: p.name, status: p.status, section: p.section,
+        costOfPurchase: Number(r.costOfPurchase) || 0,
+        costReduction:  Number(r.costReduction)  || 0,
+        costSaving:     Number(r.costSaving)     || 0,
+        costAvoidance:  Number(r.costAvoidance)  || 0,
+        procurementCost:   Number(r.procurementCost)   || 0,
+        procurementReturn: Number(r.procurementReturn) || 0,
+        roiPct: roiPct(r.procurementReturn, r.procurementCost)
+      });
+    });
+
+    var donut = Object.keys(catRed).map(function (k) { return { name:k, value:catRed[k] }; })
+      .sort(function (a, b) { return b.value - a.value; });
+
+    var categoryRates = Object.keys(catRate).map(function (k) {
+      var acc = catRate[k], w = acc.w || 1;
+      return { name:k, savingsPct:Math.round(acc.s/w), avoidancePct:Math.round(acc.a/w), roiPct:Math.round(acc.roi/w), weight:acc.w };
+    }).sort(function (a, b) { return b.savingsPct - a.savingsPct; });
+
+    var suppliers = Object.keys(supRoll).map(function (k) { return { name:k, costReduction:supRoll[k] }; })
+      .sort(function (a, b) { return b.costReduction - a.costReduction; });
+
+    return {
+      perProject: perProject,
+      count: perProject.length,
+      totals: totals,
+      roiPct: roiPct(totals.procurementReturn, totals.procurementCost),
+      trend: {
+        costOfPurchase: qTot.costOfPurchase,
+        costReduction:  qTot.costReduction,
+        costSaving:     qTot.costSaving,
+        costAvoidance:  qTot.costAvoidance,
+        procurementROI: [0,1,2,3].map(function (i) { return roiPct(qTot.procurementReturn[i], qTot.procurementCost[i]); })
+      },
+      donut: donut,
+      categoryRates: categoryRates,
+      suppliers: suppliers,
+      topSuppliers: suppliers.slice(0, 5)
+    };
+  }
+
   function getProjectGovernance(code) {
     var risks = getRisksByProject(code);
     var decisions = getDecisionsByProject(code);
@@ -590,6 +976,12 @@
     isCrOpen: isCrOpen,
     allProjectCodesInUse: allProjectCodesInUse,
     getProjectGovernance: getProjectGovernance,
+    getResources: getResources,
+    getAllocations: getAllocations,
+    getCapacityView: getCapacityView,
+    capacityBand: capacityBand,
+    getFinancials: getFinancials,
+    getAllFinancials: getAllFinancials,
     esc: esc,
     _seedRegisterCount: SEED_REGISTER.length
   };
