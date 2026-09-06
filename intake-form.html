@@ -146,11 +146,6 @@
 
 <div class="section-tag">Section 1 &mdash; to be filled by the requestor</div>
 
-<div class="log-note">
-  <span>Every submitted request is automatically logged to a CSV file on this device.</span>
-  <button type="button" class="secondary" id="downloadLogBtn">&#8681; Download Submissions Log (CSV)</button>
-</div>
-
 <form id="crForm" novalidate>
 
 <h2>1. Basic Information</h2>
@@ -629,15 +624,6 @@
     return Object.assign(base, overrides || {});
   }
 
-  document.getElementById('downloadLogBtn').addEventListener('click', () => {
-    const log = loadLog();
-    if (!log.length) {
-      alert('No submissions have been logged yet on this device.');
-      return;
-    }
-    downloadCsv(buildCsv(log), 'change-requests-log.csv');
-  });
-
   // ============== Submit (Section 1) ==============
   form.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -653,10 +639,9 @@
     statusBadge.textContent = 'Submitted';
 
     const record = buildRecordFromForm('Submitted');
-    const log = upsertRecord(record);
-    downloadCsv(buildCsv(log), 'change-requests-log.csv');
+    upsertRecord(record);
 
-    formStatus.textContent = 'Request ' + requestIdField.value + ' submitted and logged to CSV. Section 8 is now unlocked for review.';
+    formStatus.textContent = 'Request ' + requestIdField.value + ' submitted and saved. Section 8 is now unlocked for review.';
     formStatus.className = 'success';
     unlockSection2();
   });
@@ -678,10 +663,9 @@
     document.getElementById('approverDate').value = formatSubmittedDate(new Date());
     const status = checkedText('approvalStatus') || 'Under Review';
     const record = buildRecordFromForm(status);
-    const log = upsertRecord(record);
-    downloadCsv(buildCsv(log), 'change-requests-log.csv');
+    upsertRecord(record);
     statusBadge.textContent = status;
-    section2Status.textContent = 'Review saved and logged to CSV.';
+    section2Status.textContent = 'Review saved.';
     section2Status.className = 'success';
   });
 
@@ -697,8 +681,7 @@
     if (!val('approverName')) document.getElementById('approverName').value = 'Reviewer';
 
     const record = buildRecordFromForm('Sent Back for More Information', { sentBackAt: now.toISOString() });
-    const log = upsertRecord(record);
-    downloadCsv(buildCsv(log), 'change-requests-log.csv');
+    upsertRecord(record);
     statusBadge.textContent = 'Sent Back for More Information';
 
     const subject = encodeURIComponent('More information needed: ' + requestIdField.value);
@@ -717,7 +700,7 @@
     const body = encodeURIComponent(bodyLines.join('\n'));
     window.location.href = 'mailto:' + email + '?subject=' + subject + '&body=' + body;
 
-    section2Status.textContent = 'Logged to CSV and opening an email back to ' + email + '.';
+    section2Status.textContent = 'Opening an email back to ' + email + '.';
     section2Status.className = 'success';
   });
 </script>

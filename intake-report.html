@@ -9,6 +9,15 @@
   /* page-specific: column widths + tidy cell sizing for the register grid */
   table.grid td, table.grid th { font-size: 12.5px; padding: 7px 9px; }
   table.grid { border: 1px solid var(--line); }
+  /* inline status editor in the Actions column [#2] */
+  .row-actions .status-edit {
+    font-family: inherit; font-size: 11.5px; color: var(--ink);
+    background: #fff; border: 1px solid var(--line); border-radius: 5px;
+    padding: 3px 6px; cursor: pointer; vertical-align: middle;
+  }
+  .row-actions .status-edit:hover { border-color: #9fb0be; }
+  .row-actions .status-edit:focus { outline: none; border-color: var(--link, #1568b8); box-shadow: 0 0 0 2px rgba(21,104,184,0.14); }
+  .row-actions .promote, .row-actions .in-portfolio { margin-left: 6px; vertical-align: middle; }
 </style>
 </head>
 <body>
@@ -34,7 +43,7 @@
 
 <p class="pps-note">
   <span class="pps-live">Live</span>
-  &nbsp;Intake data is read-only here. Approved requests can be promoted into the Portfolio, which creates a matching project.
+  &nbsp;Set any request's status from the Actions column. Once a request is marked Approved (green), it can be promoted into the Portfolio, which creates a matching project.
 </p>
 
 <div class="crm-legend" aria-label="Status legend">
@@ -50,14 +59,14 @@
 <table class="grid">
   <colgroup>
     <col style="width:10%"><col style="width:15%"><col style="width:9%"><col style="width:7%">
-    <col style="width:8%"><col style="width:6%"><col style="width:8%"><col style="width:8%">
+    <col style="width:8%"><col data-min-tier="itil" style="width:7%"><col style="width:6%"><col style="width:8%"><col style="width:8%">
     <col style="width:7%"><col style="width:10%"><col style="width:4%"><col style="width:8%">
   </colgroup>
 
   <thead class="col-head">
     <tr>
       <td>Request ID</td><td>Request Title</td><td>Requestor</td><td>Department</td>
-      <td>Type of Change</td><td>Importance</td><td>Submission Date</td><td>Owner / Team</td>
+      <td>Type of Change</td><td data-min-tier="itil">ITIL Type</td><td>Importance</td><td>Submission Date</td><td>Owner / Team</td>
       <td>Planned End</td><td>Remarks</td><td>Status</td><td>Actions</td>
     </tr>
   </thead>
@@ -139,15 +148,24 @@
 
     function actionsCell(r) {
       var existing = PPS.getPortfolioByRequest(r.requestId);
+      var curLabel = PPS.intakeStatus(r.status).label;
+      var opts = PPS.intakeStatusList().map(function (s) {
+        var sel = (s.label === curLabel) ? " selected" : "";
+        return '<option value="' + attr(s.value) + '"' + sel + '>' + esc(s.label) + '</option>';
+      }).join("");
+      var editor = '<select class="status-edit" data-request="' + attr(r.requestId) +
+        '" title="Change status" aria-label="Change status for ' + attr(r.requestId) + '">' + opts + '</select>';
+
       if (existing) {
-        return '<td class="row-actions"><span class="in-portfolio">In portfolio: ' +
+        return '<td class="row-actions">' + editor +
+          ' <span class="in-portfolio">In portfolio: ' +
           '<a href="portfolio-review.html" title="' + attr(existing.name) + '">' + esc(existing.code) + '</a></span></td>';
       }
-      if (r.status === "Approved") {
-        return '<td class="row-actions">' +
-          '<button type="button" class="promote" data-request="' + attr(r.requestId) + '">Promote to portfolio</button></td>';
+      if (curLabel === "Approved") {
+        return '<td class="row-actions">' + editor +
+          ' <button type="button" class="promote" data-request="' + attr(r.requestId) + '">Promote to portfolio</button></td>';
       }
-      return '<td class="row-actions"><span class="muted">\u2014</span></td>';
+      return '<td class="row-actions">' + editor + '</td>';
     }
 
     function render() {
@@ -156,8 +174,9 @@
       document.getElementById("requestCount").textContent = rows.length;
 
       if (!rows.length) {
-        body.innerHTML = '<tr><td colspan="12" class="pps-empty">' +
+        body.innerHTML = '<tr><td colspan="13" class="pps-empty">' +
           'No intake requests have been submitted yet. Open the Intake Form to add one.</td></tr>';
+        if (window.PPS) PPS.applyTier(); // gate the ITIL Type column header even when empty [I1]
         return;
       }
 
@@ -171,6 +190,7 @@
           '<td>' + esc(r.initiator) + '</td>' +
           '<td>' + esc(r.department) + '</td>' +
           '<td class="center">' + esc(r.typeOfChange) + '</td>' +
+          '<td class="center" data-min-tier="itil">' + esc(r.itilRequestType || "\u2014") + '</td>' +
           '<td class="center">' + esc(r.importance) + '</td>' +
           '<td class="center">' + esc(r.dateSubmitted) + '</td>' +
           '<td>' + esc(r.ownerTeam || "Unassigned") + '</td>' +
@@ -180,6 +200,10 @@
           actionsCell(r) +
         '</tr>';
       }).join("");
+
+      // Rows are injected after store.js ran its initial applyTier(), so
+      // re-gate now to hide/show the ITIL Type column for the active edition. [I1]
+      if (window.PPS) PPS.applyTier();
     }
 
     /* ---------------- Promote to portfolio modal ---------------- */
@@ -260,6 +284,15 @@
       var btn = e.target.closest ? e.target.closest("button.promote[data-request]") : null;
       if (!btn) return;
       openPromote(btn.getAttribute("data-request"));
+    });
+
+    // Inline status edit [#2]: change any request's status (seeded rows included).
+    // Setting it to Approved reveals the Promote to portfolio action on re-render.
+    document.querySelector("table.grid").addEventListener("change", function (e) {
+      var sel = e.target.closest ? e.target.closest("select.status-edit[data-request]") : null;
+      if (!sel) return;
+      var res = PPS.setRequestStatus(sel.getAttribute("data-request"), sel.value);
+      if (res && res.ok) render();
     });
 
     render();

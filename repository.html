@@ -113,6 +113,30 @@
   </div>
 </div>
 
+<!-- ===== Service Catalog & CI Map (ITIL edition) [I4] ===== -->
+<div id="svcCatalog" data-min-tier="itil" style="margin-top:18px;">
+  <div class="repo-panel" style="min-height:auto;">
+    <div class="repo-panel-head">
+      <div>
+        <div class="repo-phase-title">Service Catalog &amp; CI Map</div>
+        <div class="repo-phase-sub">ITIL edition. Maps this project's repository artifacts to the services they define and the configuration items (CIs) that deliver them.</div>
+      </div>
+    </div>
+    <table class="filetable grid" style="border:1px solid var(--line);margin-top:12px;">
+      <colgroup><col style="width:22%"><col style="width:24%"><col style="width:13%"><col style="width:15%"><col style="width:26%"></colgroup>
+      <thead class="col-head"><tr>
+        <td style="text-align:left;">Service (Catalog)</td>
+        <td style="text-align:left;">Configuration Item</td>
+        <td>CI Type</td>
+        <td>Status</td>
+        <td style="text-align:left;">Mapped Repository Artifact</td>
+      </tr></thead>
+      <tbody id="svcCatalogBody"><!-- injected by JS --></tbody>
+    </table>
+    <div style="font-size:11px;color:var(--ink-faint);margin-top:8px;">CI status uses the suite's standard dot legend. Each row ties a catalog service and its CIs back to the OPA artifact above that documents it.</div>
+  </div>
+</div>
+
 <script>
 (function () {
   var flagship = PPS.getProject("P2606-01");
@@ -281,7 +305,53 @@
 
   function renderAll() { renderRail(); renderPanel(); }
 
+  /* ============================================================
+     SERVICE CATALOG & CI MAP  [I4] (ITIL edition)
+     ------------------------------------------------------------
+     Demo mapping of the flagship project's repository artifacts to
+     the IT services they define and the configuration items (CIs)
+     that make up each service. Read-only sample data, in the same
+     spirit as the OPA STRUCTURE above.
+     ============================================================ */
+  var SERVICE_CATALOG = [
+    { service:"Billing Reconciliation Service", ci:"Reconciliation Engine",   type:"Application", status:"Live",           dot:"dot-green",  artifact:"SolutionDesign_BillingEngine_v1.pdf" },
+    { service:"Billing Reconciliation Service", ci:"Billing DB Schema",        type:"Database",    status:"Live",           dot:"dot-green",  artifact:"FSD_BillingReconEngine_v1.docx" },
+    { service:"Billing Reconciliation Service", ci:"Recon Batch Job",          type:"Application", status:"Live",           dot:"dot-green",  artifact:"UnitTestCases_ReconModule.xlsx" },
+    { service:"Import Data Feed Service",       ci:"Import Adapter",           type:"Application", status:"Live",           dot:"dot-green",  artifact:"BRD_ImportBillingAutomation_v2.docx" },
+    { service:"Import Data Feed Service",       ci:"SFTP Ingest Endpoint",     type:"Interface",   status:"Change Pending", dot:"dot-yellow", artifact:"Build_ReconEngine_v0.9.zip" },
+    { service:"Recon Reporting Service",        ci:"Recon Report Pack",        type:"Reporting",   status:"In Build",       dot:"dot-grey",   artifact:"QA_TestPlan_ReconEngine.docx" }
+  ];
+
+  function renderCatalog() {
+    var esc = PPS.esc;
+    var body = document.getElementById("svcCatalogBody");
+    if (!body) return;
+    // Group rows by service so the catalog reads one service at a time.
+    var groups = [];
+    SERVICE_CATALOG.forEach(function (row) {
+      var g = groups.filter(function (x) { return x.service === row.service; })[0];
+      if (!g) { g = { service: row.service, items: [] }; groups.push(g); }
+      g.items.push(row);
+    });
+    body.innerHTML = groups.map(function (g) {
+      return g.items.map(function (it, idx) {
+        var svcCell = idx === 0
+          ? '<td rowspan="' + g.items.length + '" style="vertical-align:top;font-weight:600;color:var(--ink);">' + esc(g.service) + '</td>'
+          : '';
+        return '<tr>' + svcCell +
+          '<td class="fname"><span class="file-icon">\u2699\uFE0F</span><span class="file-name">' + esc(it.ci) + '</span></td>' +
+          '<td class="center file-meta">' + esc(it.type) + '</td>' +
+          '<td class="center"><span class="dot ' + it.dot + '" title="' + esc(it.status) + '"></span> <span class="file-meta">' + esc(it.status) + '</span></td>' +
+          '<td class="file-meta">' + esc(it.artifact) + '</td>' +
+        '</tr>';
+      }).join("");
+    }).join("");
+  }
+
   renderAll();
+  renderCatalog();
+  // The catalog section sits below store.js, so gate it for the active edition. [I4]
+  if (window.PPS) PPS.applyTier();
 
   /* Simulated upload: adds a placeholder row to the current subfolder, in memory only */
   document.getElementById("fakeUpload").addEventListener("change", function (e) {

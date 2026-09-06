@@ -30,6 +30,8 @@
     allocations: "ppsAllocations",
     financials:  "ppsFinancialMetrics",
     wbs:         "ppsWbs",
+    deployments:  "ppsDeployments",
+    deployCounter:"ppsDeployCounter",
     tier:        "ppsTier",
     seeded:      "ppsSeededV1"
   };
@@ -449,13 +451,15 @@
     if (read(KEYS.allocations, null) === null) write(KEYS.allocations, SEED_ALLOCATIONS);
     if (read(KEYS.financials, null) === null)  write(KEYS.financials, SEED_FINANCIALS);
     if (read(KEYS.wbs, null) === null)         write(KEYS.wbs, SEED_WBS);
+    if (read(KEYS.deployments, null) === null) write(KEYS.deployments, SEED_DEPLOYMENTS);
+    if (Number(read(KEYS.deployCounter, 0)) < SEED_DEPLOYMENTS.length) write(KEYS.deployCounter, SEED_DEPLOYMENTS.length);
     if (Number(read(KEYS.counter, 0)) < SEED_REGISTER.length) write(KEYS.counter, SEED_REGISTER.length);
     write(KEYS.seeded, true);
   }
 
   function resetAll() {
     [KEYS.counter, KEYS.register, KEYS.portfolio, KEYS.scorecards, KEYS.risks, KEYS.decisions,
-     KEYS.resources, KEYS.allocations, KEYS.financials, KEYS.wbs, KEYS.seeded]
+     KEYS.resources, KEYS.allocations, KEYS.financials, KEYS.wbs, KEYS.deployments, KEYS.deployCounter, KEYS.seeded]
       .forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
     ensureSeed();
   }
@@ -568,6 +572,31 @@
     var seq = maxSeq + 1, code;
     do { code = prefix + ("0" + seq).slice(-2); seq++; } while (codes.indexOf(code) !== -1);
     return code;
+  }
+
+  /* Intake register write API [#2]
+     The Intake Report lets any request's status be changed inline, including
+     the seeded demo rows, which drives the status dot and enables Promote to
+     Portfolio once a request is set to Approved. */
+  var INTAKE_STATUS_LIST = [
+    { value: "Submitted",                     label: "Submitted",       dot: "dot-grey" },
+    { value: "Approved",                      label: "Approved",        dot: "dot-green" },
+    { value: "Rejected",                      label: "Rejected",        dot: "dot-red" },
+    { value: "On Hold",                       label: "On Hold",         dot: "dot-purple" },
+    { value: "Sent Back for More Information", label: "Needs More Info", dot: "dot-yellow" }
+  ];
+  function intakeStatusList() {
+    return INTAKE_STATUS_LIST.map(function (s) { return { value: s.value, label: s.label, dot: s.dot }; });
+  }
+  function setRequestStatus(requestId, status) {
+    if (!requestId) return { ok:false, error:"Missing request id." };
+    var arr = getRegister();
+    var idx = -1;
+    for (var i = 0; i < arr.length; i++) { if (arr[i].requestId === requestId) { idx = i; break; } }
+    if (idx === -1) return { ok:false, error:"Request \"" + requestId + "\" was not found." };
+    arr[idx] = assign(arr[idx], { status: String(status || "") });
+    if (!write(KEYS.register, arr)) return { ok:false, error:"Could not save. Browser storage may be full." };
+    return { ok:true, record: arr[idx] };
   }
 
   /* ============================================================
@@ -777,7 +806,114 @@
     getRisks().forEach(function (r) { if (r.project) set[r.project] = true; });
     getDecisions().forEach(function (d) { if (d.project) set[d.project] = true; });
     getChangeRequests().forEach(function (c) { if (c.projectCode) set[c.projectCode] = true; });
+    getDeployments().forEach(function (d) { if (d.projectCode) set[d.projectCode] = true; });
     return Object.keys(set).sort();
+  }
+
+  /* ============================================================
+     CI/CD DEPLOYMENTS  [C1 / C2 / C3]  (DevOps edition)
+     ------------------------------------------------------------
+     A simulated deployment + pipeline store. The Deployment Intake
+     form writes records here [C1]; the Pipeline & Deployment Events
+     view reads them [C2]. Each record carries a small set of
+     simulated pipeline stages and an overall conclusion, shaped to
+     line up with a real GitHub Actions workflow_run payload so the
+     intake can later be fed by a webhook rather than a form (the
+     field mapping is documented on the intake page) [C3].
+     ============================================================ */
+  var DEPLOY_ENVIRONMENTS = ["Development", "Staging", "Production"];
+  var DEPLOY_STAGE_NAMES = ["Build", "Test", "Deploy"];
+
+  var SEED_DEPLOYMENTS = [
+    { id:"DEP-20260902-0001", runId:1, createdAt:"2026-09-02T09:15:00Z", date:"2-Sep-26",
+      repo:"socalgas/import-billing", branch:"main", commit:"a1b2c3d", environment:"Staging",
+      workflow:"CI/CD Pipeline", event:"workflow_run", triggeredBy:"Michael Turner", projectCode:"P2606-01", changeRef:"",
+      stages:[{name:"Build",status:"success",durationSec:74},{name:"Test",status:"success",durationSec:120},{name:"Deploy",status:"success",durationSec:48}], status:"success" },
+    { id:"DEP-20260903-0002", runId:2, createdAt:"2026-09-03T14:40:00Z", date:"3-Sep-26",
+      repo:"socalgas/import-billing", branch:"release/1.2", commit:"9f8e7d6", environment:"Production",
+      workflow:"CI/CD Pipeline", event:"workflow_run", triggeredBy:"Michael Turner", projectCode:"P2606-01", changeRef:"",
+      stages:[{name:"Build",status:"success",durationSec:70},{name:"Test",status:"success",durationSec:118},{name:"Deploy",status:"failure",durationSec:22}], status:"failure" },
+    { id:"DEP-20260904-0003", runId:3, createdAt:"2026-09-04T11:05:00Z", date:"4-Sep-26",
+      repo:"socalgas/tariff-portal", branch:"main", commit:"3c2b1a0", environment:"Development",
+      workflow:"Build & Deploy", event:"workflow_run", triggeredBy:"James Carter", projectCode:"P2607-02", changeRef:"",
+      stages:[{name:"Build",status:"success",durationSec:52},{name:"Test",status:"success",durationSec:64},{name:"Deploy",status:"success",durationSec:33}], status:"success" },
+    { id:"DEP-20260904-0004", runId:4, createdAt:"2026-09-04T16:20:00Z", date:"4-Sep-26",
+      repo:"socalgas/import-billing", branch:"release/1.2", commit:"9f8e7d6", environment:"Production",
+      workflow:"CI/CD Pipeline", event:"workflow_run", triggeredBy:"Michael Turner", projectCode:"P2606-01", changeRef:"",
+      stages:[{name:"Build",status:"success",durationSec:71},{name:"Test",status:"success",durationSec:121},{name:"Deploy",status:"success",durationSec:47}], status:"success" }
+  ];
+
+  function getDeployments() {
+    var a = read(KEYS.deployments, []);
+    return Array.isArray(a) ? a : [];
+  }
+  function getDeploymentsByProject(code) { return byProject(getDeployments(), code, "projectCode"); }
+  function deployEnvironments() { return DEPLOY_ENVIRONMENTS.slice(); }
+  function deployStageNames() { return DEPLOY_STAGE_NAMES.slice(); }
+
+  function pad4(n) { return String(n).padStart(4, "0"); }
+  function deployId(counter, d) {
+    d = d || new Date();
+    return "DEP-" + d.getFullYear() + String(d.getMonth()+1).padStart(2,"0") + String(d.getDate()).padStart(2,"0") + "-" + pad4(counter);
+  }
+
+  // Simulated pipeline: Build -> Test -> Deploy run in order. If the caller
+  // forces a failure at a stage, that stage fails and later stages are skipped.
+  function simulateStages(failAt) {
+    var out = [], failed = false;
+    DEPLOY_STAGE_NAMES.forEach(function (name) {
+      if (failed) { out.push({ name:name, status:"skipped", durationSec:0 }); return; }
+      if (failAt && name === failAt) { failed = true; out.push({ name:name, status:"failure", durationSec:20 + Math.round(Math.random()*40) }); }
+      else { out.push({ name:name, status:"success", durationSec:20 + Math.round(Math.random()*90) }); }
+    });
+    return out;
+  }
+  function stagesConclusion(stages) {
+    for (var i = 0; i < stages.length; i++) { if (stages[i].status === "failure") return "failure"; }
+    return "success";
+  }
+
+  function addDeployment(input) {
+    input = input || {};
+    var repo = String(input.repo || "").trim();
+    if (!repo) return { ok:false, error:"A repository (org/repo) is required." };
+    var env = DEPLOY_ENVIRONMENTS.indexOf(input.environment) > -1 ? input.environment : "Development";
+    var counter = (Number(read(KEYS.deployCounter, 0)) || 0) + 1;
+    var now = new Date();
+    var failAt = (input.outcome === "failure")
+      ? (DEPLOY_STAGE_NAMES.indexOf(input.failStage) > -1 ? input.failStage : "Deploy") : "";
+    var stages = simulateStages(failAt);
+    var rec = {
+      id: deployId(counter, now), runId: counter, createdAt: now.toISOString(), date: today(),
+      repo: repo,
+      branch: String(input.branch || "main").trim(),
+      commit: String(input.commit || "").trim().slice(0, 10),
+      environment: env,
+      workflow: String(input.workflow || "CI/CD Pipeline").trim(),
+      event: String(input.event || "workflow_run").trim(),
+      triggeredBy: String(input.triggeredBy || "").trim(),
+      projectCode: String(input.projectCode || "").trim(),
+      changeRef: String(input.changeRef || "").trim(),
+      stages: stages,
+      status: stagesConclusion(stages)
+    };
+    var arr = getDeployments();
+    arr.push(rec);
+    if (!write(KEYS.deployments, arr)) return { ok:false, error:"Could not save. Browser storage may be full." };
+    write(KEYS.deployCounter, counter);
+    return { ok:true, deployment: rec };
+  }
+
+  // Change-gate linkage [C2 depends I2]: for a deployment tied to a project,
+  // summarise whether that project's ITIL change / CAB position covers it.
+  function deploymentChangeGate(dep) {
+    var code = dep && dep.projectCode;
+    if (!code) return { label:"No project", dot:"dot-grey" };
+    var crs = getChangeRequestsByProject(code);
+    if (!crs.length) return { label:"No linked change", dot:"dot-grey" };
+    if (crs.filter(cifCabPending).length > 0) return { label:"CAB pending", dot:"dot-yellow" };
+    if (crs.filter(cifCabApproved).length > 0) return { label:"Change approved", dot:"dot-green" };
+    return { label:"Change logged", dot:"dot-green" };
   }
 
   /* ============================================================
@@ -1127,12 +1263,43 @@
     return { ok:true };
   }
 
+  /* ------------------------------------------------------------
+     ITIL CHANGE / CAB helpers   [I2 / I3]
+     A CIF classified as a "Normal" ITIL change must clear the
+     Change Advisory Board (CAB Decision = Approved) before it is
+     implemented. "Standard" changes are pre-approved and need no
+     CAB; "Emergency" changes proceed under ECAB and are surfaced
+     for post-review. These read the same CIF records the Change
+     Implementation Form writes, so the summary stays live.
+     ------------------------------------------------------------ */
+  function cifChangeType(c) { return String((c && c.itilChangeType) || ""); }
+  function cifCabDecision(c) { return String((c && c.cabDecision) || ""); }
+  function cifNeedsCab(c) { return cifChangeType(c) === "Normal"; }
+  function cifCabApproved(c) { return cifCabDecision(c) === "Approved"; }
+  // A CAB gate is "pending" when a Normal change is still open (not yet
+  // implemented) and has not been approved by the board.
+  function cifCabPending(c) { return isCrOpen(c) && cifNeedsCab(c) && !cifCabApproved(c); }
+
+  function cabSummary(crs) {
+    var pending = 0, emergencyOpen = 0;
+    crs.forEach(function (c) {
+      if (cifCabPending(c)) pending++;
+      if (isCrOpen(c) && cifChangeType(c) === "Emergency") emergencyOpen++;
+    });
+    return {
+      cabPending: pending,
+      emergencyOpen: emergencyOpen,
+      cabStatus: pending > 0 ? "CAB Pending" : "Clear"
+    };
+  }
+
   function getProjectGovernance(code) {
     var risks = getRisksByProject(code);
     var decisions = getDecisionsByProject(code);
     var crs = getChangeRequestsByProject(code);
     var finRec = getFinancials(code);
     var capRec = getCapacityView().byProject.filter(function (p) { return p.code === code; })[0] || null;
+    var cab = cabSummary(crs);
     return {
       risks: risks,
       decisions: decisions,
@@ -1140,6 +1307,12 @@
       openRisks: risks.filter(function (r) { return r.status === "Open"; }).length,
       openDecisions: decisions.filter(function (d) { return d.status === "Open"; }).length,
       openChangeRequests: crs.filter(isCrOpen).length,
+      // ITIL change governance [I3]: CAB gate status linked from the CIFs
+      // tagged to this project. cabPending = Normal changes still awaiting
+      // board approval; emergencyOpen = open Emergency changes (ECAB review).
+      cabPending: cab.cabPending,
+      emergencyOpen: cab.emergencyOpen,
+      cabStatus: cab.cabStatus,
       // Added so the Scorecard's linked-records panel can show the same
       // project's procurement/cost-reduction figures (from Project Financials)
       // and weekly resource demand (from Resource Management) alongside its
@@ -1376,7 +1549,6 @@
         { label: "2. Intake Report",  href: "intake-report.html", tier: "pmo" }
     ]},
     { type: "link",  label: "Portfolio Review",    href: "portfolio-review.html",    tier: "pmo" },
-    { type: "link",  label: "Work Breakdown",      href: "wbs.html",                 tier: "pmo" },
     { type: "link",  label: "Resource Capacity",   href: "capacity.html",            tier: "pmo" },
     { type: "link",  label: "Financial Dashboard", href: "financial-dashboard.html", tier: "pmo" },
     { type: "group", label: "Project Status", tier: "pmo", children: [
@@ -1385,7 +1557,12 @@
         { label: "3. Repository",          href: "repository.html",          tier: "pmo" },
         { label: "4. Change Request",      href: "change-request-form.html", tier: "pmo" },
         { label: "5. Project Financials",  href: "financials.html",          tier: "pmo" },
-        { label: "6. Resource Management", href: "resources.html",           tier: "pmo" }
+        { label: "6. Resource Management", href: "resources.html",           tier: "pmo" },
+        { label: "7. Work Breakdown",      href: "wbs.html",                 tier: "pmo" }
+    ]},
+    { type: "group", label: "CI/CD Delivery", tier: "devops", children: [
+        { label: "1. Deployment Intake",             href: "deployment-intake.html", tier: "devops" },
+        { label: "2. Pipeline & Deployment Events",  href: "deployment-events.html", tier: "devops" }
     ]}
   ];
 
@@ -1401,8 +1578,17 @@
     var active = getTier();
     var html = "";
 
-    html += "<a href=\"index.html\" class=\"pps-brand\">PMO Suite" +
-              "<span class=\"pps-brand-edition\">" + esc(tierByKey(active).edition) + "</span></a>";
+    // Edition control now lives in the brand pill next to "PMO Suite".
+    // Short edition names (Core / ITIL / DevOps) keep it compact.
+    var opts = "";
+    for (var t = 0; t < TIERS.length; t++) {
+      var sel = (TIERS[t].key === active) ? " selected" : "";
+      opts += "<option value=\"" + TIERS[t].key + "\"" + sel + ">" + esc(TIERS[t].edition) + "</option>";
+    }
+    html += "<span class=\"pps-brand\">" +
+              "<a href=\"index.html\" class=\"pps-brand-home\">PMO Suite</a>" +
+              "<select id=\"ppsTierSelect\" class=\"pps-brand-edition\" data-noguard aria-label=\"Suite edition\" title=\"Switch edition\">" + opts + "</select>" +
+            "</span>";
 
     for (var i = 0; i < NAV_CONFIG.length; i++) {
       var node = NAV_CONFIG[i];
@@ -1425,16 +1611,6 @@
                 "</div>";
       }
     }
-
-    var opts = "";
-    for (var t = 0; t < TIERS.length; t++) {
-      var sel = (TIERS[t].key === active) ? " selected" : "";
-      opts += "<option value=\"" + TIERS[t].key + "\"" + sel + ">" + esc(TIERS[t].label) + "</option>";
-    }
-    html += "<div class=\"pps-tier-switch\">" +
-              "<span class=\"pps-tier-label\">Edition</span>" +
-              "<select id=\"ppsTierSelect\" class=\"pps-tier-select\" data-noguard aria-label=\"Suite edition\">" + opts + "</select>" +
-            "</div>";
 
     mount.innerHTML = html;
   }
@@ -1460,9 +1636,10 @@
   window.PPS = {
     KEYS: KEYS,
     today: today,
-    intakeStatus: intakeStatus,
-    portfolioStatus: portfolioStatus,
+    intakeStatus: intakeStatus,    portfolioStatus: portfolioStatus,
     getRegister: getRegister,
+    intakeStatusList: intakeStatusList,
+    setRequestStatus: setRequestStatus,
     getPortfolio: getPortfolio,
     getProject: getProject,
     getScorecardDetail: getScorecardDetail,
@@ -1490,6 +1667,15 @@
     getDecisionsByProject: getDecisionsByProject,
     getChangeRequestsByProject: getChangeRequestsByProject,
     isCrOpen: isCrOpen,
+    isCifCabPending: cifCabPending,
+    cifCabDecision: cifCabDecision,
+    cifChangeType: cifChangeType,
+    getDeployments: getDeployments,
+    getDeploymentsByProject: getDeploymentsByProject,
+    addDeployment: addDeployment,
+    deploymentChangeGate: deploymentChangeGate,
+    deployEnvironments: deployEnvironments,
+    deployStageNames: deployStageNames,
     allProjectCodesInUse: allProjectCodesInUse,
     getProjectGovernance: getProjectGovernance,
     getResources: getResources,

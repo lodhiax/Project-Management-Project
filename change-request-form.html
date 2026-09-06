@@ -158,6 +158,42 @@
     </table>
   </div>
 
+  <!-- ============ ITIL CHANGE / CAB GATE (ITIL edition only) [I2] ============ -->
+  <div class="part-head" data-min-tier="itil">ITIL Change Management &amp; CAB Gate <span class="hint">(ITIL edition, classify the change and record the Change Advisory Board decision)</span></div>
+  <div class="part-body" data-min-tier="itil">
+    <table class="cif">
+      <tr>
+        <td class="label">ITIL Change Type <span class="required">*</span>
+          <span class="sub">Standard is pre-approved, Normal needs CAB approval, Emergency goes to ECAB for post-review</span></td>
+        <td class="field" colspan="3">
+          <div class="radio-row" id="itilChangeTypeGroup" data-req-group="itilChangeType">
+            <label><input type="radio" name="itilChangeType" value="Standard"> Standard</label>
+            <label><input type="radio" name="itilChangeType" value="Normal"> Normal</label>
+            <label><input type="radio" name="itilChangeType" value="Emergency"> Emergency</label>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="label">CAB Decision</td>
+        <td class="field" colspan="3">
+          <div class="radio-row" id="cabDecisionGroup">
+            <label><input type="radio" name="cabDecision" value="Approved"> Approved</label>
+            <label><input type="radio" name="cabDecision" value="Rejected"> Rejected</label>
+            <label><input type="radio" name="cabDecision" value="Deferred"> Deferred</label>
+            <label><input type="radio" name="cabDecision" value="N/A"> N/A</label>
+            <span class="hint" style="font-style:italic;color:var(--ink-soft);font-size:11.5px;">A Normal change cannot be submitted until the CAB records Approved.</span>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="label">CAB Review Date</td>
+        <td class="field"><input type="text" id="cabDate" placeholder="dd/mm/yyyy"></td>
+        <td class="label">CAB Reference / Chair</td>
+        <td class="field"><input type="text" id="cabReference" placeholder="e.g. CAB-2026-014, chaired by IT EPMO"></td>
+      </tr>
+    </table>
+  </div>
+
   <!-- ==================== PART B ==================== -->
   <div class="part-head">Part B) IT System Admin. &amp; Databases <span class="hint">(fill in with appropriate information)</span></div>
   <div class="part-body">
@@ -258,8 +294,8 @@
   </div>
   <table class="grid" style="width:100%;border-collapse:collapse;border:1px solid var(--line);margin-top:8px;">
     <colgroup>
-      <col style="width:14%"><col style="width:12%"><col style="width:34%">
-      <col style="width:10%"><col style="width:12%"><col style="width:18%">
+      <col style="width:14%"><col style="width:12%"><col style="width:22%">
+      <col style="width:10%"><col data-min-tier="itil" style="width:12%"><col style="width:12%"><col style="width:18%">
     </colgroup>
     <thead class="col-head">
       <tr>
@@ -267,6 +303,7 @@
         <td style="padding:7px 9px;font-size:12.5px;">Project</td>
         <td style="padding:7px 9px;font-size:12.5px;">Brief Description</td>
         <td style="padding:7px 9px;font-size:12.5px;">Priority</td>
+        <td style="padding:7px 9px;font-size:12.5px;" data-min-tier="itil">ITIL / CAB</td>
         <td style="padding:7px 9px;font-size:12.5px;">Status</td>
         <td style="padding:7px 9px;font-size:12.5px;">Requested</td>
       </tr>
@@ -315,15 +352,19 @@
     var rows = PPS.getChangeRequests().filter(function (c) { return matches(c.projectCode, filterVal); });
     bodyEl.innerHTML = rows.length ? rows.slice().reverse().map(function (c) {
       var implLabel = c.implStatus ? c.implStatus : (c.status || "Submitted");
+      var cabCell = c.itilChangeType ? esc(c.itilChangeType) : '<span class="muted">&mdash;</span>';
+      if (PPS.isCifCabPending(c)) cabCell += ' <span class="note" style="color:#b02a37;">CAB Pending</span>';
+      else if (c.cabDecision && c.cabDecision !== "N/A") cabCell += ' <span class="note">' + esc(c.cabDecision) + '</span>';
       return '<tr>' +
         '<td style="padding:7px 9px;font-size:12.5px;">' + esc(c.cifNumber) + '</td>' +
         '<td style="padding:7px 9px;font-size:12.5px;">' + (c.projectCode ? esc(c.projectCode) : '<span class="muted">&mdash;</span>') + '</td>' +
         '<td style="padding:7px 9px;font-size:12.5px;">' + esc(c.briefDesc) + '</td>' +
         '<td style="padding:7px 9px;font-size:12.5px;">' + esc(c.priority) + '</td>' +
+        '<td style="padding:7px 9px;font-size:12.5px;" data-min-tier="itil">' + cabCell + '</td>' +
         '<td style="padding:7px 9px;font-size:12.5px;">' + esc(implLabel) + '</td>' +
         '<td style="padding:7px 9px;font-size:12.5px;">' + esc(c.requestDate) + '</td>' +
       '</tr>';
-    }).join("") : '<tr><td colspan="6" class="pps-empty">' +
+    }).join("") : '<tr><td colspan="7" class="pps-empty">' +
         (filterVal === FILTER_ALL ? 'No CIFs logged yet on this device. Submit the form above to add one.'
                                    : 'No CIFs match this project filter.') +
       '</td></tr>';
@@ -334,6 +375,8 @@
       var p = PPS.getProject(filterVal);
       noteEl.textContent = "Showing " + (p ? (p.name + " (" + filterVal + ")") : filterVal) + " only.";
     }
+    // Rows and the static ITIL/CAB header sit below store.js, so re-gate them. [I2]
+    if (window.PPS) PPS.applyTier();
   }
 
   buildFilter();
@@ -403,6 +446,10 @@
   requestDateField.value = todayStr;
   initiatedByDateField.value = todayStr;
 
+  // The CAB section is below the store.js include, so re-gate now that it
+  // exists in the DOM — it stays hidden unless the ITIL edition is active. [I2]
+  if (window.PPS) PPS.applyTier();
+
   var form = document.getElementById("cifForm");
   var formStatus = document.getElementById("formStatus");
 
@@ -427,6 +474,34 @@
     return valid;
   }
 
+  // CAB gate [I2] — only enforced in the ITIL edition, where the section shows.
+  // Standard = pre-approved, Emergency = allowed (ECAB post-review), Normal =
+  // blocked until the CAB records an Approved decision.
+  function validateCabGate() {
+    if (!(window.PPS && PPS.tierAllows("itil"))) return true;
+    var typeGroup = document.getElementById("itilChangeTypeGroup");
+    var type = radioVal("itilChangeType");
+    var typeOk = !!type;
+    typeGroup.style.outline = typeOk ? "none" : "2px solid #c0392b";
+    typeGroup.style.padding = typeOk ? "" : "4px";
+    if (!typeOk) {
+      formStatus.textContent = "Select an ITIL Change Type before submitting.";
+      formStatus.className = "fail";
+      return false;
+    }
+    var cabGroup = document.getElementById("cabDecisionGroup");
+    if (type === "Normal" && radioVal("cabDecision") !== "Approved") {
+      cabGroup.style.outline = "2px solid #c0392b";
+      cabGroup.style.padding = "4px";
+      formStatus.textContent = "This Normal change must be approved by the CAB (CAB Decision = Approved) before it can be submitted.";
+      formStatus.className = "fail";
+      return false;
+    }
+    cabGroup.style.outline = "none";
+    cabGroup.style.padding = "";
+    return true;
+  }
+
   function buildRecord(status) {
     return {
       cifNumber: cifNumberField.value,
@@ -440,6 +515,10 @@
       changeImpact: val("changeImpact"),
       rollbackSteps: val("rollbackSteps"),
       priority: radioVal("priority"),
+      itilChangeType: radioVal("itilChangeType"),
+      cabDecision: radioVal("cabDecision"),
+      cabDate: val("cabDate"),
+      cabReference: val("cabReference"),
       deployDateTime: val("deployDateTime"),
       initiatedByName: val("initiatedByName"),
       initiatedByDate: val("initiatedByDate"),
@@ -510,6 +589,7 @@
   form.addEventListener("submit", function (e) {
     e.preventDefault();
     if (!validateForm()) { formStatus.textContent = ""; return; }
+    if (!validateCabGate()) { return; }
 
     var next = getCounter() + 1;
     setCounter(next);

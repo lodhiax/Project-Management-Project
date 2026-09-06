@@ -311,6 +311,10 @@
 
       // Linked Governance Records (live, cross-page)
       linkedGovernancePanel(p, gov);
+
+      // The CAB status line inside the governance panel is ITIL-gated and was
+      // just injected, so re-apply the active edition's gating. [I3]
+      if (window.PPS) PPS.applyTier();
     }
 
     function linkedGovernancePanel(p, gov) {
@@ -322,6 +326,15 @@
       var demandCell = gov.capacity
         ? esc(gov.capacity.demand) + ' hrs/wk <span class="note">(' + esc(gov.capacity.allocations.length) + ' allocated)</span>'
         : '<span style="color:var(--ink-faint);">No demand logged</span>';
+      // ITIL change governance [I3]: surface the CAB gate status pulled from the
+      // project's CIFs (Normal changes awaiting board approval + open Emergency
+      // changes). Only shown in the ITIL edition.
+      var cabNote = (gov.cabPending > 0)
+        ? '<div class="note" data-min-tier="itil" style="color:#b02a37;margin-top:2px;">CAB: ' + esc(gov.cabPending) + ' pending</div>'
+        : '<div class="note" data-min-tier="itil" style="margin-top:2px;">CAB: clear</div>';
+      if (gov.emergencyOpen > 0) {
+        cabNote += '<div class="note" data-min-tier="itil" style="margin-top:2px;">Emergency: ' + esc(gov.emergencyOpen) + ' open (ECAB)</div>';
+      }
       return '<table class="section">' +
         '<colgroup><col style="width:20%"><col style="width:16%"><col style="width:16%"><col style="width:16%"><col style="width:16%"><col style="width:16%"></colgroup>' +
         '<tr class="sec-head"><td colspan="6">Linked Governance Records <span class="note">(live \u2014 tagged to this project code)</span></td></tr>' +
@@ -330,7 +343,7 @@
           '<td class="val-hl">' + esc(p.code) + '</td>' +
           '<td>' + esc(gov.openRisks) + ' of ' + esc(gov.risks.length) + '</td>' +
           '<td>' + esc(gov.openDecisions) + ' of ' + esc(gov.decisions.length) + '</td>' +
-          '<td>' + esc(gov.openChangeRequests) + ' of ' + esc(gov.changeRequests.length) + '</td>' +
+          '<td>' + esc(gov.openChangeRequests) + ' of ' + esc(gov.changeRequests.length) + cabNote + '</td>' +
           '<td>' + costCell + '</td>' +
           '<td>' + demandCell + '</td>' +
         '</tr>' +

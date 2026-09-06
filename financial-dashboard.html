@@ -160,6 +160,25 @@
   <div class="chart-note" id="contribNote">Column totals tie exactly to the KPI tiles above. Each row links to that project's Project Financials entry.</div>
 </div>
 
+<!-- ===================== VALUE REALIZATION (ITIL edition) [I5] ===================== -->
+<div class="fin-card" id="valueRealizationCard" data-min-tier="itil" style="margin-top:14px;">
+  <h3>Value Realization <span class="sub" id="vrHeadline">&mdash;</span></h3>
+  <div id="vrSummary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px;"><!-- injected --></div>
+  <div id="vrProgress"><!-- injected --></div>
+  <table class="fin-tbl" id="vrTable" style="margin-top:12px;">
+    <thead><tr>
+      <td>Project</td>
+      <td style="text-align:right;">Expected Value (FY)</td>
+      <td style="text-align:right;">Realized to Date</td>
+      <td style="text-align:right;">Outstanding</td>
+      <td style="text-align:right;">Realization</td>
+      <td>Status</td>
+    </tr></thead>
+    <tbody id="vrBody"><!-- injected --></tbody>
+  </table>
+  <div class="chart-note" id="vrNote">Expected Value is the full-year plan for tangible benefits (cost reduction, saving and avoidance). Realized to Date is the cumulative benefit through the current quarter. This tracks benefits realization, not spend.</div>
+</div>
+
 <script>
 (function () {
   var esc = PPS.esc;
@@ -418,6 +437,90 @@
     picker.innerHTML = opts;
   }
 
+  /* ============================================================
+     VALUE REALIZATION  [I5] (ITIL edition)
+     ------------------------------------------------------------
+     Benefits realization, not spend: Expected Value is the full-year
+     plan for tangible benefits (cost reduction + saving + avoidance);
+     Realized to Date is the cumulative benefit through the current
+     quarter, read from the same quarterly trend the KPI sparklines
+     use. Realization % = realized / expected.
+     ============================================================ */
+  function currentQuarterIndex() {
+    return Math.min(3, Math.floor(new Date().getMonth() / 3)); // 0..3
+  }
+  function tangiblePlanFY(k) {
+    return (Number(k.costReduction) || 0) + (Number(k.costSaving) || 0) + (Number(k.costAvoidance) || 0);
+  }
+  function realizedToDate(trend, qi) {
+    if (!trend) return null;
+    function at(arr) { arr = arr || [0,0,0,0]; return Number(arr[qi]) || 0; }
+    return at(trend.costReduction) + at(trend.costSaving) + at(trend.costAvoidance);
+  }
+  function vrStatus(pctVal) {
+    if (pctVal >= 95) return { label: "Realized", dot: "dot-green" };
+    if (pctVal >= 70) return { label: "On Track", dot: "dot-green" };
+    return { label: "At Risk", dot: "dot-yellow" };
+  }
+
+  function renderValueRealization(view) {
+    var qi = currentQuarterIndex();
+    var planFY = tangiblePlanFY(view.kpis);
+    var realized = realizedToDate(view.trend, qi);
+    if (realized === null) realized = planFY;
+    var outstanding = Math.max(0, planFY - realized);
+    var pctVal = planFY > 0 ? (realized / planFY * 100) : 0;
+    var st = planFY > 0 ? vrStatus(pctVal) : { label: "No plan", dot: "dot-grey" };
+
+    document.getElementById("vrHeadline").textContent = planFY > 0 ? (Math.round(pctVal) + "% realized") : "No value plan";
+
+    var tiles = [
+      { label: "Expected Value (FY)", val: money(planFY) },
+      { label: "Realized to Date",    val: money(realized) },
+      { label: "Outstanding",         val: money(outstanding) },
+      { label: "Realization",         val: (planFY > 0 ? Math.round(pctVal) : 0) + "%" }
+    ];
+    document.getElementById("vrSummary").innerHTML = tiles.map(function (t) {
+      return '<div class="fin-kpi"><div class="k-label">' + t.label + '</div>' +
+             '<div class="k-val" style="font-size:18px;">' + t.val + '</div></div>';
+    }).join("");
+
+    var w = Math.max(0, Math.min(100, pctVal));
+    document.getElementById("vrProgress").innerHTML =
+      '<div class="fin-hbar" style="grid-template-columns:120px 1fr 130px;">' +
+        '<span class="lab">Realized vs plan</span>' +
+        '<span class="track" style="height:14px;"><span class="fill" style="width:' + w.toFixed(1) + '%;background:' + (pctVal >= 70 ? C_GREEN : "#c9a24a") + ';"></span></span>' +
+        '<span class="val"><span class="dot ' + st.dot + '"></span> ' + st.label + '</span>' +
+      '</div>';
+
+    var body = document.getElementById("vrBody");
+    var tableEl = document.getElementById("vrTable");
+    if (view.isAll && view.perProject && view.perProject.length) {
+      tableEl.style.display = "";
+      var rows = view.perProject.map(function (p) {
+        var rec = PPS.getFinancials(p.code);
+        var planP = (Number(p.costReduction) || 0) + (Number(p.costSaving) || 0) + (Number(p.costAvoidance) || 0);
+        var realP = realizedToDate(rec && rec.trend, qi);
+        if (realP === null) realP = planP;
+        return { code: p.code, name: p.name, plan: planP, real: realP,
+                 out: Math.max(0, planP - realP), pct: planP > 0 ? (realP / planP * 100) : 0, hasPlan: planP > 0 };
+      }).sort(function (a, b) { return b.plan - a.plan; });
+      body.innerHTML = rows.map(function (r) {
+        var st2 = r.hasPlan ? vrStatus(r.pct) : { label: "No plan", dot: "dot-grey" };
+        return '<tr>' +
+          '<td><a href="financials.html?project=' + encodeURIComponent(r.code) + '">' + esc(r.name) + '</a> <span class="chart-note">(' + esc(r.code) + ')</span></td>' +
+          '<td class="num">' + money(r.plan) + '</td>' +
+          '<td class="num">' + money(r.real) + '</td>' +
+          '<td class="num">' + money(r.out) + '</td>' +
+          '<td class="num">' + (r.hasPlan ? Math.round(r.pct) : 0) + '%</td>' +
+          '<td><span class="dot ' + st2.dot + '"></span> ' + st2.label + '</td>' +
+        '</tr>';
+      }).join("");
+    } else {
+      tableEl.style.display = "none";
+    }
+  }
+
   /* ---- render ---- */
   function render() {
     var code = picker.value || ALL;
@@ -434,6 +537,12 @@
       document.getElementById("scorecardLinkRow").innerHTML = (code === ALL) ? "" :
         '<a class="pps-btn secondary" href="scorecard.html?project=' + encodeURIComponent(code) + '">View Scorecard &rarr;</a>';
       renderContribution({ isAll: code === ALL, perProject: [] });
+      document.getElementById("vrHeadline").textContent = "\u2014";
+      document.getElementById("vrSummary").innerHTML = "";
+      document.getElementById("vrProgress").innerHTML = "";
+      document.getElementById("vrBody").innerHTML = "";
+      document.getElementById("vrTable").style.display = "none";
+      if (window.PPS) PPS.applyTier();
       return;
     }
 
@@ -451,6 +560,11 @@
     renderSuppliers(view.suppliers);
     renderKpis(view);
     renderContribution(view);
+    renderValueRealization(view);
+
+    // The Value Realization card is ITIL-gated and sits below store.js, so
+    // re-apply the active edition's gating after each render. [I5]
+    if (window.PPS) PPS.applyTier();
 
     var srcLink = document.getElementById("kpiSrcLink");
     srcLink.href = (code === ALL) ? "financials.html" : "financials.html?project=" + encodeURIComponent(code);
