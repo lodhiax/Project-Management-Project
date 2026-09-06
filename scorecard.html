@@ -44,6 +44,7 @@
     </div>
   </div>
   <a href="portfolio-review.html">Portfolio Review</a>
+  <a href="wbs.html">Work Breakdown</a>
   <a href="capacity.html">Resource Capacity</a>
   <a href="financial-dashboard.html">Financial Dashboard</a>
   <div class="pps-dropdown">
@@ -109,6 +110,8 @@
     var esc = PPS.esc;
     var picker = document.getElementById("projectPicker");
     var mount  = document.getElementById("scorecard");
+
+    function money(n) { return "$" + (Number(n) || 0).toLocaleString(); }
 
     function dot(statusKey) {
       var st = PPS.portfolioStatus(statusKey);
@@ -225,8 +228,11 @@
         ([p.progress, p.remarks].filter(Boolean).join(" ") || "No objective statement captured for this project yet.");
 
       var cr  = (d && d.changeRequests) || { approved: 0, rejected: 0, lastCycle: 0 };
-      var fin = (d && d.financials) || { budgeted: "\u2014", spent: "\u2014", etc: "\u2014" };
       var gov = PPS.getProjectGovernance(p.code);
+      var finRec = gov.financials; // single source of truth -- Project Financials page
+      var fin = finRec
+        ? { budgeted: money(finRec.budget), spent: money(finRec.spent), etc: money(finRec.etc) }
+        : { budgeted: "\u2014", spent: "\u2014", etc: "\u2014" };
 
       /* update the record-header strip */
       document.getElementById("scProjectName").textContent = p.name;
@@ -280,6 +286,9 @@
             '<tr><td class="panel-lbl">Spent to date</td><td class="panel-val">' + esc(fin.spent) + '</td></tr>' +
             '<tr><td class="panel-lbl">Estimate to Complete</td><td class="panel-val">' + esc(fin.etc) + '</td></tr>' +
             procurementRows(gov) +
+            '<tr><td colspan="2" style="background:#fff;border-top:1px dashed var(--line);padding:6px 8px;">' +
+              '<a class="src-link" href="financials.html?project=' + encodeURIComponent(p.code) + '">Source: Project Financials &rarr;</a>' +
+            '</td></tr>' +
           '</table>' +
         '</div>' +
       '</div>' +

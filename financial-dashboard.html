@@ -74,6 +74,7 @@
     </div>
   </div>
   <a href="portfolio-review.html">Portfolio Review</a>
+  <a href="wbs.html">Work Breakdown</a>
   <a href="capacity.html">Resource Capacity</a>
   <a href="financial-dashboard.html" class="active">Financial Dashboard</a>
   <div class="pps-dropdown">
@@ -161,8 +162,26 @@
   <!-- ===================== RIGHT RAIL (KPIs) ===================== -->
   <div class="fin-col fin-rail">
     <div class="fin-rail-tiles" id="kpiTiles"><!-- injected --></div>
+    <div style="margin-top:10px;"><a class="src-link" id="kpiSrcLink" href="financials.html">Source: Project Financials &rarr;</a></div>
   </div>
 
+</div>
+
+<!-- ===================== CONTRIBUTION BY PROJECT ===================== -->
+<div class="fin-card" id="contribCard" style="margin-top:14px;">
+  <h3>Contribution by Project <span class="sub" id="contribSub">&mdash;</span></h3>
+  <table class="fin-tbl" id="contribTable">
+    <thead><tr>
+      <td>Project</td>
+      <td style="text-align:right;">Cost Reduction</td>
+      <td style="text-align:right;">Cost Saving</td>
+      <td style="text-align:right;">Cost Avoidance</td>
+      <td style="text-align:right;">ROI</td>
+    </tr></thead>
+    <tbody id="contribBody"><!-- injected --></tbody>
+    <tfoot id="contribFoot"><!-- injected --></tfoot>
+  </table>
+  <div class="chart-note" id="contribNote">Column totals tie exactly to the KPI tiles above. Each row links to that project's Project Financials entry.</div>
 </div>
 
 <script>
@@ -201,7 +220,8 @@
         roiBars:       a.categoryRates.map(function (c) { return { name:c.name, pct:c.roiPct }; }).sort(byPctDesc),
         savingsBars:   a.categoryRates.map(function (c) { return { name:c.name, pct:c.savingsPct }; }).sort(byPctDesc),
         avoidanceBars: a.categoryRates.map(function (c) { return { name:c.name, pct:c.avoidancePct }; }).sort(byPctDesc),
-        suppliers: a.topSuppliers
+        suppliers: a.topSuppliers,
+        perProject: a.perProject
       };
     }
     var r = PPS.getFinancials(code);
@@ -334,6 +354,45 @@
     }).join("");
   }
 
+  /* ---- contribution by project (decomposes the "All Projects" headline) ---- */
+  function renderContribution(view) {
+    var body = document.getElementById("contribBody");
+    var foot = document.getElementById("contribFoot");
+    var sub  = document.getElementById("contribSub");
+    var note = document.getElementById("contribNote");
+
+    if (!view.isAll || !view.perProject || !view.perProject.length) {
+      sub.textContent = "\u2014";
+      body.innerHTML = '<tr><td colspan="5" class="pps-empty">Select "All Projects (portfolio roll-up)" above to see the per-project breakdown.</td></tr>';
+      foot.innerHTML = "";
+      note.style.display = "none";
+      return;
+    }
+    note.style.display = "";
+    sub.textContent = view.perProject.length + " project" + (view.perProject.length === 1 ? "" : "s");
+
+    var rows = view.perProject.slice().sort(function (a, b) { return b.costReduction - a.costReduction; });
+    body.innerHTML = rows.map(function (r) {
+      return '<tr>' +
+        '<td><a href="financials.html?project=' + encodeURIComponent(r.code) + '">' + esc(r.name) + '</a> <span class="chart-note">(' + esc(r.code) + ')</span></td>' +
+        '<td class="num">' + money(r.costReduction) + '</td>' +
+        '<td class="num">' + money(r.costSaving) + '</td>' +
+        '<td class="num">' + money(r.costAvoidance) + '</td>' +
+        '<td class="num">' + pct(r.roiPct) + '</td>' +
+      '</tr>';
+    }).join("");
+
+    var tR = rows.reduce(function (a, r) { return a + r.costReduction; }, 0);
+    var tS = rows.reduce(function (a, r) { return a + r.costSaving; }, 0);
+    var tA = rows.reduce(function (a, r) { return a + r.costAvoidance; }, 0);
+    foot.innerHTML = '<tr><td>Total</td>' +
+      '<td class="num">' + money(tR) + '</td>' +
+      '<td class="num">' + money(tS) + '</td>' +
+      '<td class="num">' + money(tA) + '</td>' +
+      '<td class="num">' + pct(view.kpis.procurementROI) + ' <span class="chart-note">(blended)</span></td>' +
+    '</tr>';
+  }
+
   /* ---- sparkline (SVG polyline over 4 quarters) ---- */
   function sparkline(series, isPct) {
     var w = 74, h = 26, pad = 3;
@@ -398,6 +457,7 @@
       document.getElementById("projCount").textContent = "0";
       document.getElementById("scorecardLinkRow").innerHTML = (code === ALL) ? "" :
         '<a class="pps-btn secondary" href="scorecard.html?project=' + encodeURIComponent(code) + '">View Scorecard &rarr;</a>';
+      renderContribution({ isAll: code === ALL, perProject: [] });
       return;
     }
 
@@ -414,6 +474,13 @@
     renderHBars("avoidanceBars", view.avoidanceBars, C_GREEN);
     renderSuppliers(view.suppliers);
     renderKpis(view);
+    renderContribution(view);
+
+    var srcLink = document.getElementById("kpiSrcLink");
+    srcLink.href = (code === ALL) ? "financials.html" : "financials.html?project=" + encodeURIComponent(code);
+    srcLink.textContent = (code === ALL)
+      ? "Source: Project Financials (summed across " + view.count + " project" + (view.count === 1 ? "" : "s") + ") \u2192"
+      : "Source: Project Financials \u2192";
   }
 
   buildPicker();

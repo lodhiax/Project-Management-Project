@@ -29,6 +29,7 @@
     resources:   "ppsResources",
     allocations: "ppsAllocations",
     financials:  "ppsFinancialMetrics",
+    wbs:         "ppsWbs",
     seeded:      "ppsSeededV1"
   };
 
@@ -123,7 +124,6 @@
       budgetStatus: "onTrack",
       objective: "Right now, import billing is reconciled by hand in spreadsheets, which is slow and easy to get wrong. This project builds an automated engine that connects the Order Management System (OMS) to Finance. It pulls in carrier and customs charges, applies the duty and VAT rules, and routes reconciled invoices through for approval. The aim is to cut out the manual matching, put a clear approval chain in place, and give Operations and Finance one shared view of charges, exceptions, and what has been closed.",
       changeRequests: { approved: 1, rejected: 0, lastCycle: 1 },
-      financials: { budgeted: "$180,000", spent: "$96,000", etc: "$75,000" },
       milestones: [
         { phase:"Planning", name:"Requirement gathering sessions",               start:"15-Jun-26", planned:"30-Jun-26", actual:"28-Jun-26", status:"completed" },
         { phase:"Planning", name:"Business Requirements (Prep / Review / Sign-off)", start:"1-Jul-26", planned:"18-Jul-26", actual:"20-Jul-26", status:"completed" },
@@ -218,18 +218,21 @@
     { project:"P2609-06", resource:"Daniel Foster",           hours:8  }
   ];
 
-  // --- Financial metrics, keyed by project code. Additive demo layer.
-  //     Every code here exists in SEED_PORTFOLIO, so each record joins
-  //     to a real project. Scalars are the latest (q4) values; the
-  //     trend arrays end exactly at each scalar so the sparkline and the
-  //     headline number always agree. categories[].costReduction sums to
-  //     the record's costReduction (feeds the donut); suppliers[] sum to
-  //     <= costReduction (feeds the Top-5 table). Flagship P2606-01 is
-  //     reconciled with its scorecard financials (costOfPurchase is the
-  //     procurement portion of the $96,000 spent). These are demo values,
-  //     not yet reconciled against other pages' actuals by design. ---
+  // --- Financial metrics, keyed by project code. This is the single
+  //     source of truth for a project's money figures. Every code here
+  //     exists in SEED_PORTFOLIO, so each record joins to a real project.
+  //     budget / spent / etc are first-class fields here (not duplicated
+  //     as strings on the scorecard) -- the Scorecard's Financials panel
+  //     and the Project Financials page both read and write this same
+  //     record, so the two can never drift apart. Scalars are the latest
+  //     (q4) values; the trend arrays end exactly at each scalar so the
+  //     sparkline and the headline number always agree. categories[].
+  //     costReduction sums to the record's costReduction (feeds the
+  //     donut); suppliers[] sum to <= costReduction (feeds the Top-5
+  //     table). ---
   var SEED_FINANCIALS = {
     "P2606-01": {
+      budget:180000, spent:96000, etc:75000,
       costOfPurchase:60000, costReduction:18000, costSaving:12000, costAvoidance:8300,
       procurementCost:60000, procurementReturn:78000,
       categories: [
@@ -253,6 +256,7 @@
       }
     },
     "P2607-02": {
+      budget:135000, spent:72000, etc:56000,
       costOfPurchase:45000, costReduction:12500, costSaving:8000, costAvoidance:5400,
       procurementCost:45000, procurementReturn:56000,
       categories: [
@@ -275,6 +279,7 @@
       }
     },
     "P2608-03": {
+      budget:84000, spent:45000, etc:35000,
       costOfPurchase:28000, costReduction:6000, costSaving:3500, costAvoidance:2600,
       procurementCost:28000, procurementReturn:32000,
       categories: [
@@ -295,6 +300,7 @@
       }
     },
     "P2608-04": {
+      budget:66000, spent:35000, etc:27000,
       costOfPurchase:22000, costReduction:4200, costSaving:2500, costAvoidance:1800,
       procurementCost:22000, procurementReturn:25000,
       categories: [
@@ -315,6 +321,7 @@
       }
     },
     "P2607-05": {
+      budget:27000, spent:14000, etc:11000,
       costOfPurchase:9000, costReduction:1500, costSaving:800, costAvoidance:600,
       procurementCost:9000, procurementReturn:9800,
       categories: [
@@ -335,6 +342,7 @@
       }
     },
     "P2609-06": {
+      budget:0, spent:0, etc:0,
       costOfPurchase:0, costReduction:0, costSaving:0, costAvoidance:0,
       procurementCost:0, procurementReturn:0,
       categories: [],
@@ -349,6 +357,7 @@
       }
     },
     "P2601-07": {
+      budget:150000, spent:150000, etc:0,
       costOfPurchase:52000, costReduction:16000, costSaving:11000, costAvoidance:7200,
       procurementCost:52000, procurementReturn:71000,
       categories: [
@@ -371,6 +380,7 @@
       }
     },
     "P2602-08": {
+      budget:110000, spent:110000, etc:0,
       costOfPurchase:38000, costReduction:10500, costSaving:7000, costAvoidance:4800,
       procurementCost:38000, procurementReturn:49000,
       categories: [
@@ -394,6 +404,31 @@
     }
   };
 
+  // --- Work Breakdown Structure, keyed by project code. Nodes are stored
+  //     flat, each carrying a parentId (null = top level). Order in the array
+  //     is display order among siblings. Leaf effort (hrs) and percent are
+  //     entered; a parent's effort and percent are DERIVED live from its
+  //     leaves (see the WBS rollup API), so they are never stored and can't
+  //     drift. Only the flagship project ships with a full breakdown; others
+  //     start empty and show a "start the breakdown" prompt. ---
+  var SEED_WBS = {
+    "P2606-01": [
+      { id:1,  parentId:null, name:"Planning",  owner:"Michael Turner", start:"15-Jun-26", end:"20-Jul-26", effort:0,   percent:0,   status:"completed" },
+      { id:2,  parentId:1,    name:"Requirement gathering sessions",                  owner:"David Bennett",  start:"15-Jun-26", end:"28-Jun-26", effort:40,  percent:100, status:"completed" },
+      { id:3,  parentId:1,    name:"Business Requirements (prep, review, sign-off)",  owner:"Michael Turner", start:"1-Jul-26",  end:"20-Jul-26", effort:80,  percent:100, status:"completed" },
+      { id:4,  parentId:null, name:"Analysis", owner:"David Bennett",  start:"21-Jul-26", end:"8-Aug-26",  effort:0,   percent:0,   status:"completed" },
+      { id:5,  parentId:4,    name:"Functional Requirements (prep, review, sign-off)",owner:"David Bennett",  start:"21-Jul-26", end:"8-Aug-26",  effort:100, percent:100, status:"completed" },
+      { id:6,  parentId:null, name:"Build", owner:"Michael Turner", start:"11-Aug-26", end:"12-Sep-26", effort:0,   percent:0,   status:"atRisk" },
+      { id:7,  parentId:6,    name:"Billing & reconciliation engine",                 owner:"Michael Turner", start:"11-Aug-26", end:"12-Sep-26", effort:160, percent:80,  status:"onTrack" },
+      { id:8,  parentId:6,    name:"OMS \u2194 engine integration",                   owner:"James Carter",   start:"18-Aug-26", end:"12-Sep-26", effort:120, percent:75,  status:"atRisk" },
+      { id:9,  parentId:null, name:"Test", owner:"Emily Watson", start:"15-Sep-26", end:"25-Sep-26", effort:0,   percent:0,   status:"onTrack" },
+      { id:10, parentId:9,    name:"UAT cycle 1",                                      owner:"Emily Watson",   start:"15-Sep-26", end:"20-Sep-26", effort:60,  percent:40,  status:"onTrack" },
+      { id:11, parentId:9,    name:"UAT cycle 2",                                      owner:"Emily Watson",   start:"21-Sep-26", end:"25-Sep-26", effort:60,  percent:20,  status:"onTrack" },
+      { id:12, parentId:null, name:"Deploy", owner:"Michael Turner", start:"28-Sep-26", end:"30-Sep-26", effort:0,   percent:0,   status:"notStarted" },
+      { id:13, parentId:12,   name:"Go-live & hypercare",                             owner:"Michael Turner", start:"28-Sep-26", end:"30-Sep-26", effort:40,  percent:0,   status:"notStarted" }
+    ]
+  };
+
   /* ============================================================
      SEEDING  (runs once; never wipes real submissions)
      ============================================================ */
@@ -412,13 +447,14 @@
     if (read(KEYS.resources, null) === null)   write(KEYS.resources, SEED_RESOURCES);
     if (read(KEYS.allocations, null) === null) write(KEYS.allocations, SEED_ALLOCATIONS);
     if (read(KEYS.financials, null) === null)  write(KEYS.financials, SEED_FINANCIALS);
+    if (read(KEYS.wbs, null) === null)         write(KEYS.wbs, SEED_WBS);
     if (Number(read(KEYS.counter, 0)) < SEED_REGISTER.length) write(KEYS.counter, SEED_REGISTER.length);
     write(KEYS.seeded, true);
   }
 
   function resetAll() {
     [KEYS.counter, KEYS.register, KEYS.portfolio, KEYS.scorecards, KEYS.risks, KEYS.decisions,
-     KEYS.resources, KEYS.allocations, KEYS.financials, KEYS.seeded]
+     KEYS.resources, KEYS.allocations, KEYS.financials, KEYS.wbs, KEYS.seeded]
       .forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
     ensureSeed();
   }
@@ -827,8 +863,9 @@
        - a metric's headline == the last (q4) point of its trend
        - Procurement ROI is DERIVED from cost & return, never stored
          as a free-floating figure
-     These are demo values; they are not yet reconciled against the
-     scorecard's own budget/spend figures (deferred by design).
+     budget / spent / etc live on this same record (see the write API
+     below), so the Scorecard's Financials panel and this page can
+     never disagree -- there is only one number to edit.
      ============================================================ */
   var FIN_METRICS = ["costOfPurchase","costReduction","costSaving","costAvoidance","procurementCost","procurementReturn"];
 
@@ -875,6 +912,9 @@
       });
       perProject.push({
         code: p.code, name: p.name, status: p.status, section: p.section,
+        budget: Number(r.budget) || 0,
+        spent:  Number(r.spent)  || 0,
+        etc:    Number(r.etc)    || 0,
         costOfPurchase: Number(r.costOfPurchase) || 0,
         costReduction:  Number(r.costReduction)  || 0,
         costSaving:     Number(r.costSaving)     || 0,
@@ -925,6 +965,10 @@
        - each metric's 4-quarter trend is regenerated to end exactly on
          its headline, so sparkline and headline never disagree
        - supplier attribution may not exceed the derived costReduction
+     budget / spent / etc are saved on this same record. The Scorecard
+     reads them straight from here (PPS.getFinancials), so editing them
+     on this page is the only way to change them and both pages always
+     agree -- there is no separate scorecard copy left to drift.
      Records are keyed by project code (must be a real portfolio code).
      ============================================================ */
   var FIN_CATEGORY_LIST = ["Software Licenses", "Integration & Dev", "Infrastructure", "Vendor Services", "Internal Labor"];
@@ -961,6 +1005,9 @@
     var costOfPurchase = finMoney(input.costOfPurchase);
     var costReduction = cats.reduce(function (a, c) { return a + c.costReduction; }, 0);  // derived
     var rec = {
+      budget: finMoney(input.budget),
+      spent: finMoney(input.spent),
+      etc: finMoney(input.etc),
       costOfPurchase: costOfPurchase,
       costReduction: costReduction,
       costSaving: finMoney(input.costSaving),
@@ -1102,6 +1149,184 @@
     };
   }
 
+  /* ============================================================
+     WORK BREAKDOWN STRUCTURE (WBS)  — write + rollup API
+     ------------------------------------------------------------
+     Per-project hierarchical task breakdown, keyed by the same
+     project `code` used everywhere else. Nodes are stored flat,
+     each with a parentId (null = top level); array order is the
+     display order among siblings. The tree, the outline numbers
+     (1, 1.1, 1.1.1) and every rolled-up figure are DERIVED live
+     from that flat list — a single source of truth with nothing
+     to keep in sync.
+
+     Rollup rule (bottom-up, effort-weighted):
+       - a LEAF contributes  effort  and  effort * percent/100
+       - a PARENT's effort  = sum of its descendant leaves' effort
+       - a PARENT's percent = effort-weighted completion of them
+       - the PROJECT figure treats the top-level nodes as the
+         children of a virtual root
+     Leaf effort/percent are entered; parent effort/percent are
+     computed and never stored, so the two can never disagree.
+     ============================================================ */
+  function getWbsMap() { return read(KEYS.wbs, {}) || {}; }
+  function getWbs(code) {
+    var arr = getWbsMap()[String(code || "")];
+    return Array.isArray(arr) ? arr : [];
+  }
+  function saveWbs(code, arr) {
+    var all = getWbsMap();
+    all[String(code || "")] = arr;
+    return write(KEYS.wbs, all);
+  }
+  function wbsNextId(arr) {
+    var max = 0;
+    arr.forEach(function (n) { var v = Number(n.id); if (!isNaN(v) && v > max) max = v; });
+    return max + 1;
+  }
+  function cleanWbsNode(input) {
+    input = input || {};
+    var pct = parseInt(input.percent, 10); if (isNaN(pct)) pct = 0;
+    var eff = parseInt(input.effort, 10);  if (isNaN(eff)) eff = 0;
+    var pid = (input.parentId === undefined || input.parentId === null || input.parentId === "")
+                ? null : Number(input.parentId);
+    if (isNaN(pid)) pid = null;
+    return {
+      name:     String(input.name || "").trim(),
+      owner:    String(input.owner || "").trim(),
+      start:    String(input.start || "").trim(),
+      end:      String(input.end || "").trim(),
+      effort:   Math.max(0, eff),
+      percent:  Math.max(0, Math.min(100, pct)),
+      status:   PORTFOLIO_STATUS[input.status] ? input.status : "notStarted",
+      parentId: pid
+    };
+  }
+  function addWbsNode(code, input) {
+    code = String(code || "").trim();
+    if (!code) return { ok:false, error:"A project must be selected." };
+    var node = cleanWbsNode(input);
+    if (!node.name) return { ok:false, error:"A task name is required." };
+    var arr = getWbs(code);
+    if (node.parentId !== null && !arr.some(function (n) { return n.id === node.parentId; }))
+      node.parentId = null;                               // orphan guard
+    node.id = wbsNextId(arr);
+    arr.push(node);
+    if (!saveWbs(code, arr)) return { ok:false, error:"Could not save. Browser storage may be full." };
+    return { ok:true, node:node };
+  }
+  function wbsIsAncestor(arr, ancestorId, nodeId) {
+    // true if ancestorId sits on nodeId's parent chain (cycle guard)
+    var byId = {};
+    arr.forEach(function (n) { byId[n.id] = n; });
+    var seen = {}, cur = byId[nodeId];
+    while (cur && cur.parentId !== null && cur.parentId !== undefined) {
+      if (cur.parentId === ancestorId) return true;
+      if (seen[cur.parentId]) break;
+      seen[cur.parentId] = true;
+      cur = byId[cur.parentId];
+    }
+    return false;
+  }
+  function updateWbsNode(code, id, input) {
+    var arr = getWbs(code), idx = -1;
+    for (var i = 0; i < arr.length; i++) { if (String(arr[i].id) === String(id)) { idx = i; break; } }
+    if (idx === -1) return { ok:false, error:"Task not found." };
+    var merged = cleanWbsNode(assign(arr[idx], input));
+    if (!merged.name) return { ok:false, error:"A task name is required." };
+    merged.id = arr[idx].id;
+    // a node may not become its own parent or a child of its own descendant
+    if (merged.parentId !== null &&
+        (merged.parentId === merged.id ||
+         !arr.some(function (n) { return n.id === merged.parentId; }) ||
+         wbsIsAncestor(arr, merged.id, merged.parentId))) {
+      merged.parentId = arr[idx].parentId;
+    }
+    arr[idx] = merged;
+    if (!saveWbs(code, arr)) return { ok:false, error:"Could not save. Browser storage may be full." };
+    return { ok:true, node:merged };
+  }
+  function deleteWbsNode(code, id) {
+    var arr = getWbs(code);
+    var kill = {}; kill[String(id)] = true;
+    var changed = true;
+    while (changed) {                                     // sweep out descendants too
+      changed = false;
+      arr.forEach(function (n) {
+        if (n.parentId !== null && kill[String(n.parentId)] && !kill[String(n.id)]) {
+          kill[String(n.id)] = true; changed = true;
+        }
+      });
+    }
+    var next = arr.filter(function (n) { return !kill[String(n.id)]; });
+    if (!saveWbs(code, next)) return { ok:false, error:"Could not save." };
+    return { ok:true, removed: arr.length - next.length };
+  }
+
+  // Ordered, numbered tree with rolled-up effort/percent on every node.
+  function getWbsTree(code) {
+    var arr = getWbs(code);
+    var byParent = {};
+    arr.forEach(function (n) {
+      var k = (n.parentId === null || n.parentId === undefined) ? "root" : String(n.parentId);
+      (byParent[k] = byParent[k] || []).push(n);
+    });
+    function build(parentKey, prefix, level) {
+      return (byParent[parentKey] || []).map(function (n, i) {
+        var no = prefix ? prefix + "." + (i + 1) : String(i + 1);
+        var kids = build(String(n.id), no, level + 1);
+        var isLeaf = kids.length === 0, effort, percent;
+        if (isLeaf) {
+          effort = Number(n.effort) || 0;
+          percent = Number(n.percent) || 0;
+        } else {
+          effort = kids.reduce(function (a, c) { return a + c.effort; }, 0);
+          var done = kids.reduce(function (a, c) { return a + c.effort * (c.percent / 100); }, 0);
+          percent = effort > 0 ? Math.round(done / effort * 100)
+                    : Math.round(kids.reduce(function (a, c) { return a + c.percent; }, 0) / (kids.length || 1));
+        }
+        return {
+          id:n.id, wbs:no, level:level, name:n.name, owner:n.owner,
+          start:n.start, end:n.end, status:n.status,
+          effort:effort, percent:percent, isLeaf:isLeaf,
+          rawEffort:Number(n.effort) || 0, rawPercent:Number(n.percent) || 0,
+          parentId:(n.parentId === undefined ? null : n.parentId),
+          children:kids
+        };
+      });
+    }
+    return build("root", "", 1);
+  }
+  // Pre-order flatten of the tree, for straight table rendering.
+  function getWbsRows(code) {
+    var out = [];
+    (function walk(nodes) { nodes.forEach(function (n) { out.push(n); walk(n.children); }); })(getWbsTree(code));
+    return out;
+  }
+  function getWbsRollup(code) {
+    var tree = getWbsTree(code);
+    var effort = tree.reduce(function (a, n) { return a + n.effort; }, 0);
+    var done   = tree.reduce(function (a, n) { return a + n.effort * (n.percent / 100); }, 0);
+    var rows = getWbsRows(code);
+    var byStatus = {}; STATUS_ORDER.forEach(function (k) { byStatus[k] = 0; });
+    rows.forEach(function (n) { if (n.isLeaf) byStatus[n.status] = (byStatus[n.status] || 0) + 1; });
+    return {
+      packages: rows.filter(function (n) { return n.isLeaf; }).length,
+      groups:   rows.filter(function (n) { return !n.isLeaf; }).length,
+      nodes:    rows.length,
+      effort:   effort,
+      percent:  effort > 0 ? Math.round(done / effort * 100)
+                : (tree.length ? Math.round(tree.reduce(function (a, n) { return a + n.percent; }, 0) / tree.length) : 0),
+      byStatus: byStatus
+    };
+  }
+  // Rollup for every current portfolio project that has a breakdown.
+  function getWbsRollupAll() {
+    var out = {};
+    getPortfolio().forEach(function (p) { if (getWbs(p.code).length) out[p.code] = getWbsRollup(p.code); });
+    return out;
+  }
+
   /* Small DOM helper used by the pages */
   function esc(s) {
     return String(s === undefined || s === null ? "" : s)
@@ -1163,6 +1388,14 @@
     addAllocation: addAllocation,
     updateAllocation: updateAllocation,
     deleteAllocation: deleteAllocation,
+    getWbs: getWbs,
+    getWbsTree: getWbsTree,
+    getWbsRows: getWbsRows,
+    getWbsRollup: getWbsRollup,
+    getWbsRollupAll: getWbsRollupAll,
+    addWbsNode: addWbsNode,
+    updateWbsNode: updateWbsNode,
+    deleteWbsNode: deleteWbsNode,
     esc: esc,
     _seedRegisterCount: SEED_REGISTER.length
   };
@@ -1276,7 +1509,8 @@
     "repository": "repository.html",
     "change request": "change-request-form.html",
     "project financials": "financials.html",
-    "resource management": "resources.html"
+    "resource management": "resources.html",
+    "work breakdown": "wbs.html"
   };
   function normStageLabel(s) {
     return (s || "").replace(/\s+/g, " ").trim().toLowerCase();

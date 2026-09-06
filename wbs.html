@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Work Breakdown Structure</title>
+<link rel="stylesheet" href="assets/css/app.css">
+<style>
+  table.grid td, table.grid th { font-size: 12.5px; padding: 7px 9px; }
+  table.grid { border: 1px solid var(--line); }
+
+  /* WBS outline number */
+  .wbs-num { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--ink-soft); white-space: nowrap; letter-spacing: 0.2px; }
+
+  /* task name cell: indentation carries the hierarchy; group rows read heavier */
+  .wbs-name { display: inline-block; }
+  tr.wbs-group td { background: #f4f7f9; }
+  tr.wbs-group .wbs-name { font-weight: 700; color: var(--ink); }
+  tr.wbs-leaf  .wbs-name { color: var(--ink); }
+  .wbs-twig { color: var(--ink-faint); margin-right: 6px; }
+
+  /* derived (rolled-up) tag, matching the Scorecard's treatment */
+  .derived { display: inline-block; font-size: 10px; color: var(--stage-done-ink); background: var(--stage-todo);
+             border: 1px solid #cfe2d1; border-radius: 3px; padding: 0 5px; margin-left: 6px; font-weight: 600;
+             letter-spacing: 0.2px; vertical-align: 1px; }
+
+  /* inline % complete bar */
+  .wbs-pct { display: flex; align-items: center; gap: 8px; }
+  .wbs-track { flex: 1 1 auto; height: 7px; background: var(--line-soft); border-radius: 4px; overflow: hidden; min-width: 46px; }
+  .wbs-track > span { display: block; height: 100%; background: var(--stage-active); }
+  .wbs-pctnum { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); min-width: 34px; text-align: right; }
+
+  /* summary card above the grid */
+  .wbs-summary { display: flex; gap: 14px; align-items: stretch; flex-wrap: wrap; margin: 4px 0 14px; }
+  .wbs-sum-card { flex: 1 1 260px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 13px 15px; }
+  .wbs-sum-card .sc-h { font-size: 10.5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--ink-soft); }
+  .wbs-sum-big { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; }
+  .wbs-sum-big .n { font-size: 28px; font-weight: 700; color: var(--ink); line-height: 1; }
+  .wbs-sum-big .u { font-size: 12px; color: var(--ink-soft); }
+  .wbs-sum-track { height: 9px; background: var(--line-soft); border-radius: 5px; overflow: hidden; margin-top: 11px; }
+  .wbs-sum-track > span { display: block; height: 100%; background: var(--stage-active); }
+  .wbs-chips { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 10px; }
+  .wbs-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-soft); }
+  .wbs-chip b { color: var(--ink); font-weight: 700; }
+
+  .pm-field input[disabled], .pm-field select[disabled] { background: var(--fill); color: var(--ink-faint); cursor: not-allowed; }
+  .pm-hint-inline { font-size: 11px; color: var(--ink-faint); font-style: italic; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<nav class="pps-nav">
+  <a href="index.html" class="pps-brand">PMO Suite</a>
+  <div class="pps-dropdown">
+    <button type="button" class="pps-dropdown-toggle">Project Intake Process</button>
+    <div class="pps-dropdown-menu">
+      <a href="intake-form.html">1. Intake Form</a>
+      <a href="intake-report.html">2. Intake Report</a>
+    </div>
+  </div>
+  <a href="portfolio-review.html">Portfolio Review</a>
+  <a href="wbs.html" class="active">Work Breakdown</a>
+  <a href="capacity.html">Resource Capacity</a>
+  <a href="financial-dashboard.html">Financial Dashboard</a>
+  <div class="pps-dropdown">
+    <button type="button" class="pps-dropdown-toggle">Project Status</button>
+    <div class="pps-dropdown-menu">
+      <a href="scorecard.html">1. Project Scorecard</a>
+      <a href="risk-decision-log.html">2. Risk &amp; Decision</a>
+      <a href="repository.html">3. Repository</a>
+      <a href="change-request-form.html">4. Change Request</a>
+      <a href="financials.html">5. Project Financials</a>
+      <a href="resources.html">6. Resource Management</a>
+    </div>
+  </div>
+</nav>
+
+<header class="crm-head">
+  <div class="crm-id">
+    <span class="crm-eyebrow">Delivery Planning</span>
+    <div class="crm-title" id="wbsProjectName">&mdash;</div>
+  </div>
+  <div class="crm-fields">
+    <div class="crm-field"><span class="crm-flabel">Project Code</span><span class="crm-fvalue" id="wbsCode">&mdash;</span></div>
+    <div class="crm-field"><span class="crm-flabel">Weighted %</span><span class="crm-fvalue" id="wbsPct">&mdash;</span></div>
+    <div class="crm-field"><span class="crm-flabel">Total Effort</span><span class="crm-fvalue" id="wbsEffort">&mdash;</span></div>
+    <div class="crm-field"><span class="crm-flabel">Report Date</span><span class="crm-fvalue" id="wbsDate">&mdash;</span></div>
+  </div>
+</header>
+
+<div class="crm-flow single-stage" aria-label="Work Breakdown">
+  <div class="crm-stage is-active"><span class="crm-stage-mark">&#9776;</span><span class="crm-stage-label">Work Breakdown</span></div>
+</div>
+
+<div class="pps-toolbar" style="justify-content:space-between;align-items:center;">
+  <span class="pps-note" style="margin:0;">
+    Break a project down into phases, deliverables and work packages. Effort and % complete roll up the tree, so each project's weighted completion is derived from the packages beneath it.
+  </span>
+  <label style="font-weight:600;color:var(--ink);font-size:12.5px;">
+    Project:&nbsp;
+    <select id="projectPicker" class="pps-select"></select>
+  </label>
+</div>
+
+<div class="crm-legend" aria-label="Status legend">
+  <span class="li"><span class="dot dot-black"></span> Not Started</span>
+  <span class="li"><span class="dot dot-green"></span> On Track</span>
+  <span class="li"><span class="dot dot-yellow"></span> At Risk</span>
+  <span class="li"><span class="dot dot-red"></span> Delayed</span>
+  <span class="li"><span class="dot dot-purple"></span> On Hold</span>
+  <span class="li"><span class="dot dot-blue"></span> Completed</span>
+</div>
+
+<script src="assets/js/store.js"></script>
+
+<div class="wbs-summary" id="wbsSummary"><!-- rendered by JS --></div>
+
+<div class="pm-toolbar">
+  <span class="pm-hint">Add phases and tasks, nest sub-tasks with <strong>+ Sub</strong>, and edit inline. Changes save to this browser; the weighted total feeds this project's delivery view.</span>
+  <button type="button" class="pps-btn" id="addTaskBtn">+ Add task</button>
+</div>
+
+<table class="grid">
+  <colgroup>
+    <col style="width:7%"><col style="width:32%"><col style="width:13%"><col style="width:9%">
+    <col style="width:9%"><col style="width:7%"><col style="width:12%"><col style="width:5%"><col style="width:6%">
+  </colgroup>
+  <tr class="col-header">
+    <td>WBS #</td><td>Task / Deliverable</td><td>Owner</td><td>Start</td><td>Planned End</td>
+    <td>Effort (h)</td><td>% Complete</td><td>Status</td><td>Actions</td>
+  </tr>
+  <tbody id="wbsBody"></tbody>
+</table>
+
+<div class="pm-overlay" id="pmOverlay" aria-hidden="true">
+  <div class="pm-modal" role="dialog" aria-modal="true" aria-labelledby="pmTitle">
+    <div class="pm-modal-head">
+      <span class="pm-modal-title" id="pmTitle">Add task</span>
+      <button type="button" class="pm-close" id="pmClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="pm-context" id="pmContext" style="display:none;"></div>
+    <form class="pm-form" id="pmForm">
+      <div class="pm-grid">
+        <div class="pm-field full">
+          <label for="f_parent">Sits under</label>
+          <select id="f_parent" name="parentId"></select>
+        </div>
+        <div class="pm-field full">
+          <label for="f_name">Task / deliverable name <span class="req">*</span></label>
+          <input id="f_name" name="name" type="text" autocomplete="off" placeholder="e.g. Build the reconciliation engine">
+        </div>
+        <div class="pm-field">
+          <label for="f_owner">Owner</label>
+          <input id="f_owner" name="owner" type="text" autocomplete="off">
+        </div>
+        <div class="pm-field">
+          <label for="f_status">Status</label>
+          <select id="f_status" name="status"></select>
+        </div>
+        <div class="pm-field">
+          <label for="f_start">Start date</label>
+          <input id="f_start" name="start" type="text" placeholder="e.g. 15-Sep-26" autocomplete="off">
+        </div>
+        <div class="pm-field">
+          <label for="f_end">Planned end</label>
+          <input id="f_end" name="end" type="text" placeholder="e.g. 30-Sep-26" autocomplete="off">
+        </div>
+        <div class="pm-field">
+          <label for="f_effort">Effort (hours)</label>
+          <input id="f_effort" name="effort" type="number" min="0" step="1" value="0">
+          <span class="pm-hint-inline" id="effortHint" style="display:none;">Rolled up from sub-tasks.</span>
+        </div>
+        <div class="pm-field">
+          <label for="f_percent">% complete</label>
+          <input id="f_percent" name="percent" type="number" min="0" max="100" step="1" value="0">
+          <span class="pm-hint-inline" id="pctHint" style="display:none;">Rolled up from sub-tasks.</span>
+        </div>
+      </div>
+      <div class="pm-error" id="pmError"></div>
+    </form>
+    <div class="pm-actions">
+      <button type="button" class="pps-btn secondary" id="pmCancel">Cancel</button>
+      <button type="button" class="pps-btn" id="pmSave">Save task</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var esc = PPS.esc;
+    function attr(s) { return esc(s).replace(/"/g, "&quot;"); }
+
+    var picker  = document.getElementById("projectPicker");
+    var body    = document.getElementById("wbsBody");
+    var summary = document.getElementById("wbsSummary");
+    var currentCode = null;
+
+    document.getElementById("wbsDate").textContent = PPS.today();
+
+    var DOTCOL = { "dot-black":"#33465a","dot-grey":"#b7c0cb","dot-green":"#4d9a68",
+                   "dot-yellow":"#d0a13f","dot-red":"#c0392b","dot-purple":"#6a5a8c","dot-blue":"#1568b8" };
+
+    /* ---------- project picker ---------- */
+    function fillPicker() {
+      var portfolio = PPS.getPortfolio();
+      picker.innerHTML = portfolio.map(function (p) {
+        var has = PPS.getWbs(p.code).length ? "" : " \u00b7 no breakdown yet";
+        return '<option value="' + attr(p.code) + '">' + esc(p.code) + " \u2014 " + esc(p.name) + has + '</option>';
+      }).join("");
+      // prefer the flagship, else the first project that already has a breakdown, else the first
+      var codes = portfolio.map(function (p) { return p.code; });
+      var pref = (currentCode && codes.indexOf(currentCode) > -1) ? currentCode
+               : (codes.indexOf("P2606-01") > -1 ? "P2606-01" : null);
+      if (!pref) {
+        var withWbs = portfolio.filter(function (p) { return PPS.getWbs(p.code).length; })[0];
+        pref = withWbs ? withWbs.code : (codes[0] || null);
+      }
+      currentCode = pref;
+      if (pref) picker.value = pref;
+    }
+
+    /* ---------- header + summary ---------- */
+    function renderHeader() {
+      var proj = PPS.getProject(currentCode);
+      var roll = PPS.getWbsRollup(currentCode);
+      document.getElementById("wbsProjectName").textContent = proj ? proj.name : (currentCode || "\u2014");
+      document.getElementById("wbsCode").textContent = currentCode || "\u2014";
+      document.getElementById("wbsPct").textContent = roll.nodes ? roll.percent + "%" : "\u2014";
+      document.getElementById("wbsEffort").textContent = roll.effort ? roll.effort.toLocaleString() + " h" : "\u2014";
+
+      if (!roll.nodes) { summary.innerHTML = ""; return; }
+      var statusCells = PPS.statusList().filter(function (s) { return roll.byStatus[s.value]; }).map(function (s) {
+        return '<span class="wbs-chip"><span class="dot ' + s.dot + '"></span>' + esc(s.label) + ' <b>' + roll.byStatus[s.value] + '</b></span>';
+      }).join("");
+      summary.innerHTML =
+        '<div class="wbs-sum-card">' +
+          '<div class="sc-h">Weighted completion</div>' +
+          '<div class="wbs-sum-big"><span class="n">' + roll.percent + '%</span><span class="u">effort-weighted across ' + roll.packages + ' work package' + (roll.packages === 1 ? "" : "s") + '</span></div>' +
+          '<div class="wbs-sum-track"><span style="width:' + roll.percent + '%"></span></div>' +
+        '</div>' +
+        '<div class="wbs-sum-card">' +
+          '<div class="sc-h">Breakdown</div>' +
+          '<div class="wbs-sum-big"><span class="n">' + roll.effort.toLocaleString() + '</span><span class="u">hours planned &middot; ' + roll.groups + ' group' + (roll.groups === 1 ? "" : "s") + ', ' + roll.packages + ' package' + (roll.packages === 1 ? "" : "s") + '</span></div>' +
+          '<div class="wbs-chips">' + statusCells + '</div>' +
+        '</div>';
+    }
+
+    /* ---------- grid ---------- */
+    function rowHtml(n) {
+      var st = PPS.portfolioStatus(n.status);
+      var groupCls = n.isLeaf ? "wbs-leaf" : "wbs-group";
+      var indent = (n.level - 1) * 18;
+      var twig = n.level > 1 ? '<span class="wbs-twig">&#8627;</span>' : "";
+      var effortCell = n.effort ? n.effort.toLocaleString() : (n.isLeaf ? "0" : "\u2014");
+      if (!n.isLeaf) effortCell += ' <span class="derived">rolled</span>';
+      var pctBar =
+        '<span class="wbs-pct"><span class="wbs-track"><span style="width:' + n.percent + '%"></span></span>' +
+        '<span class="wbs-pctnum">' + n.percent + '%</span></span>';
+      return '<tr class="' + groupCls + '">' +
+        '<td class="center"><span class="wbs-num">' + esc(n.wbs) + '</span></td>' +
+        '<td><span class="wbs-name" style="padding-left:' + indent + 'px">' + twig + esc(n.name) + '</span></td>' +
+        '<td>' + esc(n.owner) + '</td>' +
+        '<td class="center">' + esc(n.start) + '</td>' +
+        '<td class="center">' + esc(n.end) + '</td>' +
+        '<td class="center">' + effortCell + '</td>' +
+        '<td>' + pctBar + '</td>' +
+        '<td class="status-cell"><span class="dot ' + st.dot + '" title="' + esc(st.label) + '"></span></td>' +
+        '<td class="row-actions">' +
+          '<button type="button" class="edit" data-id="' + n.id + '" title="Edit">Edit</button>' +
+          '<button type="button" class="sub"  data-id="' + n.id + '" title="Add a sub-task">+ Sub</button>' +
+          '<button type="button" class="del"  data-id="' + n.id + '" title="Delete">Delete</button>' +
+        '</td>' +
+      '</tr>';
+    }
+
+    function render() {
+      renderHeader();
+      var rows = PPS.getWbsRows(currentCode);
+      body.innerHTML = rows.length
+        ? rows.map(rowHtml).join("")
+        : '<tr><td colspan="9" class="pps-empty">No breakdown yet for this project. Use &ldquo;Add task&rdquo; to create the first phase or deliverable.</td></tr>';
+    }
+
+    /* ---------- Add / Edit modal ---------- */
+    var overlay = document.getElementById("pmOverlay");
+    var form    = document.getElementById("pmForm");
+    var errBox  = document.getElementById("pmError");
+    var titleEl = document.getElementById("pmTitle");
+    var ctxEl   = document.getElementById("pmContext");
+    var parentSel = document.getElementById("f_parent");
+    var effortInput = document.getElementById("f_effort");
+    var pctInput    = document.getElementById("f_percent");
+    var effortHint  = document.getElementById("effortHint");
+    var pctHint     = document.getElementById("pctHint");
+    var editingId = null;
+
+    function clearGuard() { if (window.PPS && PPS.navGuard) PPS.navGuard.markClean(); }
+    function showErr(msg) { errBox.textContent = msg; errBox.classList.add("show"); }
+    function setField(name, val) { if (form.elements[name]) form.elements[name].value = (val == null ? "" : val); }
+
+    function fillStatusOptions() {
+      document.getElementById("f_status").innerHTML =
+        PPS.statusList().map(function (s) {
+          return '<option value="' + attr(s.value) + '">' + esc(s.label) + '</option>';
+        }).join("");
+    }
+    // Parent options = current nodes as "1.2 Name", excluding (on edit) the node itself and its descendants.
+    function fillParentOptions(selectedId, excludeId) {
+      var rows = PPS.getWbsRows(currentCode);
+      var excluded = {};
+      if (excludeId != null) {
+        excluded[String(excludeId)] = true;
+        var changed = true;
+        while (changed) {
+          changed = false;
+          rows.forEach(function (n) {
+            if (n.parentId != null && excluded[String(n.parentId)] && !excluded[String(n.id)]) {
+              excluded[String(n.id)] = true; changed = true;
+            }
+          });
+        }
+      }
+      var opts = ['<option value="">\u2014 Top level (project phase) \u2014</option>'];
+      rows.forEach(function (n) {
+        if (excluded[String(n.id)]) return;
+        opts.push('<option value="' + n.id + '">' + esc(n.wbs) + "  " + esc(n.name) + '</option>');
+      });
+      parentSel.innerHTML = opts.join("");
+      parentSel.value = (selectedId == null ? "" : String(selectedId));
+    }
+    // Disable effort/percent when the node currently has children (values are derived).
+    function reflectDerived(nodeHasChildren) {
+      effortInput.disabled = pctInput.disabled = !!nodeHasChildren;
+      effortHint.style.display = pctHint.style.display = nodeHasChildren ? "block" : "none";
+    }
+
+    function nodeHasChildren(id) {
+      return PPS.getWbs(currentCode).some(function (n) { return n.parentId === id; });
+    }
+
+    function openAdd(parentId) {
+      errBox.classList.remove("show"); errBox.textContent = "";
+      editingId = null;
+      titleEl.textContent = "Add task";
+      form.reset();
+      fillStatusOptions();
+      fillParentOptions(parentId == null ? "" : parentId, null);
+      setField("percent", 0); setField("effort", 0); setField("status", "notStarted");
+      reflectDerived(false);
+      if (parentId != null) {
+        var p = PPS.getWbsRows(currentCode).filter(function (n) { return n.id === parentId; })[0];
+        ctxEl.style.display = "block";
+        ctxEl.innerHTML = p ? "Adding a sub-task under <strong>" + esc(p.wbs) + " " + esc(p.name) + "</strong>." : "";
+      } else { ctxEl.style.display = "none"; ctxEl.innerHTML = ""; }
+      openOverlay("name");
+    }
+    function openEdit(id) {
+      var node = PPS.getWbs(currentCode).filter(function (n) { return n.id === id; })[0];
+      if (!node) return;
+      errBox.classList.remove("show"); errBox.textContent = "";
+      editingId = id;
+      titleEl.textContent = "Edit task";
+      fillStatusOptions();
+      fillParentOptions(node.parentId, id);
+      setField("name", node.name); setField("owner", node.owner);
+      setField("start", node.start); setField("end", node.end);
+      setField("effort", node.effort); setField("percent", node.percent);
+      setField("status", node.status || "notStarted");
+      reflectDerived(nodeHasChildren(id));
+      var row = PPS.getWbsRows(currentCode).filter(function (n) { return n.id === id; })[0];
+      ctxEl.style.display = "block";
+      ctxEl.innerHTML = row ? "Editing <strong>" + esc(row.wbs) + " " + esc(row.name) + "</strong>." : "";
+      openOverlay("name");
+    }
+    function openOverlay(focusName) {
+      overlay.classList.add("open");
+      overlay.setAttribute("aria-hidden", "false");
+      clearGuard();
+      setTimeout(function () { if (form.elements[focusName]) form.elements[focusName].focus(); }, 30);
+    }
+    function closeModal() {
+      overlay.classList.remove("open");
+      overlay.setAttribute("aria-hidden", "true");
+      editingId = null;
+      clearGuard();
+    }
+
+    function save() {
+      var data = {
+        name:   form.elements["name"].value,
+        owner:  form.elements["owner"].value,
+        start:  form.elements["start"].value,
+        end:    form.elements["end"].value,
+        effort: form.elements["effort"].value,
+        percent:form.elements["percent"].value,
+        status: form.elements["status"].value,
+        parentId: form.elements["parentId"].value
+      };
+      var res = editingId ? PPS.updateWbsNode(currentCode, editingId, data)
+                          : PPS.addWbsNode(currentCode, data);
+      if (!res.ok) { showErr(res.error); return; }
+      closeModal();
+      render();
+    }
+
+    document.getElementById("addTaskBtn").addEventListener("click", function () { openAdd(null); });
+    document.getElementById("pmSave").addEventListener("click", save);
+    document.getElementById("pmCancel").addEventListener("click", closeModal);
+    document.getElementById("pmClose").addEventListener("click", closeModal);
+    overlay.addEventListener("click", function (e) { if (e.target === overlay) closeModal(); });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && overlay.classList.contains("open")) closeModal();
+    });
+    form.addEventListener("submit", function (e) { e.preventDefault(); save(); });
+
+    /* Row actions (delegated) */
+    document.querySelector("table.grid").addEventListener("click", function (e) {
+      var btn = e.target.closest ? e.target.closest("button[data-id]") : null;
+      if (!btn) return;
+      var id = Number(btn.getAttribute("data-id"));
+      if (btn.classList.contains("edit")) openEdit(id);
+      else if (btn.classList.contains("sub")) openAdd(id);
+      else if (btn.classList.contains("del")) {
+        var node = PPS.getWbs(currentCode).filter(function (n) { return n.id === id; })[0];
+        var kids = nodeHasChildren(id);
+        var msg = "Delete \u201c" + (node ? node.name : "this task") + "\u201d?" +
+                  (kids ? "\n\nThis also removes every sub-task beneath it." : "") + "\n\nThis cannot be undone.";
+        if (window.confirm(msg)) {
+          var res = PPS.deleteWbsNode(currentCode, id);
+          if (res.ok) render(); else window.alert(res.error);
+        }
+      }
+    });
+
+    /* Picker + cross-tab sync */
+    picker.addEventListener("change", function () { currentCode = picker.value; render(); });
+    window.addEventListener("storage", function (e) {
+      if (e.key === PPS.KEYS.wbs || e.key === PPS.KEYS.portfolio) { fillPicker(); render(); }
+    });
+
+    fillPicker();
+    render();
+  })();
+</script>
+
+</body>
+</html>

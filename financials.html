@@ -59,6 +59,7 @@
     </div>
   </div>
   <a href="portfolio-review.html">Portfolio Review</a>
+  <a href="wbs.html">Work Breakdown</a>
   <a href="capacity.html">Resource Capacity</a>
   <a href="financial-dashboard.html">Financial Dashboard</a>
   <div class="pps-dropdown">
@@ -108,6 +109,16 @@
     Project:&nbsp;
     <select id="projectPicker" class="pps-select"></select>
   </label>
+</div>
+
+<!-- Budget / Spend (reconciled with the Scorecard's Financials panel) -->
+<div class="fx-card">
+  <h3>Budget &amp; Spend <span class="sub" style="font-size:11px;font-weight:500;font-style:italic;color:var(--ink-faint);">Shown on the Project Scorecard</span></h3>
+  <div class="fx-grid">
+    <div class="fx-field"><label for="f_budget">Budgeted</label><div class="fx-prefix"><input id="f_budget" type="number" min="0" step="1" value="0"></div></div>
+    <div class="fx-field"><label for="f_spent">Spent to Date</label><div class="fx-prefix"><input id="f_spent" type="number" min="0" step="1" value="0"></div></div>
+    <div class="fx-field"><label for="f_etc">Estimate to Complete</label><div class="fx-prefix"><input id="f_etc" type="number" min="0" step="1" value="0"></div></div>
+  </div>
 </div>
 
 <!-- Headline figures -->
@@ -245,6 +256,10 @@
     document.getElementById("projLabel").textContent = code;
     document.getElementById("viewDash").href = "financial-dashboard.html";
 
+    document.getElementById("f_budget").value = rec ? rec.budget : 0;
+    document.getElementById("f_spent").value  = rec ? rec.spent  : 0;
+    document.getElementById("f_etc").value    = rec ? rec.etc    : 0;
+
     document.getElementById("f_purchase").value = rec ? rec.costOfPurchase : 0;
     document.getElementById("f_return").value   = rec ? rec.procurementReturn : 0;
     document.getElementById("f_saving").value    = rec ? rec.costSaving : 0;
@@ -265,6 +280,9 @@
   function save() {
     var code = picker.value;
     var data = {
+      budget: document.getElementById("f_budget").value,
+      spent:  document.getElementById("f_spent").value,
+      etc:    document.getElementById("f_etc").value,
       costOfPurchase: document.getElementById("f_purchase").value,
       procurementReturn: document.getElementById("f_return").value,
       costSaving: document.getElementById("f_saving").value,
@@ -295,9 +313,16 @@
       return '<option value="' + attr(p.code) + '">' + esc(p.name) + ' (' + esc(p.code) + ')</option>';
     }).join("");
   }
-  picker.addEventListener("change", function () { load(picker.value); });
+  picker.addEventListener("change", function () {
+    var url = new URL(location.href);
+    url.searchParams.set("project", picker.value);
+    history.replaceState(null, "", url.pathname + url.search);
+    load(picker.value);
+  });
 
   buildPicker();
+  var preselect = new URLSearchParams(location.search).get("project");
+  if (preselect && PPS.getProject(preselect)) picker.value = preselect;
   if (picker.options.length) load(picker.value);
 
   window.addEventListener("storage", function (e) {

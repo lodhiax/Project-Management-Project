@@ -163,6 +163,7 @@
   .glance-chip { font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 11px; border: 1px solid var(--line); color: var(--ink-soft); }
   .glance-chip.pos { color: #2c4631; background: #e6f0ea; border-color: #cfe2d1; }
   .glance-sub { font-size: 11.5px; color: var(--ink-soft); margin-top: 5px; }
+  .glance-src { display: block; font-size: 10.5px; font-style: italic; color: var(--ink-faint); margin-top: 3px; }
   .glance-viz { margin-top: auto; padding-top: 12px; }
 
   .gl-stack { display: flex; height: 9px; border-radius: 5px; overflow: hidden; background: var(--line-soft); }
@@ -215,6 +216,7 @@
     </div>
   </div>
   <a href="portfolio-review.html">Portfolio Review</a>
+  <a href="wbs.html">Work Breakdown</a>
   <a href="capacity.html">Resource Capacity</a>
   <a href="financial-dashboard.html">Financial Dashboard</a>
   <div class="pps-dropdown">
@@ -317,6 +319,7 @@
       </div>
       <div class="glance-numrow"><span class="glance-num" id="glProjNum">&ndash;</span></div>
       <span class="glance-sub" id="glProjSub"></span>
+      <span class="glance-src">Source: Portfolio Review</span>
       <div class="glance-viz">
         <div class="gl-stack" id="glProjStack"></div>
         <div class="gl-legend" id="glProjLegend"></div>
@@ -332,6 +335,7 @@
       </div>
       <div class="glance-numrow"><span class="glance-num" id="glRiskNum">&ndash;</span></div>
       <span class="glance-sub" id="glRiskSub"></span>
+      <span class="glance-src">Source: Risk &amp; Decision Log</span>
       <div class="glance-viz" id="glRiskViz"></div>
     </a>
 
@@ -344,6 +348,7 @@
       </div>
       <div class="glance-numrow"><span class="glance-num" id="glIntakeNum">&ndash;</span></div>
       <span class="glance-sub" id="glIntakeSub"></span>
+      <span class="glance-src">Source: Intake Report</span>
       <div class="glance-viz"><ul class="gl-list" id="glIntakeList"></ul></div>
     </a>
 
@@ -356,6 +361,7 @@
       </div>
       <div class="glance-numrow"><span class="glance-num" id="glOverdueNum">&ndash;</span></div>
       <span class="glance-sub" id="glOverdueSub"></span>
+      <span class="glance-src">Source: Portfolio Review</span>
       <div class="glance-viz"><ul class="gl-list" id="glOverdueList"></ul></div>
     </a>
 
@@ -368,6 +374,7 @@
       </div>
       <div class="glance-numrow"><span class="glance-num" id="glFinNum">&ndash;</span><span class="glance-chip pos" id="glFinChip"></span></div>
       <span class="glance-sub" id="glFinSub"></span>
+      <span class="glance-src">Source: Project Financials</span>
       <div class="glance-viz"><svg class="gl-spark" id="glFinSpark" viewBox="0 0 210 34" preserveAspectRatio="none" aria-hidden="true"></svg></div>
     </a>
 
@@ -380,6 +387,7 @@
       </div>
       <div class="glance-numrow"><span class="glance-num" id="glCapNum">&ndash;</span></div>
       <span class="glance-sub" id="glCapSub"></span>
+      <span class="glance-src">Source: Resource Management</span>
       <div class="glance-viz">
         <div class="gl-stack" id="glCapStack"></div>
         <div class="gl-legend" id="glCapLegend"></div>
@@ -389,12 +397,37 @@
   </div>
 </div>
 
+<div class="group-block">
+  <div class="group-head"><h2>Data Lineage</h2><span class="group-sub">Click any node to open that page</span></div>
+  <div class="lineage">
+    <div class="lineage-row">
+      <a class="lineage-node" href="intake-form.html">Intake Form<span class="li-sub">Submit a request</span></a>
+      <span class="lineage-arrow">&rarr;</span>
+      <a class="lineage-node" href="portfolio-review.html">Portfolio Review<span class="li-sub">Track delivery</span></a>
+      <span class="lineage-arrow">&rarr;</span>
+      <a class="lineage-node" href="wbs.html">Work Breakdown<span class="li-sub">Plan the tasks</span></a>
+      <span class="lineage-arrow">&rarr;</span>
+      <a class="lineage-node" href="scorecard.html">Project Scorecard<span class="li-sub">Weekly status</span></a>
+    </div>
+    <div class="lineage-row">
+      <a class="lineage-node" href="financials.html">Project Financials<span class="li-sub">Enter cost data</span></a>
+      <span class="lineage-arrow">&rarr;</span>
+      <a class="lineage-node" href="financial-dashboard.html">Financial Dashboard<span class="li-sub">Portfolio roll-up</span></a>
+    </div>
+    <div class="lineage-row">
+      <a class="lineage-node" href="resources.html">Resource Management<span class="li-sub">Roster &amp; allocations</span></a>
+      <span class="lineage-arrow">&rarr;</span>
+      <a class="lineage-node" href="capacity.html">Resource Capacity<span class="li-sub">Demand vs. availability</span></a>
+    </div>
+  </div>
+</div>
+
 <div class="flow-note">
   <strong>How the groups are linked</strong><br>
   Intake Form <span class="arrow">&rarr;</span> Intake Report &nbsp;&nbsp;(submissions populate the read-only register)<br>
   Portfolio Review <span class="arrow">&rarr;</span> Project Scorecard &nbsp;&nbsp;(portfolio data drives every derived scorecard value)<br>
   Resource Management <span class="arrow">&rarr;</span> Resource Capacity vs. Demand &nbsp;&nbsp;(roster and allocations roll up automatically for active projects)<br>
-  Project Financials <span class="arrow">&rarr;</span> Financial Dashboard &nbsp;&nbsp;(per-project cost entries roll up into the portfolio's savings, avoidance and ROI view)<br>
+  Project Financials <span class="arrow">&rarr;</span> Financial Dashboard &nbsp;&nbsp;(per-project cost entries roll up into the portfolio's savings, avoidance and ROI view; the Scorecard's own budget/spend figures read from the same records)<br>
   Risk &amp; Decision, Repository, and Change Request are standalone governance and document-control tools on the same shared data layer.
 </div>
 
