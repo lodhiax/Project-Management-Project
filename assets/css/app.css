@@ -471,3 +471,60 @@ tbody tr:hover td { background: #f6f9fb; }
   .lineage-arrow { transform: rotate(90deg); align-self: center; }
   .lineage-node { text-align: center; }
 }
+
+/* ============================================================
+   EDITION (TIER) SYSTEM  [F1/F2]
+   Live edition badge + right-aligned switcher in the top nav,
+   and the helper that hides anything above the active tier.
+   ============================================================ */
+.pps-tier-off { display: none !important; }
+
+.pps-nav .pps-brand-edition {
+  margin-left: 8px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--stage-active-ink, #2f6b3a);
+  background: #eaf3ec;
+  border: 1px solid #cfe3d4;
+}
+
+.pps-tier-switch {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+}
+.pps-tier-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #66727e;
+}
+.pps-tier-select {
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink);
+  background-color: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 26px 5px 10px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath d='M0 0l4 6 4-6z' fill='%2366727e'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+}
+.pps-tier-select:hover { border-color: #9fb0be; }
+.pps-tier-select:focus {
+  outline: none;
+  border-color: var(--stage-active, #5f9468);
+  box-shadow: 0 0 0 2px rgba(95,148,104,0.18);
+}

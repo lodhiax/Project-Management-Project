@@ -30,6 +30,7 @@
     allocations: "ppsAllocations",
     financials:  "ppsFinancialMetrics",
     wbs:         "ppsWbs",
+    tier:        "ppsTier",
     seeded:      "ppsSeededV1"
   };
 
@@ -1333,6 +1334,124 @@
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 
+  /* ============================================================
+     TIER (EDITION) SYSTEM   [F1]
+     ------------------------------------------------------------
+     One deploy presents as three progressively richer editions.
+     A view or nav entry declares the minimum tier it belongs to;
+     anything above the active tier is hidden. Nothing is deleted
+     between tiers, higher tiers simply reveal more.
+
+       pmo    -> Tier 1  PMO Core
+       itil   -> Tier 2  PMO + ITIL
+       devops -> Tier 3  PMO + ITIL + DevOps
+     ============================================================ */
+  var TIERS = [
+    { key: "pmo",    rank: 1, label: "PMO Core",            edition: "Core",   blurb: "Project & portfolio management" },
+    { key: "itil",   rank: 2, label: "PMO + ITIL",          edition: "ITIL",   blurb: "Delivery tied to IT service operations" },
+    { key: "devops", rank: 3, label: "PMO + ITIL + DevOps", edition: "DevOps", blurb: "Full Dev-to-Ops delivery loop" }
+  ];
+  function tierByKey(k) {
+    for (var i = 0; i < TIERS.length; i++) { if (TIERS[i].key === k) return TIERS[i]; }
+    return TIERS[0];
+  }
+  function getTier()      { return tierByKey(read(KEYS.tier, "pmo")).key; }
+  function setTier(k)     { var t = tierByKey(k); write(KEYS.tier, t.key); return { ok: true, tier: t.key }; }
+  function tierRank(k)    { return tierByKey(k).rank; }
+  function tierAllows(minKey) { return tierRank(getTier()) >= tierRank(minKey || "pmo"); }
+  function tierList()     { return TIERS.slice(); }
+
+  /* ============================================================
+     NAV MODEL + RENDERER   [F2]
+     ------------------------------------------------------------
+     Single source of truth for the top nav. Each page now carries
+     an empty <nav id="ppsNav"></nav> and this renders into it, so
+     adding a view is ONE config entry here, not an edit in every
+     file. Each entry has a `tier`: it only appears once the active
+     edition reaches that tier.
+     ============================================================ */
+  var NAV_CONFIG = [
+    { type: "group", label: "Project Intake Process", tier: "pmo", children: [
+        { label: "1. Intake Form",    href: "intake-form.html",   tier: "pmo" },
+        { label: "2. Intake Report",  href: "intake-report.html", tier: "pmo" }
+    ]},
+    { type: "link",  label: "Portfolio Review",    href: "portfolio-review.html",    tier: "pmo" },
+    { type: "link",  label: "Work Breakdown",      href: "wbs.html",                 tier: "pmo" },
+    { type: "link",  label: "Resource Capacity",   href: "capacity.html",            tier: "pmo" },
+    { type: "link",  label: "Financial Dashboard", href: "financial-dashboard.html", tier: "pmo" },
+    { type: "group", label: "Project Status", tier: "pmo", children: [
+        { label: "1. Project Scorecard",   href: "scorecard.html",           tier: "pmo" },
+        { label: "2. Risk & Decision",     href: "risk-decision-log.html",   tier: "pmo" },
+        { label: "3. Repository",          href: "repository.html",          tier: "pmo" },
+        { label: "4. Change Request",      href: "change-request-form.html", tier: "pmo" },
+        { label: "5. Project Financials",  href: "financials.html",          tier: "pmo" },
+        { label: "6. Resource Management", href: "resources.html",           tier: "pmo" }
+    ]}
+  ];
+
+  function currentFile() { return location.pathname.split("/").pop() || "index.html"; }
+  function navLink(item, here) {
+    var cls = (item.href === here) ? " class=\"active\"" : "";
+    return "<a href=\"" + item.href + "\"" + cls + ">" + esc(item.label) + "</a>";
+  }
+  function renderNav(mount) {
+    mount = mount || document.getElementById("ppsNav");
+    if (!mount) return;
+    var here = currentFile();
+    var active = getTier();
+    var html = "";
+
+    html += "<a href=\"index.html\" class=\"pps-brand\">PMO Suite" +
+              "<span class=\"pps-brand-edition\">" + esc(tierByKey(active).edition) + "</span></a>";
+
+    for (var i = 0; i < NAV_CONFIG.length; i++) {
+      var node = NAV_CONFIG[i];
+      if (!tierAllows(node.tier)) continue;
+      if (node.type === "link") {
+        html += navLink(node, here);
+      } else if (node.type === "group") {
+        var kids = "", anyActive = false, shown = 0;
+        for (var j = 0; j < node.children.length; j++) {
+          var c = node.children[j];
+          if (!tierAllows(c.tier)) continue;
+          shown++;
+          if (c.href === here) anyActive = true;
+          kids += navLink(c, here);
+        }
+        if (shown === 0) continue;
+        html += "<div class=\"pps-dropdown\">" +
+                  "<button type=\"button\" class=\"pps-dropdown-toggle" + (anyActive ? " active" : "") + "\">" + esc(node.label) + "</button>" +
+                  "<div class=\"pps-dropdown-menu\">" + kids + "</div>" +
+                "</div>";
+      }
+    }
+
+    var opts = "";
+    for (var t = 0; t < TIERS.length; t++) {
+      var sel = (TIERS[t].key === active) ? " selected" : "";
+      opts += "<option value=\"" + TIERS[t].key + "\"" + sel + ">" + esc(TIERS[t].label) + "</option>";
+    }
+    html += "<div class=\"pps-tier-switch\">" +
+              "<span class=\"pps-tier-label\">Edition</span>" +
+              "<select id=\"ppsTierSelect\" class=\"pps-tier-select\" data-noguard aria-label=\"Suite edition\">" + opts + "</select>" +
+            "</div>";
+
+    mount.innerHTML = html;
+  }
+
+  /* Set body[data-tier], gate any [data-min-tier] element, repaint nav. */
+  function applyTier() {
+    var active = getTier();
+    if (document.body) document.body.setAttribute("data-tier", active);
+    var gated = document.querySelectorAll("[data-min-tier]");
+    for (var i = 0; i < gated.length; i++) {
+      var need = gated[i].getAttribute("data-min-tier");
+      if (tierAllows(need)) gated[i].classList.remove("pps-tier-off");
+      else gated[i].classList.add("pps-tier-off");
+    }
+    renderNav();
+  }
+
   // Seed immediately (synchronously) so pages that read on load have data,
   // and so the intake form's ID counter is correct before its own script runs.
   ensureSeed();
@@ -1396,6 +1515,13 @@
     addWbsNode: addWbsNode,
     updateWbsNode: updateWbsNode,
     deleteWbsNode: deleteWbsNode,
+    getTier: getTier,
+    setTier: setTier,
+    tierRank: tierRank,
+    tierAllows: tierAllows,
+    tierList: tierList,
+    renderNav: renderNav,
+    applyTier: applyTier,
     esc: esc,
     _seedRegisterCount: SEED_REGISTER.length
   };
@@ -1410,19 +1536,33 @@
       if (d !== except) d.classList.remove("open");
     });
   }
-  document.querySelectorAll(".pps-dropdown-toggle").forEach(function (btn) {
-    btn.addEventListener("click", function (e) {
-      e.stopPropagation();
+  /* Delegated so it also works for the JS-injected nav [F2]. One
+     handler covers both "toggle this menu" and "click-away closes". */
+  document.addEventListener("click", function (e) {
+    var btn = (e.target && e.target.closest) ? e.target.closest(".pps-dropdown-toggle") : null;
+    if (btn) {
       var dd = btn.closest(".pps-dropdown");
       var wasOpen = dd.classList.contains("open");
       closeAllDropdowns();
       if (!wasOpen) dd.classList.add("open");
-    });
+    } else {
+      closeAllDropdowns();
+    }
   });
-  document.addEventListener("click", function () { closeAllDropdowns(); });
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") closeAllDropdowns();
   });
+
+  /* Edition switcher — delegated, so it survives every nav re-render [F1] */
+  document.addEventListener("change", function (e) {
+    if (e.target && e.target.id === "ppsTierSelect") {
+      setTier(e.target.value);
+      applyTier();
+    }
+  });
+
+  /* First paint of the nav + edition state [F1/F2] */
+  applyTier();
 
   /* ============================================================
      UNSAVED-CHANGES NAV GUARD
