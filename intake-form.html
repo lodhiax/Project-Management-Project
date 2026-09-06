@@ -252,6 +252,19 @@
       </div>
     </td>
   </tr>
+  <tr data-min-tier="itil">
+    <td class="idx">x</td>
+    <td class="label">ITIL Request Type <span class="required">*</span></td>
+    <td colspan="3">
+      <div class="checkbox-row" data-req-group="ITIL Request Type">
+        <label class="cb-opt"><input type="checkbox" name="itilRequestType"> Incident</label>
+        <label class="cb-opt"><input type="checkbox" name="itilRequestType"> Service Request</label>
+        <label class="cb-opt"><input type="checkbox" name="itilRequestType"> Change</label>
+        <label class="cb-opt"><input type="checkbox" name="itilRequestType"> Problem</label>
+      </div>
+      <div class="hint" style="display:block;margin-top:4px;">Classify this request per ITIL practice so it can route to the right service process.</div>
+    </td>
+  </tr>
 </table>
 
 <div class="field-block">
@@ -383,6 +396,11 @@
 </div>
 
 <script>
+  // Re-apply tier gating now that tier-gated fields further down the page
+  // (e.g. the ITIL Request Type row) exist in the DOM. store.js runs its own
+  // applyTier() synchronously right after <nav>, before this markup is parsed.
+  if (window.PPS) PPS.applyTier();
+
   // ============== Request ID (unique, counter-based) + submission date ==============
   const COUNTER_KEY = 'crRequestCounter';
   const LOG_KEY = 'crSubmissionsLog';
@@ -444,9 +462,15 @@
   const formError = document.getElementById('formError');
   const formStatus = document.getElementById('formStatus');
 
+  function isTierHidden(el) {
+    const gate = el.closest('[data-min-tier]');
+    return !!(gate && gate.classList.contains('pps-tier-off'));
+  }
+
   function validateForm() {
     let valid = true;
     form.querySelectorAll('[required]').forEach(el => {
+      if (isTierHidden(el)) return; // not shown in the current edition, so not required
       el.classList.remove('invalid');
       if (!el.value.trim()) {
         el.classList.add('invalid');
@@ -454,6 +478,7 @@
       }
     });
     form.querySelectorAll('[data-req-group]').forEach(group => {
+      if (isTierHidden(group)) return; // not shown in the current edition, so not required
       const boxes = group.querySelectorAll('input[type="checkbox"]');
       const anyChecked = Array.from(boxes).some(b => b.checked);
       group.style.outline = anyChecked ? 'none' : '2px solid #c0392b';
@@ -493,6 +518,7 @@
     ['department', 'Department'],
     ['typeOfChange', 'Type of Change'],
     ['category', 'Category of Change'],
+    ['itilRequestType', 'ITIL Request Type'],
     ['importance', 'Importance'],
     ['justification', 'Justification'],
     ['impact', 'Impact of Change'],
@@ -578,6 +604,7 @@
       department: val('department'),
       typeOfChange: checkedText('typeOfChange'),
       category: checkedText('category'),
+      itilRequestType: checkedText('itilRequestType'),
       importance: checkedText('importance'),
       justification: val('justification'),
       impact: checkedText('impact'),

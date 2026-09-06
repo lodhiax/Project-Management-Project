@@ -45,6 +45,51 @@
 
   .pm-field input[disabled], .pm-field select[disabled] { background: var(--fill); color: var(--ink-faint); cursor: not-allowed; }
   .pm-hint-inline { font-size: 11px; color: var(--ink-faint); font-style: italic; margin-top: 2px; }
+
+  /* ---- view toggle (Table / Gantt) ---- */
+  .view-toggle { display: flex; gap: 6px; margin: 2px 0 14px; }
+  .view-toggle button {
+    padding: 6px 16px; font-size: 12px; font-weight: 700; letter-spacing: 0.2px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink-soft);
+    border-radius: 6px; cursor: pointer;
+  }
+  .view-toggle button.active { background: var(--link); border-color: var(--link); color: #fff; }
+  .view-toggle button:hover:not(.active) { background: var(--fill); }
+
+  /* ---- Gantt view ---- */
+  .gantt-note { font-size: 11.5px; color: var(--ink-faint); font-style: italic; margin: -6px 0 12px; }
+  .gantt-wrap { border: 1px solid var(--line); border-radius: 8px; overflow: auto; max-height: 68vh; position: relative; }
+  .gantt-table { border-collapse: collapse; font-size: 11.5px; table-layout: fixed; }
+  .gantt-table th, .gantt-table td { border-right: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); padding: 0; }
+  .gantt-name-col {
+    position: sticky; left: 0; z-index: 3; background: var(--surface); text-align: left;
+    padding: 7px 10px !important; border-right: 1px solid var(--line) !important; white-space: nowrap;
+  }
+  .gantt-table thead th.gantt-name-col { background: #f4f7f9; z-index: 4; vertical-align: bottom; }
+  .gantt-week-h {
+    background: #f4f7f9; color: var(--ink-soft); font-weight: 700; font-size: 10.5px;
+    text-align: left; padding: 4px 0 4px 6px !important; border-bottom: 1px solid var(--line) !important; white-space: nowrap;
+  }
+  .gantt-day-h { background: #fafbfc; color: var(--ink-faint); font-weight: 600; text-align: center; padding: 3px 0 !important; }
+  .gantt-day-h.weekend { background: #eef2f5; }
+  .gantt-track { position: relative; height: 36px; padding: 0 !important; }
+  tbody tr:nth-child(odd) .gantt-name-col { background: #fbfcfd; }
+  .gantt-bar { position: absolute; top: 10px; height: 16px; border-radius: 3px; box-sizing: border-box; overflow: hidden; }
+  .gantt-bar.leaf { border: 1px solid rgba(0,0,0,0.08); }
+  .gantt-bar.leaf .fill { position: absolute; top: 0; left: 0; bottom: 0; }
+  .gantt-bar.group { top: 14px; height: 8px; background: #233040; border-radius: 1px; }
+  .gantt-bar.group::before, .gantt-bar.group::after { content: ""; position: absolute; top: -4px; width: 2px; height: 16px; background: #233040; }
+  .gantt-bar.group::before { left: 0; }
+  .gantt-bar.group::after  { right: 0; }
+  .gantt-milestone { position: absolute; top: 7px; width: 13px; height: 13px; background: var(--danger); transform: rotate(45deg); border-radius: 2px; }
+  .gantt-pct-label, .gantt-milestone-label { position: absolute; top: 9px; font-size: 10.5px; font-weight: 600; color: var(--ink-soft); white-space: nowrap; }
+  .gantt-milestone-label { color: var(--danger); font-weight: 700; }
+  .gantt-today-line { position: absolute; top: 0; width: 0; border-left: 1px dashed var(--danger); z-index: 2; pointer-events: none; }
+  .gantt-today-label {
+    position: absolute; top: 2px; font-size: 10px; font-weight: 700; color: #fff; background: var(--danger);
+    padding: 1px 4px; border-radius: 3px; transform: translateX(-50%); white-space: nowrap;
+  }
+  .gantt-empty { padding: 34px; text-align: center; color: var(--ink-faint); }
 </style>
 </head>
 <body>
@@ -91,22 +136,35 @@
 
 <div class="wbs-summary" id="wbsSummary"><!-- rendered by JS --></div>
 
-<div class="pm-toolbar">
-  <span class="pm-hint">Add phases and tasks, nest sub-tasks with <strong>+ Sub</strong>, and edit inline. Changes save to this browser; the weighted total feeds this project's delivery view.</span>
-  <button type="button" class="pps-btn" id="addTaskBtn">+ Add task</button>
+<div class="view-toggle" id="wbsViewToggle">
+  <button type="button" data-view="table" class="active">Table</button>
+  <button type="button" data-view="gantt">Gantt</button>
 </div>
 
-<table class="grid">
-  <colgroup>
-    <col style="width:7%"><col style="width:32%"><col style="width:13%"><col style="width:9%">
-    <col style="width:9%"><col style="width:7%"><col style="width:12%"><col style="width:5%"><col style="width:6%">
-  </colgroup>
-  <tr class="col-header">
-    <td>WBS #</td><td>Task / Deliverable</td><td>Owner</td><td>Start</td><td>Planned End</td>
-    <td>Effort (h)</td><td>% Complete</td><td>Status</td><td>Actions</td>
-  </tr>
-  <tbody id="wbsBody"></tbody>
-</table>
+<div id="wbsTableView">
+  <div class="pm-toolbar">
+    <span class="pm-hint">Add phases and tasks, nest sub-tasks with <strong>+ Sub</strong>, and edit inline. Changes save to this browser; the weighted total feeds this project's delivery view.</span>
+    <button type="button" class="pps-btn" id="addTaskBtn">+ Add task</button>
+  </div>
+
+  <table class="grid">
+    <colgroup>
+      <col style="width:7%"><col style="width:32%"><col style="width:13%"><col style="width:9%">
+      <col style="width:9%"><col style="width:7%"><col style="width:12%"><col style="width:5%"><col style="width:6%">
+    </colgroup>
+    <tr class="col-header">
+      <td>WBS #</td><td>Task / Deliverable</td><td>Owner</td><td>Start</td><td>Planned End</td>
+      <td>Effort (h)</td><td>% Complete</td><td>Status</td><td>Actions</td>
+    </tr>
+    <tbody id="wbsBody"></tbody>
+  </table>
+</div>
+
+<div id="wbsGanttView" style="display:none;">
+  <div class="gantt-note">Bars are colored by status (see legend above) and filled to each task's % complete; black bars are phase/group roll-ups; diamonds mark single-day milestones. The dashed red line marks today.</div>
+  <div id="wbsGanttWrap"><!-- rendered by JS --></div>
+</div>
+
 
 <div class="pm-overlay" id="pmOverlay" aria-hidden="true">
   <div class="pm-modal" role="dialog" aria-modal="true" aria-labelledby="pmTitle">
@@ -175,6 +233,140 @@
 
     var DOTCOL = { "dot-black":"#33465a","dot-grey":"#b7c0cb","dot-green":"#4d9a68",
                    "dot-yellow":"#d0a13f","dot-red":"#c0392b","dot-purple":"#6a5a8c","dot-blue":"#1568b8" };
+
+    /* ---------- Gantt view [W1] ---------- */
+    var viewMode = "table";
+    var GANTT_DAY_W = 24;
+    var DOW_LETTER = ["S","M","T","W","T","F","S"];
+    var MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    var MS_DAY = 86400000;
+
+    function daysBetween(a, b) {
+      return Math.round((Date.UTC(b.getFullYear(), b.getMonth(), b.getDate()) -
+                          Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())) / MS_DAY);
+    }
+    function addDays(d, n) { var r = new Date(d); r.setDate(r.getDate() + n); return r; }
+    function fmtWeekLabel(d) { return MONTHS_SHORT[d.getMonth()] + " " + (d.getDate() < 10 ? "0" : "") + d.getDate(); }
+    function lighten(hex, amt) {
+      amt = amt == null ? 0.78 : amt;
+      hex = hex.replace("#", "");
+      var r = parseInt(hex.substr(0, 2), 16), g = parseInt(hex.substr(2, 2), 16), b = parseInt(hex.substr(4, 2), 16);
+      r = Math.round(r + (255 - r) * amt); g = Math.round(g + (255 - g) * amt); b = Math.round(b + (255 - b) * amt);
+      return "rgb(" + r + "," + g + "," + b + ")";
+    }
+    function statusColor(status) { return DOTCOL[PPS.portfolioStatus(status).dot] || "#8a96a1"; }
+
+    // Domain = full date span covered by every start/end on the current breakdown,
+    // padded a couple of days and snapped back to the start of the week (Sunday)
+    // so the week header lines up cleanly.
+    function computeDomain(rows) {
+      var minD = null, maxD = null;
+      rows.forEach(function (n) {
+        [PPS.parseDMY(n.start), PPS.parseDMY(n.end)].forEach(function (d) {
+          if (!d) return;
+          if (!minD || d < minD) minD = d;
+          if (!maxD || d > maxD) maxD = d;
+        });
+      });
+      if (!minD || !maxD) return null;
+      minD = addDays(minD, -2 - minD.getDay());
+      maxD = addDays(maxD, 2);
+      return { start: minD, end: maxD };
+    }
+
+    function renderGantt() {
+      var mount = document.getElementById("wbsGanttWrap");
+      var rows = PPS.getWbsRows(currentCode);
+      if (!rows.length) { mount.innerHTML = '<div class="gantt-empty">No breakdown yet for this project. Use &ldquo;Add task&rdquo; on the Table view to create the first phase or deliverable.</div>'; return; }
+      var domain = computeDomain(rows);
+      if (!domain) { mount.innerHTML = '<div class="gantt-empty">Add start and end dates to tasks (on the Table view) to plot them on the timeline.</div>'; return; }
+
+      var totalDays = daysBetween(domain.start, domain.end) + 1;
+      var days = [];
+      for (var i = 0; i < totalDays; i++) days.push(addDays(domain.start, i));
+
+      var weekHtml = "", di = 0;
+      while (di < days.length) {
+        var span = 1;
+        while (di + span < days.length && days[di + span].getDay() !== 0) span++;
+        weekHtml += '<th class="gantt-week-h" colspan="' + span + '">' + fmtWeekLabel(days[di]) + '</th>';
+        di += span;
+      }
+      var dayHtml = days.map(function (d) {
+        var we = (d.getDay() === 0 || d.getDay() === 6);
+        return '<th class="gantt-day-h' + (we ? ' weekend' : '') + '">' + DOW_LETTER[d.getDay()] + '</th>';
+      }).join("");
+
+      var bodyHtml = rows.map(function (n) {
+        var trackCell = '<td class="gantt-track" colspan="' + totalDays + '" style="width:' + (totalDays * GANTT_DAY_W) + 'px;">' +
+          ganttBarOnly(n, domain) + '</td>';
+        var indent = (n.level - 1) * 16;
+        var twig = n.level > 1 ? '<span class="wbs-twig">&#8627;</span>' : "";
+        var nameCell =
+          '<td class="gantt-name-col"><span class="wbs-name" style="padding-left:' + indent + 'px;' +
+          (n.isLeaf ? "" : "font-weight:700;") + '">' + twig +
+          '<span class="wbs-num" style="margin-right:6px;">' + esc(n.wbs) + '</span>' + esc(n.name) + '</span></td>';
+        return '<tr>' + nameCell + trackCell + '</tr>';
+      }).join("");
+
+      mount.innerHTML =
+        '<div class="gantt-wrap"><table class="gantt-table">' +
+          '<colgroup><col style="width:260px">' + days.map(function () { return '<col style="width:' + GANTT_DAY_W + 'px">'; }).join("") + '</colgroup>' +
+          '<thead><tr><th class="gantt-name-col" rowspan="2">Task / Deliverable</th>' + weekHtml + '</tr><tr>' + dayHtml + '</tr></thead>' +
+          '<tbody>' + bodyHtml + '</tbody>' +
+        '</table></div>';
+
+      // "today" marker, positioned once the table has real dimensions
+      var wrap = mount.querySelector(".gantt-wrap");
+      var table = mount.querySelector(".gantt-table");
+      var today = new Date(); today.setHours(0, 0, 0, 0);
+      if (today >= domain.start && today <= domain.end) {
+        var left = 260 + daysBetween(domain.start, today) * GANTT_DAY_W + GANTT_DAY_W / 2;
+        var line = document.createElement("div");
+        line.className = "gantt-today-line";
+        line.style.left = left + "px";
+        line.style.height = table.offsetHeight + "px";
+        var label = document.createElement("div");
+        label.className = "gantt-today-label";
+        label.style.left = left + "px";
+        label.textContent = "Today";
+        wrap.appendChild(line);
+        wrap.appendChild(label);
+      }
+    }
+    // Bar/milestone markup only (used inside the pre-sized track cell).
+    function ganttBarOnly(n, domain) {
+      var s = PPS.parseDMY(n.start), e = PPS.parseDMY(n.end);
+      if (!s) return "";
+      var offset = daysBetween(domain.start, s);
+      if (!e || daysBetween(s, e) <= 0) {
+        var mLeft = offset * GANTT_DAY_W + GANTT_DAY_W / 2 - 6;
+        return '<div class="gantt-milestone" style="left:' + mLeft + 'px" title="' + attr(n.name) + ' \u2014 ' + esc(n.start) + '"></div>' +
+               '<div class="gantt-milestone-label" style="left:' + (mLeft + 14) + 'px">' + esc(n.start) + '</div>';
+      }
+      var span = daysBetween(s, e) + 1;
+      var left = offset * GANTT_DAY_W + 2;
+      var width = Math.max(4, span * GANTT_DAY_W - 4);
+      if (n.isLeaf) {
+        var col = statusColor(n.status);
+        return '<div class="gantt-bar leaf" style="left:' + left + 'px;width:' + width + 'px;background:' + lighten(col) + ';" ' +
+                 'title="' + attr(n.name) + ' \u2014 ' + esc(n.start) + ' to ' + esc(n.end) + ', ' + n.percent + '% complete">' +
+                   '<div class="fill" style="width:' + n.percent + '%;background:' + col + ';"></div>' +
+                 '</div>' +
+                 '<div class="gantt-pct-label" style="left:' + (left + width + 6) + 'px;">' + n.percent + '%</div>';
+      }
+      return '<div class="gantt-bar group" style="left:' + left + 'px;width:' + width + 'px;" title="' + attr(n.name) + '"></div>';
+    }
+
+    document.getElementById("wbsViewToggle").addEventListener("click", function (e) {
+      var btn = e.target.closest ? e.target.closest("button[data-view]") : null;
+      if (!btn) return;
+      viewMode = btn.getAttribute("data-view");
+      this.querySelectorAll("button").forEach(function (b) { b.classList.toggle("active", b === btn); });
+      document.getElementById("wbsTableView").style.display = viewMode === "table" ? "" : "none";
+      document.getElementById("wbsGanttView").style.display = viewMode === "gantt" ? "" : "none";
+      if (viewMode === "gantt") renderGantt();
+    });
 
     /* ---------- project picker ---------- */
     function fillPicker() {
@@ -255,6 +447,7 @@
       body.innerHTML = rows.length
         ? rows.map(rowHtml).join("")
         : '<tr><td colspan="9" class="pps-empty">No breakdown yet for this project. Use &ldquo;Add task&rdquo; to create the first phase or deliverable.</td></tr>';
+      if (viewMode === "gantt") renderGantt();
     }
 
     /* ---------- Add / Edit modal ---------- */
