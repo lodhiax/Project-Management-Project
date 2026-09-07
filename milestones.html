@@ -61,6 +61,7 @@
     <div class="pm-field full"><label for="ms_title">Milestone title <span class="req">*</span></label><input id="ms_title" name="title" type="text" placeholder="e.g. Implement Apple Pay Integration"></div>
     <div class="pm-field"><label for="ms_status">Status</label><select id="ms_status" name="status"></select></div>
     <div class="pm-field"><label for="ms_risk">Risk tag</label><select id="ms_risk" name="riskTag"><option value="none">None</option><option value="High-Risk/Financial Impact">High-Risk / Financial Impact</option></select></div>
+    <div class="pm-field full"><label for="ms_change">Related ITIL change (link a ticket)</label><select id="ms_change"></select></div>
   </div>
   <div class="pm-error" id="msError"></div>
   <div class="pm-actions" style="margin-top:8px;">
@@ -110,6 +111,17 @@
   function fillStatusSelect(sel) {
     sel.innerHTML = STATUSES.map(function (s) { return '<option value="' + esc(s) + '">' + esc(s) + "</option>"; }).join("");
   }
+  function fillChangeSelect(sel, current) {
+    var crs = PPS.getChangeRequests();
+    var html = '<option value="">None</option>';
+    crs.forEach(function (c) {
+      var lbl = c.cifNumber + " - " + (c.projectCode || "") + " - " + (c.itilChangeType || "") +
+                (c.cabDecision ? " (" + c.cabDecision + ")" : "");
+      html += '<option value="' + esc(c.cifNumber) + '">' + esc(lbl) + "</option>";
+    });
+    sel.innerHTML = html;
+    sel.value = current || "";
+  }
 
   var filter = document.getElementById("projectFilter");
   var body   = document.getElementById("msBody");
@@ -129,7 +141,17 @@
 
     body.innerHTML = list.map(function (m) {
       var lastLog = (Array.isArray(m.log) && m.log.length) ? m.log[m.log.length - 1] : "";
-      var linked = m.linkedChangeId ? esc(m.linkedChangeId) : '<span style="color:var(--ink-soft);">&mdash;</span>';
+      var linked;
+      if (m.linkedChangeId) {
+        var g = PPS.milestoneDeployGate(m.id);
+        var appr = g.approved
+          ? '<span class="ms-pill ms-done">approved</span>'
+          : '<span class="ms-pill ms-blocked">not approved</span>';
+        linked = esc(m.linkedChangeId) + " " + appr +
+                 ' <button type="button" class="pps-btn secondary" data-act="unlink">Unlink</button>';
+      } else {
+        linked = '<span style="color:var(--ink-soft);">&mdash;</span>';
+      }
       var risk = (m.riskTag && m.riskTag !== "none")
         ? '<span class="ms-pill ms-risk">' + esc(m.riskTag) + "</span>"
         : '<span style="color:var(--ink-soft);">&mdash;</span>';
@@ -159,6 +181,7 @@
     document.getElementById("ms_title").value    = m ? m.title : "";
     document.getElementById("ms_status").value   = m ? m.status : "Not Started";
     document.getElementById("ms_risk").value      = m ? (m.riskTag || "none") : "none";
+    fillChangeSelect(document.getElementById("ms_change"), m ? m.linkedChangeId : "");
     document.getElementById("msError").textContent = "";
     form.classList.remove("hidden");
     document.getElementById("ms_title").focus();
@@ -174,6 +197,14 @@
     };
     var res = editingId ? PPS.updateMilestone(editingId, data) : PPS.addMilestone(data);
     if (!res.ok) { document.getElementById("msError").textContent = res.error || "Could not save."; return; }
+    // Reconcile the Related change link (writes both sides via the store).
+    var mid = editingId || res.milestone.id;
+    var selectedChange = document.getElementById("ms_change").value;
+    var currentChange = (PPS.getMilestone(mid).linkedChangeId) || "";
+    if (selectedChange !== currentChange) {
+      if (selectedChange) PPS.linkMilestoneChange(mid, selectedChange);
+      else PPS.unlinkMilestoneChange(mid);
+    }
     closeForm(); render();
   }
 
@@ -183,6 +214,7 @@
     var act = btn.getAttribute("data-act");
     if (act === "prog") PPS.setMilestoneStatus(id, "In Progress");
     else if (act === "done") PPS.setMilestoneStatus(id, "Done");
+    else if (act === "unlink") PPS.unlinkMilestoneChange(id);
     else if (act === "edit") { openForm(PPS.getMilestone(id)); return; }
     else if (act === "del") { if (!confirm("Delete this milestone?")) return; PPS.deleteMilestone(id); }
     render();

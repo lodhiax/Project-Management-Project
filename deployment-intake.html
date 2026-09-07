@@ -115,6 +115,10 @@
       <select id="projectCode"><option value="">&mdash; Not project-specific &mdash;</option></select>
     </div>
     <div class="dep-field">
+      <label>Milestone</label>
+      <select id="milestoneId"><option value="">&mdash; None &mdash;</option></select>
+    </div>
+    <div class="dep-field">
       <label>Related Change (CIF)</label>
       <input type="text" id="changeRef" placeholder="Optional, e.g. CIF-20260904-0003">
     </div>
@@ -196,6 +200,21 @@
     if (pre && PPS.getProject(pre)) sel.value = pre;
   })();
 
+  // ---- [P3-T2b] milestone selector, scoped to the chosen project ----
+  function fillMilestones() {
+    var code = document.getElementById("projectCode").value;
+    var sel = document.getElementById("milestoneId");
+    var list = code ? PPS.getMilestonesByProject(code) : [];
+    var opts = ['<option value="">\u2014 None \u2014</option>'];
+    list.forEach(function (m) {
+      var tag = m.linkedChangeId ? (" \u00b7 " + m.linkedChangeId) : "";
+      opts.push('<option value="' + m.id + '">' + esc(m.title) + tag + '</option>');
+    });
+    sel.innerHTML = opts.join("");
+  }
+  document.getElementById("projectCode").addEventListener("change", fillMilestones);
+  fillMilestones();
+
   // ---- outcome -> show/hide fail stage ----
   var outcomeSel = document.getElementById("outcome");
   var failField = document.getElementById("failStageField");
@@ -240,25 +259,7 @@
   var status = document.getElementById("depStatus");
   var repoEl = document.getElementById("repo");
 
-  form.addEventListener("submit", function (e) {
-    e.preventDefault();
-    repoEl.classList.remove("invalid");
-    if (!repoEl.value.trim()) {
-      repoEl.classList.add("invalid");
-      status.textContent = "Repository (org/repo) is required.";
-      status.className = "fail";
-      return;
-    }
-    var res = PPS.addDeployment({
-      repo: repoEl.value, branch: document.getElementById("branch").value,
-      commit: document.getElementById("commit").value, environment: document.getElementById("environment").value,
-      workflow: document.getElementById("workflow").value, triggeredBy: document.getElementById("triggeredBy").value,
-      projectCode: document.getElementById("projectCode").value, changeRef: document.getElementById("changeRef").value,
-      outcome: outcomeSel.value, failStage: document.getElementById("failStage").value
-    });
-    if (!res.ok) { status.textContent = res.error; status.className = "fail"; return; }
-
-    var d = res.deployment;
+  function showResult(d) {
     var card = document.getElementById("resultCard");
     document.getElementById("resultRun").textContent = d.id + "  \u00b7  run #" + d.runId + "  \u00b7  " + d.environment;
     document.getElementById("resultConclusion").innerHTML = (d.status === "failure")
@@ -266,12 +267,58 @@
       : '<span class="dot dot-green"></span> <strong style="color:#1a7f37;">Succeeded</strong>';
     document.getElementById("resultStages").innerHTML = stageChips(d.stages);
     card.classList.add("show");
-
-    status.textContent = "Deployment " + d.id + " logged (" + d.status + ").";
+    status.textContent = "Deployment " + d.id + " logged (" + d.status + ")" +
+      (d.overridden ? " \u00b7 change gate overridden" : "") + ".";
     status.className = "success";
     renderRecent();
     try { window.dispatchEvent(new CustomEvent("deploy:updated")); } catch (err) {}
-  });
+  }
+
+  function runDeploy(override) {
+    repoEl.classList.remove("invalid");
+    if (!repoEl.value.trim()) {
+      repoEl.classList.add("invalid");
+      status.innerHTML = ""; status.textContent = "Repository (org/repo) is required."; status.className = "fail";
+      return;
+    }
+    var res = PPS.addDeployment({
+      repo: repoEl.value, branch: document.getElementById("branch").value,
+      commit: document.getElementById("commit").value, environment: document.getElementById("environment").value,
+      workflow: document.getElementById("workflow").value, triggeredBy: document.getElementById("triggeredBy").value,
+      projectCode: document.getElementById("projectCode").value,
+      milestoneId: document.getElementById("milestoneId").value,
+      changeRef: document.getElementById("changeRef").value,
+      outcome: outcomeSel.value, failStage: document.getElementById("failStage").value,
+      override: !!override
+    });
+
+    // [P3-T2b/T2c] Change-approval gate result.
+    if (res.blocked) {
+      status.className = "fail";
+      var msg = "\u26A0 " + (res.gate && res.gate.label ? res.gate.label : "Linked ITIL Change Request is not approved") +
+                (res.gate && res.gate.changeId ? " (" + res.gate.changeId + ")." : ".");
+      if (res.allowOverride) {
+        // Pro (warn) edition: human may override.
+        status.innerHTML = "";
+        var span = document.createElement("span");
+        span.textContent = msg + " ";
+        var btn = document.createElement("button");
+        btn.type = "button"; btn.className = "pps-btn"; btn.id = "forceDeployBtn";
+        btn.textContent = "Force Deploy Anyway";
+        btn.style.marginLeft = "8px";
+        btn.addEventListener("click", function () { runDeploy(true); });
+        status.appendChild(span); status.appendChild(btn);
+      } else {
+        // Enterprise (lock) edition: no override. Deployment is held.
+        status.textContent = msg + " Deployment is held pending governance; no override in this edition.";
+      }
+      return;
+    }
+    if (!res.ok) { status.innerHTML = ""; status.textContent = res.error; status.className = "fail"; return; }
+    showResult(res.deployment);
+  }
+
+  form.addEventListener("submit", function (e) { e.preventDefault(); runDeploy(false); });
 
   // ---- C3 payload spec (reference) ----
   var SPEC_MAP = [

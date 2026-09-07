@@ -442,6 +442,15 @@
     { id:3, projectCode:"P2606-01", title:"UAT sign-off",                    status:"Not Started", percentComplete:0,   riskTag:"none",                    linkedChangeId:null, log:[] },
     { id:4, projectCode:"P2607-02", title:"SSO integration",                 status:"Blocked",     percentComplete:25,  riskTag:"High-Risk/Financial Impact", linkedChangeId:null, log:["Seed: waiting on InfoSec."] }
   ];
+
+  // --- [P3-T2a] A few change tickets in the registry so milestones have
+  //     something to link to out of the box (the Change form adds more).
+  //     One unapproved Normal, one Approved Normal, one pre-approved Standard. ---
+  var SEED_CHANGES = [
+    { cifNumber:"CIF-20260901-0001", projectCode:"P2606-01", itilChangeType:"Normal",   cabDecision:"",         status:"Submitted", briefDesc:"Import billing production server update", requestDate:"01-Sep-26", linkedMilestoneId:null },
+    { cifNumber:"CIF-20260901-0002", projectCode:"P2607-02", itilChangeType:"Normal",   cabDecision:"Approved", status:"Submitted", briefDesc:"Tariff portal SSO cutover",             requestDate:"01-Sep-26", cabDate:"03-Sep-26", cabReference:"CAB-77", linkedMilestoneId:null },
+    { cifNumber:"CIF-20260901-0003", projectCode:"P2606-01", itilChangeType:"Standard", cabDecision:"",         status:"Submitted", briefDesc:"Routine config toggle (pre-approved)",   requestDate:"01-Sep-26", linkedMilestoneId:null }
+  ];
   function ensureSeed() {
     // Per-key backfill. Each guard writes ONLY when its key is absent, so it
     // never clobbers real data you've entered — and, crucially, seed blocks
@@ -459,6 +468,7 @@
     if (read(KEYS.financials, null) === null)  write(KEYS.financials, SEED_FINANCIALS);
     if (read(KEYS.wbs, null) === null)         write(KEYS.wbs, SEED_WBS);
     if (read(KEYS.milestones, null) === null)  write(KEYS.milestones, SEED_MILESTONES);
+    if (read(CIF_LOG_KEY, null) === null)      write(CIF_LOG_KEY, SEED_CHANGES);
     if (read(KEYS.deployments, null) === null) write(KEYS.deployments, SEED_DEPLOYMENTS);
     if (Number(read(KEYS.deployCounter, 0)) < SEED_DEPLOYMENTS.length) write(KEYS.deployCounter, SEED_DEPLOYMENTS.length);
     if (Number(read(KEYS.counter, 0)) < SEED_REGISTER.length) write(KEYS.counter, SEED_REGISTER.length);
@@ -467,7 +477,7 @@
 
   function resetAll() {
     [KEYS.counter, KEYS.register, KEYS.portfolio, KEYS.scorecards, KEYS.risks, KEYS.decisions,
-     KEYS.resources, KEYS.allocations, KEYS.financials, KEYS.wbs, KEYS.milestones, KEYS.deployments, KEYS.deployCounter, KEYS.seeded]
+     KEYS.resources, KEYS.allocations, KEYS.financials, KEYS.wbs, KEYS.milestones, CIF_LOG_KEY, KEYS.deployments, KEYS.deployCounter, KEYS.seeded]
       .forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
     ensureSeed();
   }
@@ -722,10 +732,56 @@
     log.push(String(note || "").trim());
     return updateMilestone(id, { log: log });
   }
-  // Link helpers are used by the Pro/Enterprise integration items (P3-T2a onward);
-  // the field exists now so Core can store a link without any gate behavior.
-  function linkMilestoneChange(id, changeId) { return updateMilestone(id, { linkedChangeId: changeId }); }
-  function unlinkMilestoneChange(id)         { return updateMilestone(id, { linkedChangeId: null }); }
+  // [P3-T2a] Linking a change to a milestone writes BOTH sides: the milestone's
+  // linkedChangeId and a back-reference (linkedMilestoneId) on the change record.
+  function getChangeRequestByNumber(num) {
+    num = String(num || "");
+    return getChangeRequests().filter(function (c) { return String(c.cifNumber) === num; })[0] || null;
+  }
+  function setChangeRequestMilestone(cifNumber, milestoneId) {
+    var arr = getChangeRequests(), changed = false;
+    arr.forEach(function (c) {
+      if (String(c.cifNumber) === String(cifNumber)) {
+        c.linkedMilestoneId = (milestoneId == null ? null : String(milestoneId));
+        changed = true;
+      }
+    });
+    if (changed) write(CIF_LOG_KEY, arr);
+    return changed;
+  }
+  function linkMilestoneChange(id, changeId) {
+    var res = updateMilestone(id, { linkedChangeId: changeId });
+    if (res.ok) setChangeRequestMilestone(changeId, id);
+    return res;
+  }
+  function unlinkMilestoneChange(id) {
+    var m = getMilestone(id);
+    var res = updateMilestone(id, { linkedChangeId: null });
+    if (res.ok && m && m.linkedChangeId) setChangeRequestMilestone(m.linkedChangeId, null);
+    return res;
+  }
+  // [P3-T2b] A change is cleared for deployment when it is a Standard change
+  // (pre-approved) or its CAB decision is Approved.
+  function isChangeApprovedForDeploy(c) {
+    if (!c) return false;
+    if (cifChangeType(c) === "Standard") return true;
+    return cifCabApproved(c);
+  }
+  // Gate for a deploy that targets a milestone: is the milestone's linked change
+  // approved? No link => nothing to block.
+  function milestoneDeployGate(milestoneId) {
+    var m = getMilestone(milestoneId);
+    if (!m || !m.linkedChangeId) return { linked:false, approved:true, label:"No linked change" };
+    var c = getChangeRequestByNumber(m.linkedChangeId);
+    if (!c) return { linked:true, approved:false, changeId:m.linkedChangeId, missing:true,
+                     label:"Linked ITIL Change Request is not approved" };
+    var approved = isChangeApprovedForDeploy(c);
+    return {
+      linked:true, approved:approved, changeId:m.linkedChangeId,
+      changeType: cifChangeType(c), cabDecision: cifCabDecision(c),
+      label: approved ? "Linked change approved" : "Linked ITIL Change Request is not approved"
+    };
+  }
   function deleteMilestone(id) {
     var arr = getMilestones().filter(function (x) { return String(x.id) !== String(id); });
     if (!write(KEYS.milestones, arr)) return { ok:false, error:"Could not save." };
@@ -950,6 +1006,27 @@
     input = input || {};
     var repo = String(input.repo || "").trim();
     if (!repo) return { ok:false, error:"A repository (org/repo) is required." };
+
+    // [P3-T2b/T2c] Change-approval gate. When the deploy targets a milestone
+    // whose linked change is not approved and integration is not "off", block
+    // it. warn mode allows a human "Force Deploy Anyway" override; lock mode
+    // never does.
+    var milestoneId = (input.milestoneId == null || input.milestoneId === "") ? null : String(input.milestoneId);
+    var linkedChangeRef = "";
+    var overridden = false;
+    if (milestoneId) {
+      var gate = milestoneDeployGate(milestoneId);
+      if (gate.linked) linkedChangeRef = gate.changeId || "";
+      var mode = getGateMode();
+      if (mode !== "off" && gate.linked && !gate.approved) {
+        var canOverride = (mode === "warn") && !!input.override;
+        if (!canOverride) {
+          return { ok:false, blocked:true, gate:gate, allowOverride:(mode === "warn") };
+        }
+        overridden = true;
+      }
+    }
+
     var env = DEPLOY_ENVIRONMENTS.indexOf(input.environment) > -1 ? input.environment : "Development";
     var counter = (Number(read(KEYS.deployCounter, 0)) || 0) + 1;
     var now = new Date();
@@ -966,7 +1043,9 @@
       event: String(input.event || "workflow_run").trim(),
       triggeredBy: String(input.triggeredBy || "").trim(),
       projectCode: String(input.projectCode || "").trim(),
-      changeRef: String(input.changeRef || "").trim(),
+      milestoneId: milestoneId,
+      changeRef: String(input.changeRef || linkedChangeRef || "").trim(),
+      overridden: overridden,
       stages: stages,
       status: stagesConclusion(stages)
     };
@@ -1754,6 +1833,9 @@
     appendMilestoneLog: appendMilestoneLog,
     linkMilestoneChange: linkMilestoneChange,
     unlinkMilestoneChange: unlinkMilestoneChange,
+    getChangeRequestByNumber: getChangeRequestByNumber,
+    isChangeApprovedForDeploy: isChangeApprovedForDeploy,
+    milestoneDeployGate: milestoneDeployGate,
     deleteMilestone: deleteMilestone,
     getDecisions: getDecisions,
     addDecision: addDecision,
