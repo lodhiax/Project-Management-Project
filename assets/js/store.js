@@ -2031,11 +2031,14 @@
   window.addEventListener("resize", closeAllDropdowns);
   document.addEventListener("scroll", closeAllDropdowns, true);
 
-  /* Edition switcher — delegated, so it survives every nav re-render [F1] */
+  /* Edition switcher — delegated, so it survives every nav re-render [F1].
+     A hard reload (not just re-applying tier classes) ensures every page's
+     own render() re-runs against the newly-visible/hidden data for the
+     selected edition, rather than leaving stale content on screen. */
   document.addEventListener("change", function (e) {
     if (e.target && e.target.id === "ppsTierSelect") {
       setTier(e.target.value);
-      applyTier();
+      window.location.reload();
     }
   });
 
