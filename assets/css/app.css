@@ -413,7 +413,7 @@ tbody tr:hover td { background: #f6f9fb; }
    spills outside the frame. */
 .table-scroll { overflow-x: auto; }
 .row-actions .status-edit { display:block; width:100%; margin:0 auto 4px; box-sizing:border-box; }
-.row-actions .promote { display:block; width:100%; box-sizing:border-box; white-space:normal; }
+.row-actions .promote { display:block; width:100%; margin:0; box-sizing:border-box; white-space:normal; }
 .row-actions button {
   font-family:inherit; font-size:11px; font-weight:600; cursor:pointer;
   border:1px solid var(--line); background:#fff; color:var(--link);

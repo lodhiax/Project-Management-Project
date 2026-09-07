@@ -1803,7 +1803,6 @@
     { type: "link",  label: "Portfolio",           href: "portfolio-review.html",    tier: "pmo" },
     { type: "link",  label: "Resource Capacity",   href: "capacity.html",            tier: "pmo" },
     { type: "link",  label: "Financial Dashboard", href: "financial-dashboard.html", tier: "pmo" },
-    { type: "link",  label: "Milestones",          href: "milestones.html",          tier: "pmo" },
     { type: "group", label: "Project Status", tier: "pmo", children: PROJECT_STATUS.map(function (s, i) {
         return { label: (i + 1) + ". " + s.label, href: s.href, tier: "pmo" };
     }) },

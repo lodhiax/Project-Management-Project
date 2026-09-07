@@ -17,7 +17,11 @@
   }
   .row-actions .status-edit:hover { border-color: #9fb0be; }
   .row-actions .status-edit:focus { outline: none; border-color: var(--link, #1568b8); box-shadow: 0 0 0 2px rgba(21,104,184,0.14); }
-  .row-actions .promote, .row-actions .in-portfolio { margin-left: 6px; vertical-align: middle; }
+  .row-actions .in-portfolio { margin-left: 6px; vertical-align: middle; }
+  /* [Bug fix] Actions column needs enough room for the status dropdown and the
+     "Promote to portfolio" button; without a floor it gets squeezed by the
+     other columns and both controls clip their text instead of wrapping. */
+  td.row-actions, th.row-actions { min-width: 150px; }
 </style>
 </head>
 <body>
@@ -59,9 +63,9 @@
 <div class="table-scroll">
 <table class="grid">
   <colgroup>
-    <col style="width:9%"><col style="width:13%"><col style="width:9%"><col style="width:7%">
-    <col style="width:8%"><col data-min-tier="itil" style="width:7%"><col style="width:6%"><col style="width:8%"><col style="width:8%">
-    <col style="width:7%"><col style="width:8%"><col style="width:4%"><col style="width:11%">
+    <col style="width:8%"><col style="width:12%"><col style="width:8%"><col style="width:7%">
+    <col style="width:7%"><col data-min-tier="itil" style="width:6%"><col style="width:6%"><col style="width:7%"><col style="width:7%">
+    <col style="width:6%"><col style="width:8%"><col style="width:4%"><col style="width:14%">
   </colgroup>
 
   <thead class="col-head">

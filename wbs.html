@@ -90,6 +90,20 @@
     padding: 1px 4px; border-radius: 3px; transform: translateX(-50%); white-space: nowrap;
   }
   .gantt-empty { padding: 34px; text-align: center; color: var(--ink-faint); }
+
+  /* ---- Milestones view ---- */
+  .ms-pill { display:inline-block; padding:1px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+  .ms-notstarted { background:#eef0f2; color:#5b6470; }
+  .ms-inprogress { background:#e7f0ff; color:#1f5fbf; }
+  .ms-blocked    { background:#fdeaea; color:#c0392b; }
+  .ms-done       { background:#e6f5ec; color:#1e824c; }
+  .ms-risk       { background:#fff2e0; color:#b9770e; border:1px solid #f0d3a0; }
+  .ms-bar { height:6px; border-radius:4px; background:#eef0f2; overflow:hidden; min-width:70px; }
+  .ms-bar > span { display:block; height:100%; background:var(--brand,#3a7d44); }
+  .ms-log { color:var(--ink-soft); font-size:11px; }
+  .ms-actions .pps-btn { padding:3px 8px; font-size:11.5px; margin:0 2px 2px 0; }
+  #msForm.pm-form { border:1px solid var(--line); border-radius:8px; padding:14px; margin:10px 0 4px; background:#fbfcfd; }
+  #msForm.hidden { display:none; }
 </style>
 </head>
 <body>
@@ -139,6 +153,7 @@
 <div class="view-toggle" id="wbsViewToggle">
   <button type="button" data-view="table" class="active">Table</button>
   <button type="button" data-view="gantt">Gantt</button>
+  <button type="button" data-view="milestones">Milestones</button>
 </div>
 
 <div id="wbsTableView">
@@ -163,6 +178,50 @@
 <div id="wbsGanttView" style="display:none;">
   <div class="gantt-note">Bars are colored by status (see legend above) and filled to each task's % complete; black bars are phase/group roll-ups; diamonds mark single-day milestones. The dashed red line marks today.</div>
   <div id="wbsGanttWrap"><!-- rendered by JS --></div>
+</div>
+
+<div id="wbsMilestonesView" style="display:none;">
+  <p class="pps-note">
+    <span class="pps-live">Live</span>
+    &nbsp;Milestones for the selected project, with a status lifecycle (Not Started, In Progress, Blocked, Done). Marking a milestone Done sets it to 100 percent. A milestone can carry a High-Risk / Financial Impact tag used by the governance flow in higher editions.
+  </p>
+
+  <div class="pps-toolbar" style="justify-content:flex-end;align-items:center;">
+    <button type="button" class="pps-btn" id="msAddBtn">+ Add milestone</button>
+  </div>
+
+  <!-- Inline add / edit form -->
+  <form class="pm-form hidden" id="msForm" autocomplete="off">
+    <div class="pm-grid">
+      <div class="pm-field full"><label for="ms_title">Milestone title <span class="req">*</span></label><input id="ms_title" name="title" type="text" placeholder="e.g. Implement Apple Pay Integration"></div>
+      <div class="pm-field"><label for="ms_status">Status</label><select id="ms_status" name="status"></select></div>
+      <div class="pm-field"><label for="ms_risk">Risk tag</label><select id="ms_risk" name="riskTag"><option value="none">None</option><option value="High-Risk/Financial Impact">High-Risk / Financial Impact</option></select></div>
+      <div class="pm-field full"><label for="ms_change">Related ITIL change (link a ticket)</label><select id="ms_change"></select></div>
+    </div>
+    <div class="pm-error" id="msError"></div>
+    <div class="pm-actions" style="margin-top:8px;">
+      <button type="button" class="pps-btn secondary" id="msCancel">Cancel</button>
+      <button type="button" class="pps-btn" id="msSave">Save</button>
+    </div>
+  </form>
+
+  <table class="grid" id="msTable" style="width:100%;border-collapse:collapse;margin-top:10px;">
+    <thead>
+      <tr>
+        <th style="text-align:left;">Milestone</th>
+        <th style="text-align:left;">Status</th>
+        <th style="text-align:left;">Progress</th>
+        <th style="text-align:left;">Risk</th>
+        <th style="text-align:left;">Linked change</th>
+        <th style="text-align:left;">Actions</th>
+      </tr>
+    </thead>
+    <tbody id="msBody"></tbody>
+  </table>
+
+  <div id="msEmptyState" class="pps-note" style="display:none;margin-top:14px;">
+    No milestones for this project yet. Use <strong>+ Add milestone</strong> to create the first one.
+  </div>
 </div>
 
 
@@ -365,7 +424,9 @@
       this.querySelectorAll("button").forEach(function (b) { b.classList.toggle("active", b === btn); });
       document.getElementById("wbsTableView").style.display = viewMode === "table" ? "" : "none";
       document.getElementById("wbsGanttView").style.display = viewMode === "gantt" ? "" : "none";
+      document.getElementById("wbsMilestonesView").style.display = viewMode === "milestones" ? "" : "none";
       if (viewMode === "gantt") renderGantt();
+      if (viewMode === "milestones") renderMilestones();
     });
 
     /* ---------- project picker ---------- */
@@ -448,6 +509,7 @@
         ? rows.map(rowHtml).join("")
         : '<tr><td colspan="9" class="pps-empty">No breakdown yet for this project. Use &ldquo;Add task&rdquo; to create the first phase or deliverable.</td></tr>';
       if (viewMode === "gantt") renderGantt();
+      if (viewMode === "milestones") renderMilestones();
     }
 
     /* ---------- Add / Edit modal ---------- */
@@ -605,7 +667,126 @@
     picker.addEventListener("change", function () { currentCode = picker.value; render(); });
     window.addEventListener("storage", function (e) {
       if (e.key === PPS.KEYS.wbs || e.key === PPS.KEYS.portfolio) { fillPicker(); render(); }
+      if (e.key === PPS.KEYS.milestones || e.key === "cifSubmissionsLog") { if (viewMode === "milestones") renderMilestones(); }
     });
+
+    /* ---------- Milestones panel (moved from the standalone Milestones page) ----------
+       Scoped to the WBS project picker rather than an independent "All projects" filter,
+       so it shares context with the Table and Gantt views. */
+    var msEditingId = null;
+    var msStatuses = PPS.milestoneStatusList();
+    var msForm   = document.getElementById("msForm");
+    var msBody   = document.getElementById("msBody");
+    var msTable  = document.getElementById("msTable");
+    var msEmpty  = document.getElementById("msEmptyState");
+    var msError  = document.getElementById("msError");
+
+      function msStatusClass(s) {
+        return { "Not Started":"ms-notstarted", "In Progress":"ms-inprogress", "Blocked":"ms-blocked", "Done":"ms-done" }[s] || "ms-notstarted";
+      }
+      function fillMsStatusSelect(sel) {
+        sel.innerHTML = msStatuses.map(function (s) { return '<option value="' + attr(s) + '">' + esc(s) + "</option>"; }).join("");
+      }
+      function fillMsChangeSelect(sel, current) {
+        var crs = PPS.getChangeRequestsByProject(currentCode);
+        var html = '<option value="">None</option>';
+        crs.forEach(function (c) {
+          var lbl = c.cifNumber + " - " + (c.itilChangeType || "") + (c.cabDecision ? " (" + c.cabDecision + ")" : "");
+          html += '<option value="' + attr(c.cifNumber) + '">' + esc(lbl) + "</option>";
+        });
+        sel.innerHTML = html;
+        sel.value = current || "";
+      }
+
+      function renderMilestones() {
+        if (!currentCode) { msTable.style.display = "none"; msEmpty.style.display = ""; msBody.innerHTML = ""; return; }
+        var list = PPS.getMilestonesByProject(currentCode);
+        if (!list.length) { msTable.style.display = "none"; msEmpty.style.display = ""; msBody.innerHTML = ""; return; }
+        msTable.style.display = ""; msEmpty.style.display = "none";
+
+        msBody.innerHTML = list.map(function (m) {
+          var lastLog = (Array.isArray(m.log) && m.log.length) ? m.log[m.log.length - 1] : "";
+          var linked;
+          if (m.linkedChangeId) {
+            var g = PPS.milestoneDeployGate(m.id);
+            var appr = g.approved
+              ? '<span class="ms-pill ms-done">approved</span>'
+              : '<span class="ms-pill ms-blocked">not approved</span>';
+            linked = esc(m.linkedChangeId) + " " + appr +
+                     ' <button type="button" class="pps-btn secondary" data-act="unlink">Unlink</button>';
+          } else {
+            linked = '<span style="color:var(--ink-soft);">&mdash;</span>';
+          }
+          var risk = (m.riskTag && m.riskTag !== "none")
+            ? '<span class="ms-pill ms-risk">' + esc(m.riskTag) + "</span>"
+            : '<span style="color:var(--ink-soft);">&mdash;</span>';
+          return '<tr data-id="' + m.id + '">' +
+            '<td class="title-cell">' + esc(m.title) +
+              (lastLog ? '<div class="ms-log">' + esc(lastLog) + "</div>" : "") + "</td>" +
+            '<td><span class="ms-pill ' + msStatusClass(m.status) + '">' + esc(m.status) + "</span></td>" +
+            '<td><div class="ms-bar"><span style="width:' + (m.percentComplete || 0) + '%"></span></div>' +
+                '<div class="ms-log">' + (m.percentComplete || 0) + "%</div></td>" +
+            "<td>" + risk + "</td>" +
+            "<td>" + linked + "</td>" +
+            '<td class="ms-actions">' +
+              (m.status !== "In Progress" ? '<button type="button" class="pps-btn secondary" data-act="prog">In Progress</button>' : "") +
+              (m.status !== "Done" ? '<button type="button" class="pps-btn" data-act="done">Mark Done</button>' : "") +
+              '<button type="button" class="pps-btn secondary" data-act="edit">Edit</button>' +
+              '<button type="button" class="pps-btn secondary" data-act="del">Delete</button>' +
+            "</td></tr>";
+        }).join("");
+      }
+
+      function openMsForm(m) {
+        msEditingId = m ? m.id : null;
+        fillMsStatusSelect(document.getElementById("ms_status"));
+        document.getElementById("ms_title").value  = m ? m.title : "";
+        document.getElementById("ms_status").value = m ? m.status : "Not Started";
+        document.getElementById("ms_risk").value   = m ? (m.riskTag || "none") : "none";
+        fillMsChangeSelect(document.getElementById("ms_change"), m ? m.linkedChangeId : "");
+        msError.textContent = ""; msError.classList.remove("show");
+        msForm.classList.remove("hidden");
+        document.getElementById("ms_title").focus();
+      }
+      function closeMsForm() { msForm.classList.add("hidden"); msEditingId = null; }
+
+      function saveMs() {
+        var data = {
+          projectCode: currentCode,
+          title:       document.getElementById("ms_title").value,
+          status:      document.getElementById("ms_status").value,
+          riskTag:     document.getElementById("ms_risk").value
+        };
+        var res = msEditingId ? PPS.updateMilestone(msEditingId, data) : PPS.addMilestone(data);
+        if (!res.ok) { msError.textContent = res.error || "Could not save."; msError.classList.add("show"); return; }
+        // Reconcile the Related change link (writes both sides via the store).
+        var mid = msEditingId || res.milestone.id;
+        var selectedChange = document.getElementById("ms_change").value;
+        var currentChange = (PPS.getMilestone(mid).linkedChangeId) || "";
+        if (selectedChange !== currentChange) {
+          if (selectedChange) PPS.linkMilestoneChange(mid, selectedChange);
+          else PPS.unlinkMilestoneChange(mid);
+        }
+        closeMsForm(); renderMilestones();
+      }
+
+      msBody.addEventListener("click", function (e) {
+        var btn = e.target.closest ? e.target.closest("button[data-act]") : null;
+        if (!btn) return;
+        var id = btn.closest("tr").getAttribute("data-id");
+        var act = btn.getAttribute("data-act");
+        if (act === "prog") PPS.setMilestoneStatus(id, "In Progress");
+        else if (act === "done") PPS.setMilestoneStatus(id, "Done");
+        else if (act === "unlink") PPS.unlinkMilestoneChange(id);
+        else if (act === "edit") { openMsForm(PPS.getMilestone(id)); return; }
+        else if (act === "del") { if (!window.confirm("Delete this milestone?")) return; PPS.deleteMilestone(id); }
+        renderMilestones();
+      });
+
+    document.getElementById("msAddBtn").addEventListener("click", function () { openMsForm(null); });
+    document.getElementById("msCancel").addEventListener("click", closeMsForm);
+    document.getElementById("msSave").addEventListener("click", saveMs);
+    msForm.addEventListener("submit", function (e) { e.preventDefault(); saveMs(); });
 
     fillPicker();
     render();
