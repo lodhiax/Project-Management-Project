@@ -1832,7 +1832,17 @@
       var dd = btn.closest(".pps-dropdown");
       var wasOpen = dd.classList.contains("open");
       closeAllDropdowns();
-      if (!wasOpen) dd.classList.add("open");
+      if (!wasOpen) {
+        dd.classList.add("open");
+        // Menus are position:fixed so the horizontally-scrollable nav can never
+        // clip them; anchor the menu under its toggle on open.
+        var menu = dd.querySelector(".pps-dropdown-menu");
+        if (menu) {
+          var r = btn.getBoundingClientRect();
+          menu.style.left = Math.round(r.left) + "px";
+          menu.style.top  = Math.round(r.bottom) + "px";
+        }
+      }
     } else {
       closeAllDropdowns();
     }
@@ -1840,6 +1850,9 @@
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") closeAllDropdowns();
   });
+  // A fixed menu would visually detach if the page or nav scrolled while open.
+  window.addEventListener("resize", closeAllDropdowns);
+  document.addEventListener("scroll", closeAllDropdowns, true);
 
   /* Edition switcher — delegated, so it survives every nav re-render [F1] */
   document.addEventListener("change", function (e) {

@@ -69,14 +69,20 @@ a:hover { color: var(--link-dark); text-decoration: underline; }
   display: flex;
   align-items: center;
   gap: 2px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;                 /* keep every header on one straight line */
+  overflow-x: auto;                  /* scroll instead of wrapping on narrow widths */
+  overflow-y: hidden;
+  scrollbar-width: thin;
   background: var(--ribbon);
   border-bottom: 1px solid var(--line);
   margin-left: calc(var(--pad) * -1);
   margin-right: calc(var(--pad) * -1);
-  padding: 0 16px;
+  padding: 0 12px;
   min-height: 46px;
 }
+.pps-nav::-webkit-scrollbar { height: 6px; }
+.pps-nav::-webkit-scrollbar-thumb { background: rgba(27,39,51,0.18); border-radius: 3px; }
+.pps-nav > a, .pps-nav > .pps-brand, .pps-nav > .pps-dropdown { flex: 0 0 auto; }  /* never shrink; scroll instead */
 .pps-nav .pps-brand {
   display: inline-flex;
   align-items: center;
@@ -86,7 +92,7 @@ a:hover { color: var(--link-dark); text-decoration: underline; }
   font-size: 12px;
   letter-spacing: 0.6px;
   text-transform: uppercase;
-  margin-right: 12px;
+  margin-right: 8px;
   white-space: nowrap;
 }
 .pps-nav .pps-brand:hover { color: var(--ink); text-decoration: none; }
@@ -99,11 +105,11 @@ a:hover { color: var(--link-dark); text-decoration: underline; }
 }
 .pps-nav a {
   color: var(--ink-soft);
-  font-size: 11.5px;
-  letter-spacing: 0.4px;
+  font-size: 11px;
+  letter-spacing: 0.25px;
   text-transform: uppercase;
   font-weight: 600;
-  padding: 15px 13px;
+  padding: 15px 9px;
   white-space: nowrap;
   border-bottom: 2px solid transparent;
   transition: color .12s ease, background .12s ease, border-color .12s ease;
@@ -119,8 +125,8 @@ a:hover { color: var(--link-dark); text-decoration: underline; }
 .pps-dropdown { position: relative; }
 .pps-dropdown-toggle {
   background: none; border: none; cursor: pointer; font-family: inherit;
-  color: var(--ink-soft); font-size: 11.5px; letter-spacing: 0.4px; text-transform: uppercase;
-  font-weight: 600; padding: 15px 13px; white-space: nowrap;
+  color: var(--ink-soft); font-size: 11px; letter-spacing: 0.25px; text-transform: uppercase;
+  font-weight: 600; padding: 15px 9px; white-space: nowrap;
   border-bottom: 2px solid transparent; display: inline-flex; align-items: center; gap: 5px;
   transition: color .12s ease, background .12s ease, border-color .12s ease;
 }
@@ -128,7 +134,7 @@ a:hover { color: var(--link-dark); text-decoration: underline; }
 .pps-dropdown-toggle:hover { color: var(--ink); background: #eef2f5; }
 .pps-dropdown-toggle.active { color: var(--ink); border-bottom-color: var(--stage-active); background: #fff; }
 .pps-dropdown-menu {
-  position: absolute; top: 100%; left: 0; min-width: 200px;
+  position: fixed; top: auto; left: auto; min-width: 200px;
   background: #fff; border: 1px solid var(--line); border-top: none; border-radius: 0 0 6px 6px;
   box-shadow: 0 8px 20px rgba(27,39,51,0.14);
   display: none; flex-direction: column; padding: 6px; z-index: 60;
@@ -211,21 +217,22 @@ a:hover { color: var(--link-dark); text-decoration: underline; }
   margin-left: calc(var(--pad) * -1);
   margin-right: calc(var(--pad) * -1);
   padding: 9px var(--pad);
+  overflow: hidden;            /* keep all stages within the card edge */
 }
 .crm-stage {
   flex: 1 1 0;
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 7px;
   min-width: 0;
-  padding: 7px 12px 7px 22px;
+  padding: 7px 10px 7px 18px;
   font-size: 12px;
   font-weight: 600;
   color: var(--stage-todo-ink);
   background: var(--stage-todo);
   clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%, 13px 50%);
 }
-.crm-stage:first-child { clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%); padding-left: 16px; }
+.crm-stage:first-child { clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%); padding-left: 14px; }
 .crm-stage:last-child  { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 13px 50%); }
 .crm-stage .crm-stage-mark {
   flex: none;
@@ -236,7 +243,7 @@ a:hover { color: var(--link-dark); text-decoration: underline; }
   background: rgba(255,255,255,0.55);
   color: inherit;
 }
-.crm-stage .crm-stage-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.crm-stage .crm-stage-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .crm-stage.is-done { background: var(--stage-done); color: var(--stage-done-ink); }
 .crm-stage.is-done .crm-stage-mark { background: rgba(255,255,255,0.7); }
 .crm-stage.is-active {
