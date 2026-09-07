@@ -31,6 +31,7 @@
     financials:  "ppsFinancialMetrics",
     wbs:         "ppsWbs",
     milestones:  "ppsMilestones",
+    ciMap:       "ppsCiMap",
     deployments:  "ppsDeployments",
     deployCounter:"ppsDeployCounter",
     tier:        "ppsTier",
@@ -451,6 +452,14 @@
     { cifNumber:"CIF-20260901-0002", projectCode:"P2607-02", itilChangeType:"Normal",   cabDecision:"Approved", status:"Submitted", briefDesc:"Tariff portal SSO cutover",             requestDate:"01-Sep-26", cabDate:"03-Sep-26", cabReference:"CAB-77", linkedMilestoneId:null },
     { cifNumber:"CIF-20260901-0003", projectCode:"P2606-01", itilChangeType:"Standard", cabDecision:"",         status:"Submitted", briefDesc:"Routine config toggle (pre-approved)",   requestDate:"01-Sep-26", linkedMilestoneId:null }
   ];
+
+  // --- [Service Catalog / CI Mapping] CI records map a repository/service asset
+  //     back to a portfolio project. ITIL fields (owner, SLA, repo) plus a
+  //     DevOps deployment target. ---
+  var SEED_CIMAP = [
+    { id:1, projectCode:"P2606-01", ci:"Reconciliation Engine", service:"Billing Reconciliation Service", serviceOwner:"Data & Integrations", slaTier:"Tier 1 (Gold)",   repoUrl:"github.com/socalgas/recon-engine",  targetEnv:"Production", targetRoute:"prod-recon.internal.socalgas" },
+    { id:2, projectCode:"P2606-01", ci:"Import Adapter",        service:"Import Data Feed Service",       serviceOwner:"Data & Integrations", slaTier:"Tier 2 (Silver)", repoUrl:"github.com/socalgas/import-billing", targetEnv:"Staging",    targetRoute:"stg-import.internal.socalgas" }
+  ];
   function ensureSeed() {
     // Per-key backfill. Each guard writes ONLY when its key is absent, so it
     // never clobbers real data you've entered — and, crucially, seed blocks
@@ -469,6 +478,7 @@
     if (read(KEYS.wbs, null) === null)         write(KEYS.wbs, SEED_WBS);
     if (read(KEYS.milestones, null) === null)  write(KEYS.milestones, SEED_MILESTONES);
     if (read(CIF_LOG_KEY, null) === null)      write(CIF_LOG_KEY, SEED_CHANGES);
+    if (read(KEYS.ciMap, null) === null)       write(KEYS.ciMap, SEED_CIMAP);
     if (read(KEYS.deployments, null) === null) write(KEYS.deployments, SEED_DEPLOYMENTS);
     if (Number(read(KEYS.deployCounter, 0)) < SEED_DEPLOYMENTS.length) write(KEYS.deployCounter, SEED_DEPLOYMENTS.length);
     if (Number(read(KEYS.counter, 0)) < SEED_REGISTER.length) write(KEYS.counter, SEED_REGISTER.length);
@@ -477,7 +487,7 @@
 
   function resetAll() {
     [KEYS.counter, KEYS.register, KEYS.portfolio, KEYS.scorecards, KEYS.risks, KEYS.decisions,
-     KEYS.resources, KEYS.allocations, KEYS.financials, KEYS.wbs, KEYS.milestones, CIF_LOG_KEY, KEYS.deployments, KEYS.deployCounter, KEYS.seeded]
+     KEYS.resources, KEYS.allocations, KEYS.financials, KEYS.wbs, KEYS.milestones, KEYS.ciMap, CIF_LOG_KEY, KEYS.deployments, KEYS.deployCounter, KEYS.seeded]
       .forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
     ensureSeed();
   }
@@ -782,9 +792,61 @@
       label: approved ? "Linked change approved" : "Linked ITIL Change Request is not approved"
     };
   }
+  // [Full Loop] Has this project had a successful automated Staging deployment?
+  // Used by the change form's CI/CD Deployment Gate before CAB sign-off.
+  function hasSuccessfulStagingDeploy(code) {
+    code = String(code || "");
+    return getDeployments().some(function (d) {
+      return String(d.projectCode || "") === code && d.environment === "Staging" && d.status === "success";
+    });
+  }
   function deleteMilestone(id) {
     var arr = getMilestones().filter(function (x) { return String(x.id) !== String(id); });
     if (!write(KEYS.milestones, arr)) return { ok:false, error:"Could not save." };
+    return { ok:true };
+  }
+
+  /* ---------- [Service Catalog / CI Mapping] ---------- */
+  function cleanCiMapping(input) {
+    input = input || {};
+    return {
+      projectCode:  String(input.projectCode || "").trim(),
+      ci:           String(input.ci || "").trim(),
+      service:      String(input.service || "").trim(),
+      serviceOwner: String(input.serviceOwner || "").trim(),
+      slaTier:      String(input.slaTier || "").trim(),
+      repoUrl:      String(input.repoUrl || "").trim(),
+      targetEnv:    String(input.targetEnv || "").trim(),
+      targetRoute:  String(input.targetRoute || "").trim()
+    };
+  }
+  function getCiMappings()             { var a = read(KEYS.ciMap, []); return Array.isArray(a) ? a : []; }
+  function getCiMappingsByProject(code){ return getCiMappings().filter(function (m) { return m.projectCode === code; }); }
+  function getCiMapping(id)            { return getCiMappings().filter(function (m) { return String(m.id) === String(id); })[0] || null; }
+  function addCiMapping(input) {
+    var m = cleanCiMapping(input);
+    if (!m.ci)          return { ok:false, error:"A Configuration Item name is required." };
+    if (!m.projectCode) return { ok:false, error:"A project is required." };
+    var arr = getCiMappings();
+    m.id = nextId(arr);
+    arr.push(m);
+    if (!write(KEYS.ciMap, arr)) return { ok:false, error:"Could not save. Browser storage may be full." };
+    return { ok:true, mapping:m };
+  }
+  function updateCiMapping(id, input) {
+    var arr = getCiMappings(), idx = -1;
+    for (var i = 0; i < arr.length; i++) { if (String(arr[i].id) === String(id)) { idx = i; break; } }
+    if (idx === -1) return { ok:false, error:"CI mapping not found." };
+    var merged = cleanCiMapping(assign(arr[idx], input));
+    if (!merged.ci) return { ok:false, error:"A Configuration Item name is required." };
+    merged.id = arr[idx].id;
+    arr[idx] = merged;
+    if (!write(KEYS.ciMap, arr)) return { ok:false, error:"Could not save." };
+    return { ok:true, mapping:merged };
+  }
+  function deleteCiMapping(id) {
+    var arr = getCiMappings().filter(function (x) { return String(x.id) !== String(id); });
+    if (!write(KEYS.ciMap, arr)) return { ok:false, error:"Could not save." };
     return { ok:true };
   }
 
@@ -1303,6 +1365,16 @@
       costAvoidance: finMoney(input.costAvoidance),
       procurementCost: costOfPurchase,            // tied to purchase, matching the seed
       procurementReturn: finMoney(input.procurementReturn),
+      // [Financial differentiators] Core: CapEx/OpEx + blended run-rate.
+      capex: finMoney(input.capex),
+      opex: finMoney(input.opex),
+      runRate: finMoney(input.runRate),
+      // ITIL: Value Realization Tracker (op cost reduction + downtime saved).
+      valueRealization: {
+        opCostReduction:     finMoney(input.opCostReduction),
+        downtimeHoursSaved:  finMoney(input.downtimeHoursSaved),
+        downtimeCostPerHour: finMoney(input.downtimeCostPerHour)
+      },
       categories: cats,
       suppliers: sups,
       trend: {}
@@ -1715,6 +1787,14 @@
     { label: "Project Scorecard",   href: "scorecard.html" }
   ];
 
+  // [Bug] CI/CD Delivery is a two-step flow. Render both steps on each CI/CD
+  // page so you can move between Deployment Intake and Pipeline & Deployment
+  // Events instead of them being dead-end pages.
+  var CICD_STEPS = [
+    { label: "Deployment Intake",            href: "deployment-intake.html" },
+    { label: "Pipeline & Deployment Events", href: "deployment-events.html" }
+  ];
+
   var NAV_CONFIG = [
     { type: "group", label: "Intake Process", tier: "pmo", children: [
         { label: "1. Intake Form",    href: "intake-form.html",   tier: "pmo" },
@@ -1794,6 +1874,15 @@
     // the edition now changes integration BEHAVIOR (gate mode), not what shows.
     var gated = document.querySelectorAll("[data-min-tier]");
     for (var i = 0; i < gated.length; i++) gated[i].classList.remove("pps-tier-off");
+    // [Edition differentiators] Field-level gating: elements marked
+    // data-edition-min are shown only from that edition upward. This is the
+    // deliberate per-tier field differentiation on forms, distinct from module
+    // sections (data-min-tier), which stay visible at every edition.
+    var ef = document.querySelectorAll("[data-edition-min]");
+    for (var k = 0; k < ef.length; k++) {
+      if (tierAllows(ef[k].getAttribute("data-edition-min"))) ef[k].classList.remove("pps-tier-off");
+      else ef[k].classList.add("pps-tier-off");
+    }
     renderNav();
   }
 
@@ -1836,6 +1925,13 @@
     getChangeRequestByNumber: getChangeRequestByNumber,
     isChangeApprovedForDeploy: isChangeApprovedForDeploy,
     milestoneDeployGate: milestoneDeployGate,
+    hasSuccessfulStagingDeploy: hasSuccessfulStagingDeploy,
+    getCiMappings: getCiMappings,
+    getCiMappingsByProject: getCiMappingsByProject,
+    getCiMapping: getCiMapping,
+    addCiMapping: addCiMapping,
+    updateCiMapping: updateCiMapping,
+    deleteCiMapping: deleteCiMapping,
     deleteMilestone: deleteMilestone,
     getDecisions: getDecisions,
     addDecision: addDecision,
@@ -2033,7 +2129,9 @@
     "change request": "change-request-form.html",
     "project financials": "financials.html",
     "resource management": "resources.html",
-    "work breakdown": "wbs.html"
+    "work breakdown": "wbs.html",
+    "deployment intake": "deployment-intake.html",
+    "pipeline & deployment events": "deployment-events.html"
   };
   function normStageLabel(s) {
     return (s || "").replace(/\s+/g, " ").trim().toLowerCase();
@@ -2042,27 +2140,30 @@
   // source so every one of the seven pages (WBS included) shows all seven steps
   // in the same order. Other flows (e.g. the 2-step Intake flow) keep their own
   // markup and are left untouched.
-  function renderProjectFlow() {
+  function renderStepFlow() {
     var current = location.pathname.split("/").pop() || "index.html";
-    var idx = -1;
-    for (var i = 0; i < PROJECT_STATUS.length; i++) {
-      if (PROJECT_STATUS[i].href === current) { idx = i; break; }
+    var flows = [PROJECT_STATUS, CICD_STEPS];
+    for (var f = 0; f < flows.length; f++) {
+      var steps = flows[f], idx = -1;
+      for (var i = 0; i < steps.length; i++) { if (steps[i].href === current) { idx = i; break; } }
+      if (idx === -1) continue;                     // not part of this flow
+      var flow = document.querySelector(".crm-flow");
+      if (!flow) return;
+      flow.classList.remove("single-stage");        // render as a real multi-step bar
+      var html = "";
+      for (var j = 0; j < steps.length; j++) {
+        var cls = j < idx ? "is-done" : (j === idx ? "is-active" : "is-todo");
+        html += '<div class="crm-stage ' + cls + '">' +
+                  '<span class="crm-stage-mark">' + (j + 1) + '</span>' +
+                  '<span class="crm-stage-label">' + esc(steps[j].label) + '</span>' +
+                '</div>';
+      }
+      flow.innerHTML = html;
+      return;
     }
-    if (idx === -1) return;                       // not a Project Status page
-    var flow = document.querySelector(".crm-flow");
-    if (!flow) return;
-    var html = "";
-    for (var j = 0; j < PROJECT_STATUS.length; j++) {
-      var cls = j < idx ? "is-done" : (j === idx ? "is-active" : "is-todo");
-      html += '<div class="crm-stage ' + cls + '">' +
-                '<span class="crm-stage-mark">' + (j + 1) + '</span>' +
-                '<span class="crm-stage-label">' + esc(PROJECT_STATUS[j].label) + '</span>' +
-              '</div>';
-    }
-    flow.innerHTML = html;
   }
   (function initStageNav() {
-    renderProjectFlow();
+    renderStepFlow();
     var current = location.pathname.split("/").pop() || "index.html";
     document.querySelectorAll(".crm-flow .crm-stage").forEach(function (stage) {
       var labelEl = stage.querySelector(".crm-stage-label");

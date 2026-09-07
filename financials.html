@@ -112,6 +112,33 @@
   </div>
 </div>
 
+<!-- [Financial differentiators] Core: CapEx / OpEx & run-rates -->
+<div class="fx-card">
+  <h3>Capitalization &amp; Run-rates <span class="sub" style="font-size:11px;font-weight:500;font-style:italic;color:var(--ink-faint);">CapEx / OpEx</span></h3>
+  <div class="fx-grid">
+    <div class="fx-field"><label for="f_capex">Capitalized Expense (CapEx)</label><div class="fx-prefix"><input id="f_capex" type="number" min="0" step="1" value="0"></div></div>
+    <div class="fx-field"><label for="f_opex">Operational Expense (OpEx)</label><div class="fx-prefix"><input id="f_opex" type="number" min="0" step="1" value="0"></div></div>
+    <div class="fx-field"><label for="f_runrate">Blended Resource Run-rate ($/hr)</label><div class="fx-prefix"><input id="f_runrate" type="number" min="0" step="1" value="0"></div></div>
+  </div>
+  <div class="fx-derived" style="margin-top:12px;">
+    <div class="d"><div class="dl">CapEx share (derived)</div><div class="dv" id="d_capexShare">0%</div><div class="dh">= CapEx / (CapEx + OpEx)</div></div>
+  </div>
+</div>
+
+<!-- [Financial differentiators] ITIL: Value Realization Tracker (hidden at Core) -->
+<div class="fx-card" data-edition-min="itil">
+  <h3>Value Realization Tracker <span class="sub" style="font-size:11px;font-weight:500;font-style:italic;color:var(--ink-faint);">PMO + ITIL</span></h3>
+  <div class="fx-grid">
+    <div class="fx-field"><label for="f_opreduction">Operational Cost Reduction ($/yr)</label><div class="fx-prefix"><input id="f_opreduction" type="number" min="0" step="1" value="0"></div></div>
+    <div class="fx-field"><label for="f_downtimeHours">System Downtime Hours Saved</label><input id="f_downtimeHours" type="number" min="0" step="1" value="0"></div>
+    <div class="fx-field"><label for="f_downtimeCostHr">Downtime Cost per Hour ($)</label><div class="fx-prefix"><input id="f_downtimeCostHr" type="number" min="0" step="1" value="0"></div></div>
+  </div>
+  <div class="fx-derived" style="margin-top:12px;">
+    <div class="d"><div class="dl">Downtime Cost Saved (derived)</div><div class="dv" id="d_downtimeSaved">$0</div><div class="dh">= hours saved &times; cost per hour</div></div>
+    <div class="d"><div class="dl">Total Realized Value (derived)</div><div class="dv" id="d_realizedValue">$0</div><div class="dh">= op cost reduction + downtime saved</div></div>
+  </div>
+</div>
+
 <!-- Categories -->
 <div class="fx-card">
   <h3>Cost Reduction by Category <span class="sub" id="catSumLabel">$0</span></h3>
@@ -222,6 +249,18 @@
       warn.textContent = "Supplier total (" + money(supSum) + ") is above the category total (" + money(reduction) + "). Saving will be blocked until it fits.";
       warn.classList.add("show");
     } else { warn.classList.remove("show"); }
+
+    // [Financial differentiators] derived figures
+    var capex = num(document.getElementById("f_capex").value);
+    var opex = num(document.getElementById("f_opex").value);
+    var capTotal = capex + opex;
+    document.getElementById("d_capexShare").textContent = capTotal > 0 ? pctTxt(capex / capTotal * 100) : "0%";
+    var hrs = num(document.getElementById("f_downtimeHours").value);
+    var costHr = num(document.getElementById("f_downtimeCostHr").value);
+    var opRed = num(document.getElementById("f_opreduction").value);
+    var downtimeSaved = hrs * costHr;
+    document.getElementById("d_downtimeSaved").textContent = money(downtimeSaved);
+    document.getElementById("d_realizedValue").textContent = money(opRed + downtimeSaved);
   }
 
   function clearMsg() { msg.textContent = ""; msg.className = "fx-msg"; }
@@ -240,6 +279,15 @@
     document.getElementById("f_return").value   = rec ? rec.procurementReturn : 0;
     document.getElementById("f_saving").value    = rec ? rec.costSaving : 0;
     document.getElementById("f_avoid").value     = rec ? rec.costAvoidance : 0;
+
+    // [Financial differentiators] Core CapEx/OpEx + ITIL Value Realization
+    document.getElementById("f_capex").value   = rec ? (rec.capex || 0) : 0;
+    document.getElementById("f_opex").value    = rec ? (rec.opex || 0) : 0;
+    document.getElementById("f_runrate").value = rec ? (rec.runRate || 0) : 0;
+    var vr = (rec && rec.valueRealization) ? rec.valueRealization : {};
+    document.getElementById("f_opreduction").value   = vr.opCostReduction || 0;
+    document.getElementById("f_downtimeHours").value  = vr.downtimeHoursSaved || 0;
+    document.getElementById("f_downtimeCostHr").value = vr.downtimeCostPerHour || 0;
 
     catBody.innerHTML = "";
     var cats = (rec && rec.categories && rec.categories.length) ? rec.categories : [null];
@@ -263,6 +311,12 @@
       procurementReturn: document.getElementById("f_return").value,
       costSaving: document.getElementById("f_saving").value,
       costAvoidance: document.getElementById("f_avoid").value,
+      capex: document.getElementById("f_capex").value,
+      opex: document.getElementById("f_opex").value,
+      runRate: document.getElementById("f_runrate").value,
+      opCostReduction: document.getElementById("f_opreduction").value,
+      downtimeHoursSaved: document.getElementById("f_downtimeHours").value,
+      downtimeCostPerHour: document.getElementById("f_downtimeCostHr").value,
       categories: gatherCategories().filter(function (c) { return c.name; }),
       suppliers: gatherSuppliers().filter(function (s) { return s.name; })
     };
@@ -300,6 +354,14 @@
   var preselect = new URLSearchParams(location.search).get("project");
   if (preselect && PPS.getProject(preselect)) picker.value = preselect;
   if (picker.options.length) load(picker.value);
+
+  // [Financial differentiators] gate the ITIL Value Realization card for the
+  // active edition, and recompute derived figures as the new fields change.
+  if (window.PPS) PPS.applyTier();
+  ["f_capex", "f_opex", "f_downtimeHours", "f_downtimeCostHr", "f_opreduction"].forEach(function (id) {
+    var e = document.getElementById(id);
+    if (e) e.addEventListener("input", function () { recompute(); clearMsg(); });
+  });
 
   window.addEventListener("storage", function (e) {
     if (e.key === PPS.KEYS.portfolio) { buildPicker(); load(picker.value); }

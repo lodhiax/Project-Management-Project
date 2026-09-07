@@ -153,9 +153,53 @@
     </table>
   </div>
 
+  <!-- ============ GOVERNANCE DETAILS (edition-aware) ============ -->
+  <div class="part-head">Governance Details <span class="hint">(fields adapt to the selected edition)</span></div>
+  <div class="part-body">
+    <div class="ef-grid">
+      <div class="ef-field ef-full"><label for="scopeChangeDesc">Scope Change Description</label>
+        <textarea id="scopeChangeDesc" rows="2" placeholder="What is changing in scope, and why"></textarea></div>
+      <div class="ef-field"><label for="timelineImpactWeeks">Timeline Impact (+/- Weeks)</label>
+        <input type="number" id="timelineImpactWeeks" step="1" placeholder="e.g. -2 or 3"></div>
+      <div class="ef-field"><label for="budgetVarianceApproval">Budget Variance Approval</label>
+        <select id="budgetVarianceApproval">
+          <option value="">&mdash; Select &mdash;</option>
+          <option>Within tolerance</option><option>Approved</option><option>Rejected</option><option>Pending</option>
+        </select></div>
+    </div>
+
+    <div class="ef-tier-block" data-edition-min="itil">
+      <div class="ef-tier-badge">PMO + ITIL</div>
+      <div class="ef-grid">
+        <div class="ef-field"><label for="riskLikelihood">Change Risk &mdash; Likelihood</label>
+          <select id="riskLikelihood"><option value="">&mdash;</option><option>High</option><option>Medium</option><option>Low</option></select></div>
+        <div class="ef-field"><label for="riskImpact">Change Risk &mdash; Impact</label>
+          <select id="riskImpact"><option value="">&mdash;</option><option>High</option><option>Medium</option><option>Low</option></select></div>
+        <div class="ef-field"><label for="changeRiskScore">Change Risk Assessment (score)</label>
+          <input type="text" id="changeRiskScore" readonly placeholder="Set likelihood and impact"></div>
+        <div class="ef-field"><label for="blackoutWindow">Scheduled Blackout Period</label>
+          <select id="blackoutWindow">
+            <option value="">&mdash; Deployment window &mdash;</option>
+            <option>Business hours</option><option>After hours</option>
+            <option>Weekend maintenance</option><option>During change freeze (blackout)</option>
+          </select></div>
+        <div id="blackoutValidation" style="grid-column:1 / -1;font-size:11.5px;"></div>
+        <div class="ef-field ef-full"><label for="backoutPlan">Backout Plan Documentation</label>
+          <textarea id="backoutPlan" rows="2" placeholder="Documented steps to revert to the last known good state"></textarea></div>
+      </div>
+      <div class="hint" style="margin-top:6px;">The CAB Gate Review panel below records the Change Advisory Board decision for this change.</div>
+    </div>
+
+    <div class="ef-tier-block" data-edition-min="devops">
+      <div class="ef-tier-badge">Full Loop</div>
+      <label class="cb-opt ef-check"><input type="checkbox" id="cicdDeploymentGate"> CI/CD Deployment Gate <span class="hint">(require a successful automated staging deployment before CAB sign-off)</span></label>
+      <div class="hint" id="cicdGateNote" style="margin-top:6px;"></div>
+    </div>
+  </div>
+
   <!-- ============ ITIL CHANGE / CAB GATE (ITIL edition only) [I2] ============ -->
-  <div class="part-head" data-min-tier="itil">ITIL Change Management &amp; CAB Gate <span class="hint">(ITIL edition, classify the change and record the Change Advisory Board decision)</span></div>
-  <div class="part-body" data-min-tier="itil">
+  <div class="part-head" data-min-tier="itil" data-edition-min="itil">ITIL Change Management &amp; CAB Gate <span class="hint">(ITIL edition, classify the change and record the Change Advisory Board decision)</span></div>
+  <div class="part-body" data-min-tier="itil" data-edition-min="itil">
     <table class="cif">
       <tr>
         <td class="label">ITIL Change Type <span class="required">*</span>
@@ -516,6 +560,15 @@
       cabDecision: radioVal("cabDecision"),
       cabDate: val("cabDate"),
       cabReference: val("cabReference"),
+      scopeChangeDesc: val("scopeChangeDesc"),
+      timelineImpactWeeks: val("timelineImpactWeeks"),
+      budgetVarianceApproval: val("budgetVarianceApproval"),
+      riskLikelihood: val("riskLikelihood"),
+      riskImpact: val("riskImpact"),
+      changeRiskScore: val("changeRiskScore"),
+      blackoutWindow: val("blackoutWindow"),
+      backoutPlan: val("backoutPlan"),
+      cicdDeploymentGate: checked("cicdDeploymentGate"),
       deployDateTime: val("deployDateTime"),
       initiatedByName: val("initiatedByName"),
       initiatedByDate: val("initiatedByDate"),
@@ -577,10 +630,69 @@
     formStatus.className = "success";
   });
 
+  // [Full Loop] CI/CD Deployment Gate: when enabled, CAB sign-off (Approved)
+  // requires a successful automated Staging deployment for the project.
+  function validateCicdGate() {
+    var gate = document.getElementById("cicdDeploymentGate");
+    if (!gate || !gate.checked) return true;
+    if (radioVal("cabDecision") !== "Approved") return true;   // only gates sign-off
+    var code = val("projectCode");
+    if (window.PPS && PPS.hasSuccessfulStagingDeploy && !PPS.hasSuccessfulStagingDeploy(code)) {
+      formStatus.textContent = "CI/CD Deployment Gate: a successful automated staging deployment is required before CAB sign-off.";
+      formStatus.className = "fail";
+      return false;
+    }
+    return true;
+  }
+
+  // Live wiring for the edition-aware governance fields.
+  (function wireGovernance() {
+    function computeChangeRisk() {
+      var el = document.getElementById("changeRiskScore"); if (!el) return;
+      var score = { High: 3, Medium: 2, Low: 1 };
+      var l = val("riskLikelihood"), i = val("riskImpact");
+      if (!l || !i) { el.value = ""; return; }
+      var s = (score[l] || 0) + (score[i] || 0);
+      el.value = s >= 6 ? "High" : (s >= 4 ? "Medium" : "Low");
+    }
+    function validateBlackout() {
+      var box = document.getElementById("blackoutValidation"); if (!box) return;
+      var v = val("blackoutWindow");
+      if (v === "During change freeze (blackout)") {
+        box.textContent = "\u26A0 Selected window falls in a change freeze. Reschedule outside the blackout before deployment.";
+        box.style.color = "var(--danger)";
+      } else if (v) {
+        box.textContent = "\u2713 Window is outside the change freeze.";
+        box.style.color = "#1a7f37";
+      } else { box.textContent = ""; }
+    }
+    function updateCicdNote() {
+      var gate = document.getElementById("cicdDeploymentGate");
+      var note = document.getElementById("cicdGateNote");
+      if (!gate || !note) return;
+      if (!gate.checked) { note.textContent = ""; return; }
+      var ok = window.PPS && PPS.hasSuccessfulStagingDeploy && PPS.hasSuccessfulStagingDeploy(val("projectCode"));
+      note.textContent = ok
+        ? "\u2713 A successful staging deployment exists for this project \u2014 CAB sign-off allowed."
+        : "\u26A0 No successful staging deployment for this project \u2014 CAB sign-off will be blocked until one exists.";
+      note.style.color = ok ? "#1a7f37" : "var(--danger)";
+    }
+    var rl = document.getElementById("riskLikelihood"), ri = document.getElementById("riskImpact");
+    if (rl) rl.addEventListener("change", computeChangeRisk);
+    if (ri) ri.addEventListener("change", computeChangeRisk);
+    var bw = document.getElementById("blackoutWindow");
+    if (bw) bw.addEventListener("change", validateBlackout);
+    var cg = document.getElementById("cicdDeploymentGate");
+    if (cg) cg.addEventListener("change", updateCicdNote);
+    var pc = document.getElementById("projectCode");
+    if (pc) pc.addEventListener("change", updateCicdNote);
+  })();
+
   form.addEventListener("submit", function (e) {
     e.preventDefault();
     if (!validateForm()) { formStatus.textContent = ""; return; }
     if (!validateCabGate()) { return; }
+    if (!validateCicdGate()) { return; }
 
     var next = getCounter() + 1;
     setCounter(next);

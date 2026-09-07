@@ -247,20 +247,54 @@
       </div>
     </td>
   </tr>
-  <tr data-min-tier="itil">
-    <td class="idx">x</td>
-    <td class="label">ITIL Request Type <span class="required">*</span></td>
-    <td colspan="3">
-      <div class="checkbox-row" data-req-group="ITIL Request Type">
-        <label class="cb-opt"><input type="checkbox" name="itilRequestType"> Incident</label>
-        <label class="cb-opt"><input type="checkbox" name="itilRequestType"> Service Request</label>
-        <label class="cb-opt"><input type="checkbox" name="itilRequestType"> Change</label>
-        <label class="cb-opt"><input type="checkbox" name="itilRequestType"> Problem</label>
-      </div>
-      <div class="hint" style="display:block;margin-top:4px;">Classify this request per ITIL practice so it can route to the right service process.</div>
-    </td>
   </tr>
 </table>
+
+<!-- [Edition differentiators] Fields adapt to the selected edition. Core fields
+     always show; ITIL fields appear at PMO + ITIL; the repository-linkage field
+     appears at Full Loop (DevOps). -->
+<div class="field-block ef-block">
+  <h2>Proposal details</h2>
+  <div class="field-desc">These fields adapt to the selected edition (Core / ITIL / DevOps) using the edition switcher in the top bar.</div>
+
+  <div class="ef-grid">
+    <div class="ef-field ef-full"><label for="businessCase">Business Case</label>
+      <textarea id="businessCase" rows="2" placeholder="Why this initiative is worth funding"></textarea></div>
+    <div class="ef-field"><label for="budgetEstimate">Budget Estimate</label>
+      <input type="text" id="budgetEstimate" placeholder="e.g. $250,000"></div>
+    <div class="ef-field"><label for="targetTimeline">Target Timeline</label>
+      <input type="text" id="targetTimeline" placeholder="e.g. Q3 2026"></div>
+    <div class="ef-field"><label for="execSponsor">Executive Sponsor</label>
+      <input type="text" id="execSponsor" placeholder="Name / title of the sponsoring executive"></div>
+  </div>
+
+  <div class="ef-tier-block" data-edition-min="itil">
+    <div class="ef-tier-badge">PMO + ITIL</div>
+    <div class="ef-grid">
+      <div class="ef-field"><label for="itilIntakeType">ITIL Intake Type</label>
+        <select id="itilIntakeType">
+          <option value="">&mdash; Select &mdash;</option>
+          <option>Incident</option><option>Problem</option>
+          <option>Service Request</option><option>Change</option>
+        </select></div>
+      <div class="ef-field"><label for="itilImpact">Impact</label>
+        <select id="itilImpact"><option value="">&mdash;</option><option>High</option><option>Medium</option><option>Low</option></select></div>
+      <div class="ef-field"><label for="itilUrgency">Urgency</label>
+        <select id="itilUrgency"><option value="">&mdash;</option><option>High</option><option>Medium</option><option>Low</option></select></div>
+      <div class="ef-field"><label for="itilPriority">Priority (computed)</label>
+        <input type="text" id="itilPriority" readonly placeholder="Set Impact and Urgency"></div>
+      <div class="ef-field ef-full"><label for="affectedCis">Affected Configuration Items (CIs)</label>
+        <input type="text" id="affectedCis" placeholder="Comma-separated, e.g. Billing DB, Auth Service, Payment Gateway"></div>
+    </div>
+  </div>
+
+  <div class="ef-tier-block" data-edition-min="devops">
+    <div class="ef-tier-badge">Full Loop</div>
+    <label class="cb-opt ef-check"><input type="checkbox" id="autoRepoLink"> Automated Repository Linkage <span class="hint">(auto-provision a pipeline when this proposal is approved)</span></label>
+    <div class="ef-field ef-full" style="margin-top:8px;"><label for="repoForLink">Repository to link</label>
+      <input type="text" id="repoForLink" placeholder="org/repo, e.g. socalgas/import-billing"></div>
+  </div>
+</div>
 
 <div class="field-block">
   <h2>2. Business Need <span class="required">*</span></h2>
@@ -396,6 +430,24 @@
   // applyTier() synchronously right after <nav>, before this markup is parsed.
   if (window.PPS) PPS.applyTier();
 
+  // [Edition differentiators] ITIL priority = f(Impact, Urgency).
+  (function wirePriority() {
+    var impactEl = document.getElementById('itilImpact');
+    var urgencyEl = document.getElementById('itilUrgency');
+    var priEl = document.getElementById('itilPriority');
+    if (!impactEl || !urgencyEl || !priEl) return;
+    function compute() {
+      var score = { High: 3, Medium: 2, Low: 1 };
+      var i = impactEl.value, u = urgencyEl.value;
+      if (!i || !u) { priEl.value = ''; return; }
+      if (i === 'High' && u === 'High') { priEl.value = 'P1 - Critical'; return; }
+      var s = (score[i] || 0) + (score[u] || 0);
+      priEl.value = s >= 5 ? 'P2 - High' : s === 4 ? 'P3 - Medium' : s === 3 ? 'P4 - Low' : 'P5 - Planning';
+    }
+    impactEl.addEventListener('change', compute);
+    urgencyEl.addEventListener('change', compute);
+  })();
+
   // ============== Request ID (unique, counter-based) + submission date ==============
   const COUNTER_KEY = 'crRequestCounter';
   const LOG_KEY = 'crSubmissionsLog';
@@ -458,7 +510,7 @@
   const formStatus = document.getElementById('formStatus');
 
   function isTierHidden(el) {
-    const gate = el.closest('[data-min-tier]');
+    const gate = el.closest('[data-min-tier], [data-edition-min]');
     return !!(gate && gate.classList.contains('pps-tier-off'));
   }
 
@@ -599,11 +651,21 @@
       department: val('department'),
       typeOfChange: checkedText('typeOfChange'),
       category: checkedText('category'),
-      itilRequestType: checkedText('itilRequestType'),
+      itilRequestType: val('itilIntakeType'),
       importance: checkedText('importance'),
       justification: val('justification'),
       impact: checkedText('impact'),
       otherImpact: checkedText('otherImpact'),
+      businessCase: val('businessCase'),
+      budgetEstimate: val('budgetEstimate'),
+      targetTimeline: val('targetTimeline'),
+      execSponsor: val('execSponsor'),
+      itilImpact: val('itilImpact'),
+      itilUrgency: val('itilUrgency'),
+      itilPriority: val('itilPriority'),
+      affectedCis: val('affectedCis'),
+      autoRepoLink: !!(document.getElementById('autoRepoLink') && document.getElementById('autoRepoLink').checked),
+      repoForLink: val('repoForLink'),
       businessNeed: val('businessNeed'),
       solutionProposed: val('solutionProposed'),
       benefit1: val('benefit1'),

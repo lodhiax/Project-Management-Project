@@ -408,6 +408,12 @@ tbody tr:hover td { background: #f6f9fb; }
 .pm-toolbar .pm-hint { font-size:12px; color:var(--ink-soft); }
 
 .row-actions { white-space:nowrap; text-align:center; }
+/* [Bug] keep wide tables (e.g. Intake Report) inside the card: scroll rather
+   than clip, and stack the row action controls so the promote button never
+   spills outside the frame. */
+.table-scroll { overflow-x: auto; }
+.row-actions .status-edit { display:block; width:100%; margin:0 auto 4px; box-sizing:border-box; }
+.row-actions .promote { display:block; width:100%; box-sizing:border-box; white-space:normal; }
 .row-actions button {
   font-family:inherit; font-size:11px; font-weight:600; cursor:pointer;
   border:1px solid var(--line); background:#fff; color:var(--link);
@@ -534,3 +540,16 @@ tbody tr:hover td { background: #f6f9fb; }
 
 /* [#5] utility: hide inline add/edit forms until toggled */
 .hidden { display: none !important; }
+
+/* [Edition differentiators] Intake form fields that adapt to the active edition */
+.ef-block .ef-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; margin-top:10px; }
+.ef-field { display:flex; flex-direction:column; gap:4px; }
+.ef-field.ef-full { grid-column:1 / -1; }
+.ef-field label { font-size:11px; font-weight:700; letter-spacing:0.3px; text-transform:uppercase; color:var(--ink-soft); }
+.ef-field input, .ef-field select, .ef-field textarea {
+  font:inherit; padding:7px 9px; border:1px solid var(--line); border-radius:5px; background:#fff; color:var(--ink); width:100%; box-sizing:border-box;
+}
+.ef-field input[readonly] { background:var(--fill); color:var(--ink-soft); }
+.ef-tier-block { position:relative; margin-top:14px; padding:14px; border:1px dashed var(--line); border-radius:8px; background:#fbfcfd; }
+.ef-tier-badge { position:absolute; top:-9px; left:12px; background:var(--stage-active); color:#fff; font-size:10px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; padding:2px 8px; border-radius:10px; }
+.ef-check { display:inline-flex; align-items:center; gap:6px; margin-top:6px; }
