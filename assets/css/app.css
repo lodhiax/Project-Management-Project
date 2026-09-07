@@ -524,3 +524,6 @@ tbody tr:hover td { background: #f6f9fb; }
   font-size: 12px;
   letter-spacing: normal;
 }
+
+/* [#5] utility: hide inline add/edit forms until toggled */
+.hidden { display: none !important; }

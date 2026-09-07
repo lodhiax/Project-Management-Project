@@ -30,6 +30,7 @@
     allocations: "ppsAllocations",
     financials:  "ppsFinancialMetrics",
     wbs:         "ppsWbs",
+    milestones:  "ppsMilestones",
     deployments:  "ppsDeployments",
     deployCounter:"ppsDeployCounter",
     tier:        "ppsTier",
@@ -432,9 +433,15 @@
     ]
   };
 
-  /* ============================================================
-     SEEDING  (runs once; never wipes real submissions)
-     ============================================================ */
+  // --- [P3-F2] Milestones. First-class, editable, per project. status drives
+  //     percentComplete (Done => 100). riskTag can flag governance-critical work.
+  //     Some projects intentionally have none, to exercise the empty state. ---
+  var SEED_MILESTONES = [
+    { id:1, projectCode:"P2606-01", title:"Requirements sign-off",          status:"Done",        percentComplete:100, riskTag:"none",                    linkedChangeId:null, log:["Seed: baseline milestone."] },
+    { id:2, projectCode:"P2606-01", title:"Billing engine build complete",  status:"In Progress", percentComplete:60,  riskTag:"none",                    linkedChangeId:null, log:[] },
+    { id:3, projectCode:"P2606-01", title:"UAT sign-off",                    status:"Not Started", percentComplete:0,   riskTag:"none",                    linkedChangeId:null, log:[] },
+    { id:4, projectCode:"P2607-02", title:"SSO integration",                 status:"Blocked",     percentComplete:25,  riskTag:"High-Risk/Financial Impact", linkedChangeId:null, log:["Seed: waiting on InfoSec."] }
+  ];
   function ensureSeed() {
     // Per-key backfill. Each guard writes ONLY when its key is absent, so it
     // never clobbers real data you've entered — and, crucially, seed blocks
@@ -451,6 +458,7 @@
     if (read(KEYS.allocations, null) === null) write(KEYS.allocations, SEED_ALLOCATIONS);
     if (read(KEYS.financials, null) === null)  write(KEYS.financials, SEED_FINANCIALS);
     if (read(KEYS.wbs, null) === null)         write(KEYS.wbs, SEED_WBS);
+    if (read(KEYS.milestones, null) === null)  write(KEYS.milestones, SEED_MILESTONES);
     if (read(KEYS.deployments, null) === null) write(KEYS.deployments, SEED_DEPLOYMENTS);
     if (Number(read(KEYS.deployCounter, 0)) < SEED_DEPLOYMENTS.length) write(KEYS.deployCounter, SEED_DEPLOYMENTS.length);
     if (Number(read(KEYS.counter, 0)) < SEED_REGISTER.length) write(KEYS.counter, SEED_REGISTER.length);
@@ -459,7 +467,7 @@
 
   function resetAll() {
     [KEYS.counter, KEYS.register, KEYS.portfolio, KEYS.scorecards, KEYS.risks, KEYS.decisions,
-     KEYS.resources, KEYS.allocations, KEYS.financials, KEYS.wbs, KEYS.deployments, KEYS.deployCounter, KEYS.seeded]
+     KEYS.resources, KEYS.allocations, KEYS.financials, KEYS.wbs, KEYS.milestones, KEYS.deployments, KEYS.deployCounter, KEYS.seeded]
       .forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
     ensureSeed();
   }
@@ -656,6 +664,71 @@
   function deleteRisk(id) {
     var arr = getRisks().filter(function (x) { return String(x.id) !== String(id); });
     if (!write(KEYS.risks, arr)) return { ok:false, error:"Could not save." };
+    return { ok:true };
+  }
+
+  /* ---------- [P3-F2] Milestones ---------- */
+  var MILESTONE_STATUSES = ["Not Started", "In Progress", "Blocked", "Done"];
+  var MILESTONE_RISK_TAGS = ["none", "High-Risk/Financial Impact"];
+  function milestoneStatusList() { return MILESTONE_STATUSES.slice(); }
+  function cleanMilestone(input) {
+    input = input || {};
+    var status = oneOf(input.status, MILESTONE_STATUSES, "Not Started");
+    // Status drives percent: Done implies 100; an explicit percent is otherwise kept.
+    var pct = Number(input.percentComplete);
+    if (isNaN(pct)) pct = 0;
+    pct = Math.max(0, Math.min(100, Math.round(pct)));
+    if (status === "Done") pct = 100;
+    var log = Array.isArray(input.log) ? input.log.slice() : [];
+    return {
+      projectCode:     String(input.projectCode || "").trim(),
+      title:           String(input.title || "").trim(),
+      status:          status,
+      percentComplete: pct,
+      riskTag:         oneOf(input.riskTag, MILESTONE_RISK_TAGS, "none"),
+      linkedChangeId:  (input.linkedChangeId == null || input.linkedChangeId === "") ? null : String(input.linkedChangeId),
+      log:             log
+    };
+  }
+  function getMilestones()            { var a = read(KEYS.milestones, []); return Array.isArray(a) ? a : []; }
+  function getMilestonesByProject(code) { return getMilestones().filter(function (m) { return m.projectCode === code; }); }
+  function getMilestone(id)           { return getMilestones().filter(function (m) { return String(m.id) === String(id); })[0] || null; }
+  function addMilestone(input) {
+    var m = cleanMilestone(input);
+    if (!m.title)       return { ok:false, error:"A milestone title is required." };
+    if (!m.projectCode) return { ok:false, error:"A project is required." };
+    var arr = getMilestones();
+    m.id = nextId(arr);
+    arr.push(m);
+    if (!write(KEYS.milestones, arr)) return { ok:false, error:"Could not save. Browser storage may be full." };
+    return { ok:true, milestone:m };
+  }
+  function updateMilestone(id, input) {
+    var arr = getMilestones(), idx = -1;
+    for (var i = 0; i < arr.length; i++) { if (String(arr[i].id) === String(id)) { idx = i; break; } }
+    if (idx === -1) return { ok:false, error:"Milestone not found." };
+    var merged = cleanMilestone(assign(arr[idx], input));
+    if (!merged.title) return { ok:false, error:"A milestone title is required." };
+    merged.id = arr[idx].id;
+    arr[idx] = merged;
+    if (!write(KEYS.milestones, arr)) return { ok:false, error:"Could not save." };
+    return { ok:true, milestone:merged };
+  }
+  function setMilestoneStatus(id, status) { return updateMilestone(id, { status: status }); }
+  function appendMilestoneLog(id, note) {
+    var m = getMilestone(id);
+    if (!m) return { ok:false, error:"Milestone not found." };
+    var log = Array.isArray(m.log) ? m.log.slice() : [];
+    log.push(String(note || "").trim());
+    return updateMilestone(id, { log: log });
+  }
+  // Link helpers are used by the Pro/Enterprise integration items (P3-T2a onward);
+  // the field exists now so Core can store a link without any gate behavior.
+  function linkMilestoneChange(id, changeId) { return updateMilestone(id, { linkedChangeId: changeId }); }
+  function unlinkMilestoneChange(id)         { return updateMilestone(id, { linkedChangeId: null }); }
+  function deleteMilestone(id) {
+    var arr = getMilestones().filter(function (x) { return String(x.id) !== String(id); });
+    if (!write(KEYS.milestones, arr)) return { ok:false, error:"Could not save." };
     return { ok:true };
   }
 
@@ -1519,10 +1592,15 @@
        itil   -> Tier 2  PMO + ITIL
        devops -> Tier 3  PMO + ITIL + DevOps
      ============================================================ */
+  // [P3-F1] Integration-mode model. The edition no longer hides modules; it
+  // sets the integration GATE MODE between PMO, ITIL and CI/CD:
+  //   off  -> modules independent, no cross checks (Core)
+  //   warn -> deploy warns on an unapproved linked change, human can override (Pro)
+  //   lock -> governance lock, no override, approve triggers deploy (Enterprise)
   var TIERS = [
-    { key: "pmo",    rank: 1, label: "PMO Core",            edition: "Core",   blurb: "Project & portfolio management" },
-    { key: "itil",   rank: 2, label: "PMO + ITIL",          edition: "ITIL",   blurb: "Delivery tied to IT service operations" },
-    { key: "devops", rank: 3, label: "PMO + ITIL + DevOps", edition: "DevOps", blurb: "Full Dev-to-Ops delivery loop" }
+    { key: "pmo",    rank: 1, gate: "off",  label: "PMO Core",            edition: "Core",   blurb: "Independent modules, no cross automation" },
+    { key: "itil",   rank: 2, gate: "warn", label: "PMO + ITIL",          edition: "ITIL",   blurb: "Assisted: linked changes, warn and override" },
+    { key: "devops", rank: 3, gate: "lock", label: "PMO + ITIL + DevOps", edition: "DevOps", blurb: "Zero-touch: governance lock and auto loop" }
   ];
   function tierByKey(k) {
     for (var i = 0; i < TIERS.length; i++) { if (TIERS[i].key === k) return TIERS[i]; }
@@ -1533,6 +1611,8 @@
   function tierRank(k)    { return tierByKey(k).rank; }
   function tierAllows(minKey) { return tierRank(getTier()) >= tierRank(minKey || "pmo"); }
   function tierList()     { return TIERS.slice(); }
+  // [P3-F1] Integration gate mode derived from the active edition.
+  function getGateMode()  { return tierByKey(getTier()).gate; }
 
   /* ============================================================
      NAV MODEL + RENDERER   [F2]
@@ -1543,23 +1623,31 @@
      file. Each entry has a `tier`: it only appears once the active
      edition reaches that tier.
      ============================================================ */
+  // [#1/#2/#3] Single ordered source of truth for the Project Status area,
+  // used BOTH by the nav dropdown and the horizontal step bar, so the two can
+  // never drift out of order or miss a page again.
+  var PROJECT_STATUS = [
+    { label: "Resource Management", href: "resources.html" },
+    { label: "Work Breakdown",      href: "wbs.html" },
+    { label: "Risk & Decision",     href: "risk-decision-log.html" },
+    { label: "Project Financials",  href: "financials.html" },
+    { label: "Change Request",      href: "change-request-form.html" },
+    { label: "Repository",          href: "repository.html" },
+    { label: "Project Scorecard",   href: "scorecard.html" }
+  ];
+
   var NAV_CONFIG = [
-    { type: "group", label: "Project Intake Process", tier: "pmo", children: [
+    { type: "group", label: "Intake Process", tier: "pmo", children: [
         { label: "1. Intake Form",    href: "intake-form.html",   tier: "pmo" },
         { label: "2. Intake Report",  href: "intake-report.html", tier: "pmo" }
     ]},
-    { type: "link",  label: "Portfolio Review",    href: "portfolio-review.html",    tier: "pmo" },
+    { type: "link",  label: "Portfolio",           href: "portfolio-review.html",    tier: "pmo" },
     { type: "link",  label: "Resource Capacity",   href: "capacity.html",            tier: "pmo" },
     { type: "link",  label: "Financial Dashboard", href: "financial-dashboard.html", tier: "pmo" },
-    { type: "group", label: "Project Status", tier: "pmo", children: [
-        { label: "1. Project Scorecard",   href: "scorecard.html",           tier: "pmo" },
-        { label: "2. Risk & Decision",     href: "risk-decision-log.html",   tier: "pmo" },
-        { label: "3. Repository",          href: "repository.html",          tier: "pmo" },
-        { label: "4. Change Request",      href: "change-request-form.html", tier: "pmo" },
-        { label: "5. Project Financials",  href: "financials.html",          tier: "pmo" },
-        { label: "6. Resource Management", href: "resources.html",           tier: "pmo" },
-        { label: "7. Work Breakdown",      href: "wbs.html",                 tier: "pmo" }
-    ]},
+    { type: "link",  label: "Milestones",          href: "milestones.html",          tier: "pmo" },
+    { type: "group", label: "Project Status", tier: "pmo", children: PROJECT_STATUS.map(function (s, i) {
+        return { label: (i + 1) + ". " + s.label, href: s.href, tier: "pmo" };
+    }) },
     { type: "group", label: "CI/CD Delivery", tier: "devops", children: [
         { label: "1. Deployment Intake",             href: "deployment-intake.html", tier: "devops" },
         { label: "2. Pipeline & Deployment Events",  href: "deployment-events.html", tier: "devops" }
@@ -1592,14 +1680,14 @@
 
     for (var i = 0; i < NAV_CONFIG.length; i++) {
       var node = NAV_CONFIG[i];
-      if (!tierAllows(node.tier)) continue;
+      // [P3-F1] Modules are visible at every edition; tier drives behavior, not
+      // visibility. (Entry `tier` is retained for reference but no longer hides.)
       if (node.type === "link") {
         html += navLink(node, here);
       } else if (node.type === "group") {
         var kids = "", anyActive = false, shown = 0;
         for (var j = 0; j < node.children.length; j++) {
           var c = node.children[j];
-          if (!tierAllows(c.tier)) continue;
           shown++;
           if (c.href === here) anyActive = true;
           kids += navLink(c, here);
@@ -1618,13 +1706,15 @@
   /* Set body[data-tier], gate any [data-min-tier] element, repaint nav. */
   function applyTier() {
     var active = getTier();
-    if (document.body) document.body.setAttribute("data-tier", active);
-    var gated = document.querySelectorAll("[data-min-tier]");
-    for (var i = 0; i < gated.length; i++) {
-      var need = gated[i].getAttribute("data-min-tier");
-      if (tierAllows(need)) gated[i].classList.remove("pps-tier-off");
-      else gated[i].classList.add("pps-tier-off");
+    if (document.body) {
+      document.body.setAttribute("data-tier", active);
+      document.body.setAttribute("data-gate-mode", getGateMode()); // [P3-F1]
     }
+    // [P3-F1] Integration-mode model: every module and section stays visible at
+    // every edition. Anything that previously hid below a tier is revealed here;
+    // the edition now changes integration BEHAVIOR (gate mode), not what shows.
+    var gated = document.querySelectorAll("[data-min-tier]");
+    for (var i = 0; i < gated.length; i++) gated[i].classList.remove("pps-tier-off");
     renderNav();
   }
 
@@ -1654,6 +1744,17 @@
     updateRisk: updateRisk,
     setRiskStatus: setRiskStatus,
     deleteRisk: deleteRisk,
+    milestoneStatusList: milestoneStatusList,
+    getMilestones: getMilestones,
+    getMilestonesByProject: getMilestonesByProject,
+    getMilestone: getMilestone,
+    addMilestone: addMilestone,
+    updateMilestone: updateMilestone,
+    setMilestoneStatus: setMilestoneStatus,
+    appendMilestoneLog: appendMilestoneLog,
+    linkMilestoneChange: linkMilestoneChange,
+    unlinkMilestoneChange: unlinkMilestoneChange,
+    deleteMilestone: deleteMilestone,
     getDecisions: getDecisions,
     addDecision: addDecision,
     updateDecision: updateDecision,
@@ -1703,6 +1804,7 @@
     deleteWbsNode: deleteWbsNode,
     getTier: getTier,
     setTier: setTier,
+    getGateMode: getGateMode,
     tierRank: tierRank,
     tierAllows: tierAllows,
     tierList: tierList,
@@ -1841,7 +1943,31 @@
   function normStageLabel(s) {
     return (s || "").replace(/\s+/g, " ").trim().toLowerCase();
   }
+  // [#2/#3] Render the Project Status step bar from the shared PROJECT_STATUS
+  // source so every one of the seven pages (WBS included) shows all seven steps
+  // in the same order. Other flows (e.g. the 2-step Intake flow) keep their own
+  // markup and are left untouched.
+  function renderProjectFlow() {
+    var current = location.pathname.split("/").pop() || "index.html";
+    var idx = -1;
+    for (var i = 0; i < PROJECT_STATUS.length; i++) {
+      if (PROJECT_STATUS[i].href === current) { idx = i; break; }
+    }
+    if (idx === -1) return;                       // not a Project Status page
+    var flow = document.querySelector(".crm-flow");
+    if (!flow) return;
+    var html = "";
+    for (var j = 0; j < PROJECT_STATUS.length; j++) {
+      var cls = j < idx ? "is-done" : (j === idx ? "is-active" : "is-todo");
+      html += '<div class="crm-stage ' + cls + '">' +
+                '<span class="crm-stage-mark">' + (j + 1) + '</span>' +
+                '<span class="crm-stage-label">' + esc(PROJECT_STATUS[j].label) + '</span>' +
+              '</div>';
+    }
+    flow.innerHTML = html;
+  }
   (function initStageNav() {
+    renderProjectFlow();
     var current = location.pathname.split("/").pop() || "index.html";
     document.querySelectorAll(".crm-flow .crm-stage").forEach(function (stage) {
       var labelEl = stage.querySelector(".crm-stage-label");

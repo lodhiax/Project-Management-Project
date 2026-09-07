@@ -86,11 +86,6 @@
 
 <p class="pps-note">CIF Number is allotted automatically by IT EPMO on submission. Fields marked <span class="required">*</span> are required before the deployment can be logged.</p>
 
-<div class="log-note" style="font-size:12px;color:var(--ink-soft);margin:12px 0 8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-  <span>Every submitted CIF is automatically logged to a CSV file on this device.</span>
-  <button type="button" class="pps-btn secondary" id="downloadLogBtn">&#8681; Download CIF Log (CSV)</button>
-</div>
-
 <form id="cifForm" novalidate>
 
   <!-- ==================== PART A ==================== -->
@@ -478,7 +473,9 @@
   // Standard = pre-approved, Emergency = allowed (ECAB post-review), Normal =
   // blocked until the CAB records an Approved decision.
   function validateCabGate() {
-    if (!(window.PPS && PPS.tierAllows("itil"))) return true;
+    // [P3-F1] Integration-mode model: at Core (gate mode "off") the modules are
+    // independent, so no CAB rule is enforced. The gate applies from Pro upward.
+    if (!(window.PPS && PPS.getGateMode && PPS.getGateMode() !== "off")) return true;
     var typeGroup = document.getElementById("itilChangeTypeGroup");
     var type = radioVal("itilChangeType");
     var typeOk = !!type;
@@ -575,12 +572,6 @@
     return log;
   }
 
-  document.getElementById("downloadLogBtn").addEventListener("click", function () {
-    var log = read(LOG_KEY, []);
-    if (!log.length) { alert("No CIFs have been logged yet on this device."); return; }
-    downloadCsv(buildCsv(log), "cif-submissions-log.csv");
-  });
-
   document.getElementById("saveDraftBtn").addEventListener("click", function () {
     formStatus.textContent = "Draft kept in the form (not yet submitted or logged) at " + new Date().toLocaleTimeString() + ".";
     formStatus.className = "success";
@@ -598,10 +589,9 @@
 
     var record = buildRecord("Submitted");
     var log = upsert(record);
-    downloadCsv(buildCsv(log), "cif-submissions-log.csv");
     window.dispatchEvent(new CustomEvent("cif:updated"));
 
-    formStatus.textContent = "CIF " + cifNumberField.value + " submitted and logged to CSV.";
+    formStatus.textContent = "CIF " + cifNumberField.value + " submitted and logged.";
     formStatus.className = "success";
   });
 })();

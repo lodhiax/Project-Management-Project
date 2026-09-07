@@ -69,6 +69,38 @@
 
 <div class="cap-tiles" id="capTiles"><!-- injected by JS --></div>
 
+<!-- [#5] Direct entry: add a resource to the roster or allocate one to a project. -->
+<div class="pps-toolbar" style="justify-content:flex-end;gap:8px;margin:6px 0;">
+  <button type="button" class="pps-btn secondary" id="toggleResForm">+ Add resource</button>
+  <button type="button" class="pps-btn secondary" id="toggleAllocForm">+ Add allocation</button>
+</div>
+
+<form class="pm-form hidden" id="resForm" autocomplete="off" style="border:1px solid var(--line);border-radius:8px;padding:12px;margin:0 0 10px;background:#fbfcfd;">
+  <div class="pm-grid">
+    <div class="pm-field"><label for="res_name">Resource name <span class="req">*</span></label><input id="res_name" type="text" placeholder="e.g. Priya Shah"></div>
+    <div class="pm-field"><label for="res_role">Role</label><input id="res_role" type="text" placeholder="e.g. Delivery Lead or Shared Pool"></div>
+    <div class="pm-field"><label for="res_cap">Capacity (hrs/wk)</label><input id="res_cap" type="number" min="0" step="1" placeholder="40"></div>
+  </div>
+  <div class="pm-error" id="resError"></div>
+  <div class="pm-actions" style="margin-top:8px;">
+    <button type="button" class="pps-btn secondary" data-close="res">Cancel</button>
+    <button type="button" class="pps-btn" id="resSave">Save resource</button>
+  </div>
+</form>
+
+<form class="pm-form hidden" id="allocForm" autocomplete="off" style="border:1px solid var(--line);border-radius:8px;padding:12px;margin:0 0 10px;background:#fbfcfd;">
+  <div class="pm-grid">
+    <div class="pm-field"><label for="alloc_project">Project <span class="req">*</span></label><select id="alloc_project"></select></div>
+    <div class="pm-field"><label for="alloc_resource">Resource <span class="req">*</span></label><select id="alloc_resource"></select></div>
+    <div class="pm-field"><label for="alloc_hours">Hours (hrs/wk)</label><input id="alloc_hours" type="number" min="0" step="1" placeholder="20"></div>
+  </div>
+  <div class="pm-error" id="allocError"></div>
+  <div class="pm-actions" style="margin-top:8px;">
+    <button type="button" class="pps-btn secondary" data-close="alloc">Cancel</button>
+    <button type="button" class="pps-btn" id="allocSave">Save allocation</button>
+  </div>
+</form>
+
 <div class="pps-tabs" role="tablist">
   <div class="pps-tab active" data-tab="byResource" role="tab">By Resource <span class="count" id="resourceCountLabel"></span></div>
   <div class="pps-tab" data-tab="byProject" role="tab">By Project <span class="count" id="projectCountLabel"></span></div>
@@ -188,6 +220,63 @@
 
   render();
 
+  /* [#5] Direct entry flow for resources and allocations. */
+  (function addFlow() {
+    var resForm = document.getElementById("resForm");
+    var allocForm = document.getElementById("allocForm");
+    function show(form) {
+      resForm.classList.add("hidden"); allocForm.classList.add("hidden");
+      form.classList.remove("hidden");
+    }
+    function fillProjects(sel) {
+      sel.innerHTML = PPS.getPortfolio().map(function (p) {
+        return '<option value="' + esc(p.code) + '">' + esc(p.code + " - " + p.name) + "</option>";
+      }).join("");
+    }
+    function fillResources(sel) {
+      var rs = PPS.getResources();
+      sel.innerHTML = rs.length
+        ? rs.map(function (r) { return '<option value="' + esc(r.name) + '">' + esc(r.name) + "</option>"; }).join("")
+        : '<option value="">Add a resource first</option>';
+    }
+    document.getElementById("toggleResForm").addEventListener("click", function () {
+      document.getElementById("res_name").value = "";
+      document.getElementById("res_role").value = "";
+      document.getElementById("res_cap").value = "";
+      document.getElementById("resError").textContent = "";
+      show(resForm); document.getElementById("res_name").focus();
+    });
+    document.getElementById("toggleAllocForm").addEventListener("click", function () {
+      fillProjects(document.getElementById("alloc_project"));
+      fillResources(document.getElementById("alloc_resource"));
+      document.getElementById("alloc_hours").value = "";
+      document.getElementById("allocError").textContent = "";
+      show(allocForm); document.getElementById("alloc_project").focus();
+    });
+    document.querySelectorAll("[data-close]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        document.getElementById(btn.getAttribute("data-close") + "Form").classList.add("hidden");
+      });
+    });
+    document.getElementById("resSave").addEventListener("click", function () {
+      var res = PPS.addResource({
+        name: document.getElementById("res_name").value,
+        role: document.getElementById("res_role").value,
+        capacity: document.getElementById("res_cap").value
+      });
+      if (!res.ok) { document.getElementById("resError").textContent = res.error || "Could not save."; return; }
+      resForm.classList.add("hidden"); render();
+    });
+    document.getElementById("allocSave").addEventListener("click", function () {
+      var res = PPS.addAllocation({
+        project: document.getElementById("alloc_project").value,
+        resource: document.getElementById("alloc_resource").value,
+        hours: document.getElementById("alloc_hours").value
+      });
+      if (!res.ok) { document.getElementById("allocError").textContent = res.error || "Could not save."; return; }
+      allocForm.classList.add("hidden"); render();
+    });
+  })();
   var tabs = document.querySelectorAll(".pps-tab");
   var panels = { byResource: document.getElementById("panel-byResource"), byProject: document.getElementById("panel-byProject") };
   function activateTab(name) {

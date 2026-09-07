@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Milestones</title>
+<link rel="stylesheet" href="assets/css/app.css">
+<style>
+  table.grid td, table.grid th { font-size: 12.5px; padding: 7px 9px; }
+  table.grid { border: 1px solid var(--line); }
+  td.title-cell { max-width: 320px; font-weight: 600; color: var(--ink); }
+  .ms-pill { display:inline-block; padding:1px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+  .ms-notstarted { background:#eef0f2; color:#5b6470; }
+  .ms-inprogress { background:#e7f0ff; color:#1f5fbf; }
+  .ms-blocked    { background:#fdeaea; color:#c0392b; }
+  .ms-done       { background:#e6f5ec; color:#1e824c; }
+  .ms-risk       { background:#fff2e0; color:#b9770e; border:1px solid #f0d3a0; }
+  .ms-bar { height:6px; border-radius:4px; background:#eef0f2; overflow:hidden; min-width:70px; }
+  .ms-bar > span { display:block; height:100%; background:var(--brand,#3a7d44); }
+  .ms-log { color:var(--ink-soft); font-size:11px; }
+  .ms-actions .pps-btn { padding:3px 8px; font-size:11.5px; margin:0 2px 2px 0; }
+  #msForm.pm-form { border:1px solid var(--line); border-radius:8px; padding:14px; margin:10px 0 4px; background:#fbfcfd; }
+  #msForm.hidden { display:none; }
+</style>
+</head>
+<body>
+
+<nav class="pps-nav" id="ppsNav" aria-label="Primary"></nav>
+
+<header class="crm-head">
+  <div class="crm-id">
+    <span class="crm-eyebrow">Delivery</span>
+    <div class="crm-title">Milestones</div>
+  </div>
+  <div class="crm-fields">
+    <div class="crm-field"><span class="crm-flabel">Report Date</span><span class="crm-fvalue" id="reportDate">&mdash;</span></div>
+    <div class="crm-field"><span class="crm-flabel">Total</span><span class="crm-fvalue" id="totalCount">&mdash;</span></div>
+    <div class="crm-field"><span class="crm-flabel">Done</span><span class="crm-fvalue" id="doneCount">&mdash;</span></div>
+  </div>
+</header>
+
+<script src="assets/js/store.js"></script>
+
+<p class="pps-note">
+  <span class="pps-live">Live</span>
+  &nbsp;Project milestones with a status lifecycle (Not Started, In Progress, Blocked, Done). Marking a milestone Done sets it to 100 percent. A milestone can carry a High-Risk / Financial Impact tag used by the governance flow in higher editions.
+</p>
+
+<div class="pps-toolbar" style="justify-content:space-between;align-items:center;">
+  <label style="font-weight:600;color:var(--ink);font-size:12.5px;">
+    Project:&nbsp;
+    <select id="projectFilter" class="pps-select"></select>
+  </label>
+  <button type="button" class="pps-btn" id="addBtn">+ Add milestone</button>
+</div>
+
+<!-- Inline add / edit form -->
+<form class="pm-form hidden" id="msForm" autocomplete="off">
+  <div class="pm-grid">
+    <div class="pm-field"><label for="ms_project">Project <span class="req">*</span></label><select id="ms_project" name="projectCode"></select></div>
+    <div class="pm-field full"><label for="ms_title">Milestone title <span class="req">*</span></label><input id="ms_title" name="title" type="text" placeholder="e.g. Implement Apple Pay Integration"></div>
+    <div class="pm-field"><label for="ms_status">Status</label><select id="ms_status" name="status"></select></div>
+    <div class="pm-field"><label for="ms_risk">Risk tag</label><select id="ms_risk" name="riskTag"><option value="none">None</option><option value="High-Risk/Financial Impact">High-Risk / Financial Impact</option></select></div>
+  </div>
+  <div class="pm-error" id="msError"></div>
+  <div class="pm-actions" style="margin-top:8px;">
+    <button type="button" class="pps-btn secondary" id="msCancel">Cancel</button>
+    <button type="button" class="pps-btn" id="msSave">Save</button>
+  </div>
+</form>
+
+<table class="grid" id="msTable" style="width:100%;border-collapse:collapse;margin-top:10px;">
+  <thead>
+    <tr>
+      <th style="text-align:left;">Milestone</th>
+      <th style="text-align:left;">Project</th>
+      <th style="text-align:left;">Status</th>
+      <th style="text-align:left;">Progress</th>
+      <th style="text-align:left;">Risk</th>
+      <th style="text-align:left;">Linked change</th>
+      <th style="text-align:left;">Actions</th>
+    </tr>
+  </thead>
+  <tbody id="msBody"></tbody>
+</table>
+
+<div id="emptyState" class="pps-note" style="display:none;margin-top:14px;">
+  No milestones for this project yet. Use <strong>+ Add milestone</strong> to create the first one.
+</div>
+
+<script>
+(function () {
+  if (!window.PPS) return;
+  var STATUSES = PPS.milestoneStatusList();
+  var editingId = null;
+
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+    return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]; }); }
+  function statusClass(s) {
+    return { "Not Started":"ms-notstarted", "In Progress":"ms-inprogress", "Blocked":"ms-blocked", "Done":"ms-done" }[s] || "ms-notstarted";
+  }
+  function projectName(code) { var p = PPS.getProject(code); return p ? p.name : code; }
+
+  function fillProjectSelect(sel, includeAll) {
+    var codes = PPS.getPortfolio();
+    var html = includeAll ? '<option value="">All projects</option>' : "";
+    codes.forEach(function (p) { html += '<option value="' + esc(p.code) + '">' + esc(p.code + " - " + p.name) + "</option>"; });
+    sel.innerHTML = html;
+  }
+  function fillStatusSelect(sel) {
+    sel.innerHTML = STATUSES.map(function (s) { return '<option value="' + esc(s) + '">' + esc(s) + "</option>"; }).join("");
+  }
+
+  var filter = document.getElementById("projectFilter");
+  var body   = document.getElementById("msBody");
+  var table  = document.getElementById("msTable");
+  var empty  = document.getElementById("emptyState");
+  var form   = document.getElementById("msForm");
+
+  function render() {
+    var code = filter.value;
+    var list = code ? PPS.getMilestonesByProject(code) : PPS.getMilestones();
+    var all  = PPS.getMilestones();
+    document.getElementById("totalCount").textContent = all.length;
+    document.getElementById("doneCount").textContent  = all.filter(function (m) { return m.status === "Done"; }).length;
+
+    if (!list.length) { table.style.display = "none"; empty.style.display = ""; body.innerHTML = ""; return; }
+    table.style.display = ""; empty.style.display = "none";
+
+    body.innerHTML = list.map(function (m) {
+      var lastLog = (Array.isArray(m.log) && m.log.length) ? m.log[m.log.length - 1] : "";
+      var linked = m.linkedChangeId ? esc(m.linkedChangeId) : '<span style="color:var(--ink-soft);">&mdash;</span>';
+      var risk = (m.riskTag && m.riskTag !== "none")
+        ? '<span class="ms-pill ms-risk">' + esc(m.riskTag) + "</span>"
+        : '<span style="color:var(--ink-soft);">&mdash;</span>';
+      return '<tr data-id="' + m.id + '">' +
+        '<td class="title-cell">' + esc(m.title) +
+          (lastLog ? '<div class="ms-log">' + esc(lastLog) + "</div>" : "") + "</td>" +
+        '<td>' + esc(m.projectCode) + '<div class="ms-log">' + esc(projectName(m.projectCode)) + "</div></td>" +
+        '<td><span class="ms-pill ' + statusClass(m.status) + '">' + esc(m.status) + "</span></td>" +
+        '<td><div class="ms-bar"><span style="width:' + (m.percentComplete || 0) + '%"></span></div>' +
+            '<div class="ms-log">' + (m.percentComplete || 0) + "%</div></td>" +
+        "<td>" + risk + "</td>" +
+        "<td>" + linked + "</td>" +
+        '<td class="ms-actions">' +
+          (m.status !== "In Progress" ? '<button type="button" class="pps-btn secondary" data-act="prog">In Progress</button>' : "") +
+          (m.status !== "Done" ? '<button type="button" class="pps-btn" data-act="done">Mark Done</button>' : "") +
+          '<button type="button" class="pps-btn secondary" data-act="edit">Edit</button>' +
+          '<button type="button" class="pps-btn secondary" data-act="del">Delete</button>' +
+        "</td></tr>";
+    }).join("");
+  }
+
+  function openForm(m) {
+    editingId = m ? m.id : null;
+    fillProjectSelect(document.getElementById("ms_project"), false);
+    fillStatusSelect(document.getElementById("ms_status"));
+    document.getElementById("ms_project").value = m ? m.projectCode : (filter.value || PPS.getPortfolio()[0].code);
+    document.getElementById("ms_title").value    = m ? m.title : "";
+    document.getElementById("ms_status").value   = m ? m.status : "Not Started";
+    document.getElementById("ms_risk").value      = m ? (m.riskTag || "none") : "none";
+    document.getElementById("msError").textContent = "";
+    form.classList.remove("hidden");
+    document.getElementById("ms_title").focus();
+  }
+  function closeForm() { form.classList.add("hidden"); editingId = null; }
+
+  function save() {
+    var data = {
+      projectCode: document.getElementById("ms_project").value,
+      title:       document.getElementById("ms_title").value,
+      status:      document.getElementById("ms_status").value,
+      riskTag:     document.getElementById("ms_risk").value
+    };
+    var res = editingId ? PPS.updateMilestone(editingId, data) : PPS.addMilestone(data);
+    if (!res.ok) { document.getElementById("msError").textContent = res.error || "Could not save."; return; }
+    closeForm(); render();
+  }
+
+  body.addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-act]"); if (!btn) return;
+    var id = btn.closest("tr").getAttribute("data-id");
+    var act = btn.getAttribute("data-act");
+    if (act === "prog") PPS.setMilestoneStatus(id, "In Progress");
+    else if (act === "done") PPS.setMilestoneStatus(id, "Done");
+    else if (act === "edit") { openForm(PPS.getMilestone(id)); return; }
+    else if (act === "del") { if (!confirm("Delete this milestone?")) return; PPS.deleteMilestone(id); }
+    render();
+  });
+
+  document.getElementById("addBtn").addEventListener("click", function () { openForm(null); });
+  document.getElementById("msCancel").addEventListener("click", closeForm);
+  document.getElementById("msSave").addEventListener("click", save);
+  filter.addEventListener("change", render);
+
+  // init
+  fillProjectSelect(filter, true);
+  var rd = document.getElementById("reportDate");
+  if (rd && PPS.today) rd.textContent = PPS.today();
+  render();
+})();
+</script>
+
+</body>
+</html>
