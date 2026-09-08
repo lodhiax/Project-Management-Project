@@ -2034,10 +2034,19 @@
   /* Edition switcher — delegated, so it survives every nav re-render [F1].
      A hard reload (not just re-applying tier classes) ensures every page's
      own render() re-runs against the newly-visible/hidden data for the
-     selected edition, rather than leaving stale content on screen. */
+     selected edition, rather than leaving stale content on screen.
+     Routes through the same unsaved-changes guard as nav links below:
+     if a form on the page is dirty, confirm before reloading and losing it,
+     and revert the dropdown's visible selection if the user backs out. */
+  var lastAppliedTier = getTier();
   document.addEventListener("change", function (e) {
     if (e.target && e.target.id === "ppsTierSelect") {
-      setTier(e.target.value);
+      if (!confirmLeaveIfDirty()) {
+        e.target.value = lastAppliedTier;
+        return;
+      }
+      lastAppliedTier = e.target.value;
+      setTier(lastAppliedTier);
       window.location.reload();
     }
   });
