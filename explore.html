@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Explore the Suite</title>
+<link rel="stylesheet" href="assets/css/app.css">
+<style>
+  /* Directory of every page, grouped by workflow, with a one-line
+     data-flow caption per group. Page-scoped; reuses shared tokens. */
+  .explore-intro { color: var(--ink-soft); margin: 14px 0 20px; font-size: 13px; max-width: 74ch; line-height: 1.6; }
+  .explore-back { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; margin: 2px 0 0; }
+
+  .explore-section { margin: 20px 0 8px; }
+  .explore-group { margin-bottom: 24px; }
+  .explore-group-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+  .explore-group-head h2 { font-size: 12.5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--ink-soft); margin: 0; }
+  .explore-flow { font-size: 12px; color: var(--ink-soft); line-height: 1.5; margin: 0 0 11px; max-width: 88ch; }
+  .explore-flow b { color: #45525f; font-weight: 600; }
+  .explore-badge { font-size: 9.5px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; padding: 2px 7px; border-radius: 9px; }
+  .explore-badge.core   { color: #4d6a8f; background: #e3eefa; }
+  .explore-badge.devops { color: #6a5a8c; background: #ebe7f2; }
+  .explore-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  @media (max-width: 900px) { .explore-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px) { .explore-grid { grid-template-columns: 1fr; } }
+  .explore-card {
+    border: 1px solid var(--line); border-radius: 7px; padding: 13px 15px; background: var(--surface);
+    text-decoration: none; color: inherit; display: block; transition: border-color .12s ease, box-shadow .12s ease;
+  }
+  .explore-card:hover { border-color: #b9c6d2; box-shadow: 0 2px 10px rgba(27,39,51,0.08); text-decoration: none; }
+  .explore-card .ec-title { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+  .explore-card .ec-sub { font-size: 11.5px; color: var(--ink-soft); margin-top: 3px; line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<nav class="pps-nav" id="ppsNav" aria-label="Primary"></nav>
+
+<header class="crm-head">
+  <div class="crm-id">
+    <span class="crm-eyebrow">PMO Suite</span>
+    <div class="crm-title">Explore the Suite</div>
+  </div>
+</header>
+
+<p class="explore-intro">Every page in the suite, grouped by the workflow it belongs to and shown in the order
+   work flows through it. One line under each group traces how its data connects &mdash; and every
+   figure downstream traces back to the entry that produced it. Or jump anywhere from the menu above.</p>
+<a class="explore-back" href="index.html">&larr; Back to overview</a>
+
+<div class="explore-section">
+
+  <div class="explore-group">
+    <div class="explore-group-head"><h2>Intake Process</h2><span class="explore-badge core">Core</span></div>
+    <p class="explore-flow">The <b>form</b> feeds a shared register on the <b>report</b>, where requests are reviewed and promoted into the portfolio.</p>
+    <div class="explore-grid">
+      <a class="explore-card" href="intake-form.html"><div class="ec-title">Intake Form</div><div class="ec-sub">Submit a new project or change request.</div></a>
+      <a class="explore-card" href="intake-report.html"><div class="ec-title">Intake Report</div><div class="ec-sub">Review, approve and promote requests into the portfolio.</div></a>
+    </div>
+  </div>
+
+  <div class="explore-group">
+    <div class="explore-group-head"><h2>Portfolio &amp; Delivery</h2><span class="explore-badge core">Core</span></div>
+    <p class="explore-flow"><b>Portfolio</b> status drives every <b>scorecard</b>; work-breakdown milestones can link to a change and gate a deployment. <b>Risk &amp; Decision</b> and <b>Repository</b> stand alone on the same data.</p>
+    <div class="explore-grid">
+      <a class="explore-card" href="portfolio-review.html"><div class="ec-title">Portfolio Review</div><div class="ec-sub">Track every active project's delivery status.</div></a>
+      <a class="explore-card" href="wbs.html"><div class="ec-title">Work Breakdown</div><div class="ec-sub">Plan tasks in Table or Gantt view, and track Milestones.</div></a>
+      <a class="explore-card" href="scorecard.html"><div class="ec-title">Project Scorecard</div><div class="ec-sub">Weekly status, KPIs and budget for one project.</div></a>
+      <a class="explore-card" href="risk-decision-log.html"><div class="ec-title">Risk &amp; Decision Log</div><div class="ec-sub">Log open risks, issues and key decisions.</div></a>
+      <a class="explore-card" href="repository.html"><div class="ec-title">Repository</div><div class="ec-sub">Central document and artifact control.</div></a>
+      <a class="explore-card" href="change-request-form.html"><div class="ec-title">Change Request</div><div class="ec-sub">Raise an ITIL change against a project.</div></a>
+    </div>
+  </div>
+
+  <div class="explore-group">
+    <div class="explore-group-head"><h2>Resourcing &amp; Financials</h2><span class="explore-badge core">Core</span></div>
+    <p class="explore-flow"><b>Cost entries</b> roll up into the <b>dashboard's</b> savings, avoidance and ROI; the <b>roster</b> rolls up into <b>capacity</b> vs. demand.</p>
+    <div class="explore-grid">
+      <a class="explore-card" href="resources.html"><div class="ec-title">Resource Management</div><div class="ec-sub">Roster and project allocations.</div></a>
+      <a class="explore-card" href="capacity.html"><div class="ec-title">Resource Capacity</div><div class="ec-sub">Demand vs. availability across the team.</div></a>
+      <a class="explore-card" href="financials.html"><div class="ec-title">Project Financials</div><div class="ec-sub">Enter cost, savings and avoidance data.</div></a>
+      <a class="explore-card" href="financial-dashboard.html"><div class="ec-title">Financial Dashboard</div><div class="ec-sub">Portfolio-wide savings, avoidance and ROI.</div></a>
+    </div>
+  </div>
+
+  <div class="explore-group">
+    <div class="explore-group-head"><h2>CI/CD Delivery</h2><span class="explore-badge devops">DevOps</span></div>
+    <p class="explore-flow">A queued <b>deployment</b> stays locked to its approved change, then every attempt lands in the <b>event log</b>.</p>
+    <div class="explore-grid">
+      <a class="explore-card" href="deployment-intake.html"><div class="ec-title">Deployment Intake</div><div class="ec-sub">Queue a deployment against a milestone and its linked change.</div></a>
+      <a class="explore-card" href="deployment-events.html"><div class="ec-title">Pipeline &amp; Deployment Events</div><div class="ec-sub">The event log for every deployment attempt.</div></a>
+    </div>
+  </div>
+
+</div>
+
+<script src="assets/js/store.js"></script>
+</body>
+</html>
