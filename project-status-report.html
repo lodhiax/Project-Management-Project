@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Status Report</title>
+<link rel="stylesheet" href="assets/css/app.css">
+<style>
+  /* ---- report-scoped styles, built on the suite's design tokens ---- */
+  .psr-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 var(--pad) 14px}
+  .psr-back{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--link-dark);text-decoration:none;border:1px solid var(--line);border-radius:7px;padding:7px 11px;background:var(--surface)}
+  .psr-back:hover{background:var(--fill)}
+  .psr-tag{font-size:11px;font-weight:700;letter-spacing:.4px;color:var(--ink-soft);background:var(--fill);border:1px solid var(--line);padding:4px 9px;border-radius:999px;text-transform:uppercase}
+  .psr-sp{flex:1}
+  .psr-btn{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;border-radius:7px;padding:8px 13px;cursor:pointer;border:1px solid transparent}
+  .psr-btn.pri{background:var(--ink);color:#fff}.psr-btn.pri:hover{background:#0f1a24}
+  .psr-btn.gho{background:var(--surface);color:var(--ink);border-color:var(--line)}.psr-btn.gho:hover{background:var(--fill)}
+
+  .psr-legend{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:0 var(--pad) 14px;font-size:12.5px;color:var(--ink-soft);background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:10px 14px}
+  .psr-legend b{color:var(--ink)}
+  .psr-legend .k{display:inline-flex;align-items:center;gap:6px}
+  .psr-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;line-height:1;white-space:nowrap}
+  .psr-pill.live{background:#e3f3e6;color:#1f6b34}
+  .psr-pill.gap{background:#fbf0d9;color:#8a5a12}
+  .psr-pill .d{width:6px;height:6px;border-radius:50%}
+  .psr-pill.live .d{background:#4d9a68}.psr-pill.gap .d{background:#c98a1e}
+
+  .psr-wrap{padding:0 var(--pad) 60px}
+  .psr-grid{display:grid;gap:13px;margin-bottom:13px}
+  .psr-grid.two{grid-template-columns:1fr 1fr}
+  .psr-grid.five{grid-template-columns:repeat(5,1fr)}
+
+  .psr-card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:15px 17px}
+  .psr-card.gap{border-color:#ecd6a6;background:linear-gradient(var(--surface),#fffdf6)}
+  .psr-ch{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+  .psr-ct{font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--ink);display:flex;align-items:center;gap:8px}
+  .psr-ct .ic{width:21px;height:21px;border-radius:6px;background:var(--fill);color:var(--link-dark);display:inline-flex;align-items:center;justify-content:center;font-size:11px;flex:none}
+
+  .psr-rag{display:inline-flex;align-items:center;gap:9px;font-size:18px;font-weight:800;padding:8px 16px;border-radius:8px;letter-spacing:.3px}
+  .psr-rag .rd{width:12px;height:12px;border-radius:50%;background:currentColor}
+  .psr-rag.green{background:#e3f3e6;color:#1f6b34}
+  .psr-rag.amber{background:#fbf0d9;color:#8a5a12}
+  .psr-rag.red{background:#fbe3e0;color:#a3291d}
+  .psr-rag.hold{background:#ece7f3;color:#5b4a86}
+  .psr-rag.done{background:#e2edf8;color:#0f4f8c}
+  .psr-rag.na{background:#eef1f4;color:#55606b}
+  .psr-note{margin-top:10px;color:var(--ink-soft);font-size:13px}
+  .psr-sum p{margin:0 0 6px;font-size:13px;color:#2c3742;line-height:1.5}.psr-sum p:last-child{margin-bottom:0}
+  .psr-sum .lead{font-weight:650;color:var(--ink)}
+
+  /* gantt */
+  table.psr-mt{width:100%;border-collapse:collapse;font-size:12px}
+  table.psr-mt th{text-align:left;font-size:9.5px;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase;font-weight:700;padding:0 8px 8px;border-bottom:1px solid var(--line)}
+  table.psr-mt td{padding:8px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+  .psr-mn{font-weight:650;color:var(--ink)}.psr-mn small{display:block;font-weight:600;color:var(--ink-faint);font-size:9.5px;letter-spacing:.4px;text-transform:uppercase}
+  .psr-ms{display:inline-flex;align-items:center;gap:6px;font-weight:650;font-size:11px;white-space:nowrap}
+  .psr-ms .d{width:8px;height:8px;border-radius:50%}
+  .psr-barcell{width:44%;min-width:260px}
+  .psr-track{position:relative;height:24px}
+  .psr-today{position:absolute;top:-5px;bottom:-5px;width:2px;background:var(--danger);z-index:3}
+  .psr-today .lab{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:800;color:#fff;background:var(--danger);padding:1px 4px;border-radius:3px;letter-spacing:.4px}
+  .psr-bar{position:absolute;top:6px;height:11px;border-radius:6px}
+  .psr-bar.plan{background:#dbe4ee}
+  .psr-glegend{display:flex;gap:14px;margin-top:11px;font-size:10.5px;color:var(--ink-soft);flex-wrap:wrap}
+  .psr-glegend .k{display:inline-flex;align-items:center;gap:5px}
+  .psr-glegend .sw{width:13px;height:7px;border-radius:3px;display:inline-block}
+
+  /* donut */
+  .psr-dw{display:flex;align-items:center;gap:15px}
+  .psr-donut{flex:none}.psr-donut .mid{font-size:16px;font-weight:800;fill:var(--ink)}
+  .psr-dl{font-size:12px;color:#43505b;display:flex;flex-direction:column;gap:6px;flex:1}
+  .psr-dl .r{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .psr-dl .l{display:inline-flex;align-items:center;gap:7px}
+  .psr-dl .sw{width:9px;height:9px;border-radius:2px;flex:none}
+  .psr-dl .v{font-weight:700;color:var(--ink);white-space:nowrap}
+  .psr-tagline{margin-top:10px;font-size:12px;font-weight:700;display:inline-block;padding:3px 9px;border-radius:6px}
+  .psr-tagline.ok{color:#1f6b34;background:#e3f3e6}
+  .psr-tagline.warn{color:#8a5a12;background:#fbf0d9}
+  .psr-chip{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px}
+
+  .psr-scfoot{font-size:10.5px;color:var(--ink-faint);margin-top:8px;line-height:1.5}
+
+  .psr-chg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;text-align:center}
+  .psr-chg .c{border-radius:8px;padding:13px 6px}
+  .psr-chg .n{font-size:24px;font-weight:800;line-height:1}
+  .psr-chg .t{font-size:10.5px;font-weight:700;margin-top:4px}
+  .psr-chg .ap{background:#e3f3e6}.psr-chg .ap .n{color:#1f6b34}
+  .psr-chg .pe{background:#fbf0d9}.psr-chg .pe .n{color:#8a5a12}
+  .psr-chg .re{background:#fbe3e0}.psr-chg .re .n{color:#a3291d}
+
+  .psr-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line-soft)}
+  .psr-row:last-child{border-bottom:none;padding-bottom:0}
+  .psr-row .rt{font-size:12.5px;font-weight:650;color:var(--ink)}
+  .psr-row .ro{font-size:11px;color:var(--ink-soft);margin-top:2px}
+  .psr-empty{color:var(--ink-faint);font-size:12.5px;font-style:italic;padding:6px 0}
+
+  .psr-kpi{text-align:center;padding:13px 6px}
+  .psr-kpi .ic{font-size:11px;color:var(--ink-faint);font-weight:800;letter-spacing:.4px}
+  .psr-kpi .n{font-size:21px;font-weight:800;margin-top:5px;color:var(--ink)}
+  .psr-kpi .t{font-size:10.5px;font-weight:700;color:var(--ink-soft);margin-top:2px}
+  .psr-kpi .h{font-size:9.5px;color:var(--ink-faint);margin-top:2px}
+  .psr-kpi.good .n{color:#1f6b34}.psr-kpi.bad .n{color:#a3291d}
+
+  .psr-conf .top{display:flex;align-items:baseline;gap:10px;margin-bottom:3px}
+  .psr-conf .pct{font-size:28px;font-weight:850;line-height:1}
+  .psr-conf .pct.g{color:#1f6b34}.psr-conf .pct.a{color:#8a5a12}.psr-conf .pct.r{color:#a3291d}
+  .psr-conf .auto{font-size:9px;font-weight:800;letter-spacing:.6px;color:var(--ink-soft);background:var(--fill);padding:3px 6px;border-radius:4px}
+  .psr-conf .eta{font-size:12px;color:var(--ink-soft);margin-bottom:11px}
+  .psr-cb{margin-bottom:9px}
+  .psr-cb .cl{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px}
+  .psr-cb .cl b{color:var(--ink)}
+  .psr-meter{height:7px;border-radius:4px;background:var(--line-soft);overflow:hidden}
+  .psr-meter i{display:block;height:100%;border-radius:4px}
+
+  .psr-gov{display:flex;gap:22px;flex-wrap:wrap}
+  .psr-gov .g{min-width:90px}
+  .psr-gov .gl{font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;color:var(--ink-faint);font-weight:700}
+  .psr-gov .gv{font-size:16px;font-weight:800;margin-top:3px}
+
+  .psr-gapstate{display:flex;gap:11px;align-items:flex-start;padding:5px 2px}
+  .psr-gapstate .b{width:24px;height:24px;border-radius:50%;background:#fbf0d9;color:#8a5a12;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none}
+  .psr-gapstate .gt{font-size:12.5px;font-weight:700;color:var(--ink)}
+  .psr-gapstate .gd{font-size:11.5px;color:var(--ink-soft);margin-top:2px}
+
+  .psr-nf{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:40px;text-align:center;margin:0 var(--pad)}
+  .psr-foot{margin-top:24px;font-size:10.5px;color:var(--ink-faint);text-align:center;line-height:1.6}
+
+  @media (max-width:900px){
+    .psr-grid.two,.psr-grid.five{grid-template-columns:1fr}
+    .psr-grid.five{grid-template-columns:1fr 1fr}
+    .psr-barcell{min-width:190px}
+  }
+  @media print{
+    .pps-nav,.psr-toolbar,.psr-legend,.no-print{display:none !important}
+    body{background:#fff}
+    .psr-card{break-inside:avoid}
+    .psr-grid{break-inside:avoid}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+
+<nav class="pps-nav" id="ppsNav" aria-label="Primary"></nav>
+
+<div id="psrToolbar"></div>
+<div id="psrLegend"></div>
+<header class="crm-head" id="psrHead" style="display:none">
+  <div class="crm-id">
+    <span class="crm-eyebrow">Project Status Report</span>
+    <div class="crm-title" id="psrTitle">&mdash;</div>
+  </div>
+  <div class="crm-fields" id="psrFields"></div>
+</header>
+
+<div class="psr-wrap" id="psrRoot"></div>
+
+<script src="assets/js/store.js"></script>
+<script>
+(function () {
+  var esc = PPS.esc;
+  var params = new URLSearchParams(location.search);
+  var code = params.get("code") || "";
+  var p = code ? PPS.getProject(code) : null;
+  var root = document.getElementById("psrRoot");
+
+  if (!p) {
+    document.getElementById("psrHead").style.display = "none";
+    root.innerHTML =
+      '<div class="psr-nf"><h2 style="margin:0 0 8px">Project not found</h2>' +
+      '<p class="psr-note">No project matches “' + esc(code || "(none)") + '”. Open a project from the portfolio.</p>' +
+      '<p style="margin-top:14px"><a class="psr-back" href="portfolio-review.html">&larr; Back to portfolio</a></p></div>';
+    return;
+  }
+
+  /* -------- pull everything live from the store -------- */
+  var sc   = PPS.getScorecardDetail(code);
+  var fin  = PPS.getFinancials(code);
+  var wbs  = PPS.getWbsRollup(code);
+  var risks= PPS.getRisksByProject(code);
+  var decs = PPS.getDecisionsByProject(code);
+  var gov  = (typeof PPS.getProjectGovernance === "function") ? PPS.getProjectGovernance(code) : null;
+  var capP = null;
+  try { capP = PPS.getCapacityView().byProject.filter(function (x) { return x.code === code; })[0] || null; } catch (e) {}
+
+  var st  = PPS.portfolioStatus(p.status);
+  var ragCls = ({onTrack:"green",atRisk:"amber",delayed:"red",onHold:"hold",completed:"done",notStarted:"na"})[p.status] || "na";
+  var today = PPS.parseDMY(PPS.today());
+
+  function pd(s){ try { return PPS.parseDMY(s) || null; } catch(e){ return null; } }
+  function money(n){ return "$" + (Number(n)||0).toLocaleString("en-US"); }
+  function clamp(n,a,b){ return Math.max(a, Math.min(b, n)); }
+
+  /* -------- toolbar + legend -------- */
+  document.getElementById("psrToolbar").innerHTML =
+    '<div class="psr-toolbar no-print">' +
+      '<a class="psr-back" href="portfolio-review.html">&larr; Back to portfolio</a>' +
+      '<span class="psr-tag">Read-only view</span>' +
+      '<span class="psr-sp"></span>' +
+      '<button class="psr-btn gho" id="psrSrc">Show data sources</button>' +
+      '<button class="psr-btn pri" onclick="window.print()">&#8681; Download PDF</button>' +
+    '</div>';
+  document.getElementById("psrLegend").innerHTML =
+    '<div class="psr-legend no-print"><b>How to read this report:</b>' +
+      '<span class="k"><span class="psr-pill live"><span class="d"></span>Live</span> from suite data</span>' +
+      '<span class="k"><span class="psr-pill gap"><span class="d"></span>Gap</span> source not populated for this project</span></div>';
+
+  /* -------- header identity -------- */
+  document.getElementById("psrHead").style.display = "";
+  document.getElementById("psrTitle").innerHTML = esc(p.name);
+  function field(l,v){ return '<div class="crm-field"><span class="crm-flabel">'+l+'</span><span class="crm-fvalue">'+v+'</span></div>'; }
+  document.getElementById("psrFields").innerHTML =
+    field("Code", esc(p.code)) +
+    field("Manager", esc(p.pm||"&mdash;")) +
+    field("Phase", esc(p.phase||"&mdash;")) +
+    field("Budget", fin && fin.budget ? money(fin.budget) : "&mdash;") +
+    field("Planned End", esc(p.end||"TBD")) +
+    field("Report Date", esc(PPS.today()));
+
+  /* -------- small builders -------- */
+  var CIRC = 2*Math.PI*44;
+  function donut(segs, center){
+    var off=0, arcs="";
+    segs.forEach(function(s){
+      var len = clamp(s.pct,0,100)/100*CIRC;
+      arcs += '<circle cx="54" cy="54" r="44" fill="none" stroke="'+s.color+'" stroke-width="14" '+
+        'stroke-dasharray="'+len.toFixed(1)+' '+(CIRC-len).toFixed(1)+'" stroke-dashoffset="'+(-off).toFixed(1)+'" '+
+        'transform="rotate(-90 54 54)" '+(s.round?'stroke-linecap="round"':'')+'></circle>';
+      off += len;
+    });
+    return '<svg class="psr-donut" width="104" height="104" viewBox="0 0 108 108">'+
+      '<circle cx="54" cy="54" r="44" fill="none" stroke="#eef2f6" stroke-width="14"></circle>'+arcs+
+      '<text x="54" y="60" text-anchor="middle" class="mid">'+center+'</text></svg>';
+  }
+  function pill(kind,txt){ return '<span class="psr-pill '+kind+'"><span class="d"></span>'+txt+'</span>'; }
+  function card(title, ic, badge, body, gap){
+    return '<div class="psr-card'+(gap?" gap":"")+'"><div class="psr-ch"><div class="psr-ct"><span class="ic">'+ic+'</span>'+title+'</div>'+badge+'</div>'+body+'</div>';
+  }
+  function gapState(src){
+    return '<div class="psr-gapstate"><span class="b">!</span><div>'+
+      '<div class="gt">Not populated for this project</div>'+
+      '<div class="gd">Fill in <b>'+src+'</b> and this section fills automatically. No placeholder figures are shown, so status is never overstated.</div></div></div>';
+  }
+  var MS_COLOR = {completed:"#4d9a68", onTrack:"#1568b8", atRisk:"#d0a13f", delayed:"var(--danger)", notStarted:"#b7c0cb"};
+  var MS_LABEL = {completed:"Completed", onTrack:"On track", atRisk:"At risk", delayed:"Delayed", notStarted:"Not started"};
+
+  /* ===== Overall status + Executive summary ===== */
+  var summaryLines = [];
+  if (sc && sc.objective) summaryLines.push({lead:true, t:sc.objective});
+  if (p.progress) summaryLines.push({t:"This week: " + p.progress});
+  if (p.remarks)  summaryLines.push({t:"Remarks: " + p.remarks});
+  if (!summaryLines.length) summaryLines.push({t:"No summary recorded for this project yet."});
+  var summaryHtml = summaryLines.map(function(l){ return '<p class="'+(l.lead?"lead":"")+'">'+esc(l.t)+'</p>'; }).join("");
+
+  var statusCard = card("Overall status","&#9678;", pill("live","Portfolio &middot; RAG"),
+    '<div class="psr-rag '+ragCls+'"><span class="rd"></span>'+esc(st.label.toUpperCase())+'</div>'+
+    (sc && (sc.scopeStatus||sc.budgetStatus) ?
+      '<div style="margin-top:11px;display:flex;gap:8px;flex-wrap:wrap">'+
+        (sc.scopeStatus ? '<span class="psr-chip" style="background:var(--fill);color:var(--ink-soft)">Scope: '+esc(PPS.portfolioStatus(sc.scopeStatus).label)+'</span>' : '')+
+        (sc.budgetStatus? '<span class="psr-chip" style="background:var(--fill);color:var(--ink-soft)">Budget: '+esc(PPS.portfolioStatus(sc.budgetStatus).label)+'</span>' : '')+
+      '</div>' : '')+
+    '<div class="psr-note">'+esc((p.percent!=null?p.percent+"% complete. ":"")) + (p.remarks?esc(p.remarks):"")+'</div>', false);
+
+  var summaryCard = '<div class="psr-card psr-sum"><div class="psr-ch"><div class="psr-ct"><span class="ic">&#9776;</span>Executive summary</div>'+
+    pill("live","Scorecard &middot; objective")+'</div>'+summaryHtml+'</div>';
+
+  /* ===== Milestone timeline (Gantt) from scorecard milestones ===== */
+  var ms = (sc && Array.isArray(sc.milestones)) ? sc.milestones : [];
+  var milestoneCard;
+  if (ms.length) {
+    var starts = ms.map(function(m){return pd(m.start);}).filter(Boolean);
+    var plans  = ms.map(function(m){return pd(m.planned);}).filter(Boolean);
+    var lo = new Date(Math.min.apply(null, starts.map(Number))); lo.setDate(lo.getDate()-4);
+    var hi = new Date(Math.max.apply(null, plans.map(Number)));  hi.setDate(hi.getDate()+6);
+    var span = hi - lo || 1;
+    var pct = function(d){ return d ? clamp(((d-lo)/span)*100,0,100) : 0; };
+    var todayPct = pct(today);
+    var rows = ms.map(function(m){
+      var s=pd(m.start), pl=pd(m.planned), ac=pd(m.actual);
+      var left=pct(s), planEnd=pct(pl), end=pct(ac||pl);
+      var w=Math.max(2,end-left), pw=Math.max(2,planEnd-left);
+      var col=MS_COLOR[m.status]||"#b7c0cb", lab=MS_LABEL[m.status]||m.status;
+      return '<tr><td class="psr-mn">'+esc(m.name)+'<small>'+esc(m.phase||"")+'</small></td>'+
+        '<td>'+esc(m.start||"—")+'</td><td>'+esc(m.planned||"—")+'</td><td>'+esc(m.actual||"—")+'</td>'+
+        '<td class="psr-barcell"><div class="psr-track">'+
+          '<div class="psr-bar plan" style="left:'+left+'%;width:'+pw+'%"></div>'+
+          '<div class="psr-bar" style="left:'+left+'%;width:'+w+'%;background:'+col+'"></div>'+
+          '<div class="psr-today" style="left:'+todayPct+'%"><span class="lab">TODAY</span></div>'+
+        '</div></td>'+
+        '<td><span class="psr-ms" style="color:'+col+'"><span class="d" style="background:'+col+'"></span>'+esc(lab)+'</span></td></tr>';
+    }).join("");
+    milestoneCard = card("Key milestone timeline","&#9636;", pill("live","Scorecard &middot; milestones"),
+      '<table class="psr-mt"><thead><tr><th style="width:22%">Milestone</th><th>Start</th><th>Plan</th><th>Actual</th>'+
+      '<th class="psr-barcell">Timeline</th><th>Status</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+      '<div class="psr-glegend">'+
+        '<span class="k"><span class="sw" style="background:#4d9a68"></span>Completed</span>'+
+        '<span class="k"><span class="sw" style="background:#1568b8"></span>On track</span>'+
+        '<span class="k"><span class="sw" style="background:#d0a13f"></span>At risk</span>'+
+        '<span class="k"><span class="sw" style="background:#dbe4ee"></span>Planned</span>'+
+        '<span class="k"><span class="sw" style="background:var(--danger);width:3px"></span>Today</span></div>', false);
+  } else {
+    milestoneCard = card("Key milestone timeline","&#9636;", pill("gap","Needs: Scorecard milestones"),
+      gapState("the milestone plan on this project's Scorecard"), true);
+  }
+
+  /* ===== derive schedule + s-curve inputs from milestones ===== */
+  var doneN=0, onN=0, riskN=0, lateN=0, plannedByToday=0;
+  ms.forEach(function(m){
+    var completed = m.status==="completed" || !!pd(m.actual);
+    if (completed) doneN++;
+    else if (m.status==="atRisk" || m.status==="delayed") riskN++;
+    else if (m.status==="onTrack") onN++;
+    var pl = pd(m.planned);
+    if (pl && pl < today && !completed) lateN++;
+    if (pl && pl <= today) plannedByToday++;
+  });
+  var msN = ms.length;
+  var completedPct = msN ? Math.round(doneN/msN*100) : null;
+  var plannedPct   = msN ? Math.round(plannedByToday/msN*100) : null;
+  var spi = (plannedPct!=null && plannedPct>0) ? (p.percent/plannedPct) : null;
+
+  /* ===== Scope / WBS + Milestone completion ===== */
+  var hasWbs = wbs && (wbs.packages>0 || wbs.groups>0);
+  var scopeCard = hasWbs
+    ? card("Work breakdown status","&#9681;", pill("live","WBS rollup"),
+        '<div class="psr-dw">'+donut([{pct:wbs.percent,color:"#4d9a68",round:true}], wbs.percent+"%")+
+        '<div class="psr-dl">'+
+          '<div class="r"><span class="l"><span class="sw" style="background:#4d9a68"></span>Work complete</span><span class="v">'+wbs.percent+'%</span></div>'+
+          '<div class="r"><span class="l"><span class="sw" style="background:#b7c0cb"></span>Work packages</span><span class="v">'+wbs.packages+'</span></div>'+
+          '<div class="r"><span class="l"><span class="sw" style="background:#b7c0cb"></span>Groups</span><span class="v">'+wbs.groups+'</span></div>'+
+        '</div></div>', false)
+    : card("Work breakdown status","&#9681;", pill("gap","Needs: Work Breakdown"),
+        gapState("a Work Breakdown Structure for this project"), true);
+
+  var mcCard = (completedPct!=null)
+    ? card("Milestone completion","&#9684;", pill("live","Scorecard &middot; milestones"),
+        '<div class="psr-dw">'+donut([{pct:completedPct,color:"#1568b8",round:true}], completedPct+"%")+
+        '<div class="psr-dl">'+
+          '<div class="r"><span class="l"><span class="sw" style="background:#4d9a68"></span>Completed</span><span class="v">'+doneN+' / '+msN+'</span></div>'+
+          '<div class="r"><span class="l"><span class="sw" style="background:#1568b8"></span>On track</span><span class="v">'+onN+'</span></div>'+
+          '<div class="r"><span class="l"><span class="sw" style="background:#d0a13f"></span>At risk / late</span><span class="v">'+(riskN+lateN)+'</span></div>'+
+        '</div></div>', false)
+    : card("Milestone completion","&#9684;", pill("gap","Needs: Scorecard milestones"),
+        gapState("the milestone plan on this project's Scorecard"), true);
+
+  /* ===== Schedule status donut + S-curve ===== */
+  var schedCard, scurveCard;
+  if (msN) {
+    var okPct = Math.round((doneN+onN)/msN*100);
+    var warnPct = Math.round(riskN/msN*100);
+    var latePct = Math.max(0, 100-okPct-warnPct);
+    schedCard = card("Schedule status","&#9719;", pill("live","Derived &middot; milestones"),
+      '<div class="psr-dw">'+donut([{pct:okPct,color:"#4d9a68",round:true}], okPct+"%")+
+      '<div class="psr-dl">'+
+        '<div class="r"><span class="l"><span class="sw" style="background:#4d9a68"></span>On track / done</span><span class="v">'+okPct+'%</span></div>'+
+        '<div class="r"><span class="l"><span class="sw" style="background:#d0a13f"></span>At risk</span><span class="v">'+warnPct+'%</span></div>'+
+        '<div class="r"><span class="l"><span class="sw" style="background:var(--danger)"></span>Late</span><span class="v">'+latePct+'%</span></div>'+
+      '</div></div>', false);
+
+    /* S-curve: planned = cumulative milestones by plan date; actual = cumulative completed by actual date */
+    var lo2s = ms.map(function(m){return pd(m.start);}).filter(Boolean).map(Number);
+    var hi2s = ms.map(function(m){return pd(m.planned);}).filter(Boolean).map(Number);
+    var lo2 = new Date(Math.min.apply(null, lo2s)); var hi2 = new Date(Math.max.apply(null, hi2s));
+    var sp2 = (hi2-lo2)||1;
+    var fx = function(d){ return 34 + clamp((d-lo2)/sp2,0,1)*416; };
+    var fy = function(v){ return 120 - clamp(v,0,100)/100*106; };
+    var plannedSorted = ms.map(function(m){return pd(m.planned);}).filter(Boolean).sort(function(a,b){return a-b;});
+    var actualSorted  = ms.map(function(m){return pd(m.actual);}).filter(Boolean).sort(function(a,b){return a-b;});
+    var pPts = [[fx(lo2),fy(0)]], aPts = [[fx(lo2),fy(0)]];
+    plannedSorted.forEach(function(d,i){ pPts.push([fx(d), fy((i+1)/msN*100)]); });
+    actualSorted.forEach(function(d,i){ if (d<=today) aPts.push([fx(d), fy((i+1)/msN*100)]); });
+    var tx = fx(today);
+    var poly = function(pts,color,dash){ return '<polyline fill="none" stroke="'+color+'" stroke-width="'+(dash?2:2.5)+'" '+(dash?'stroke-dasharray="4 3"':'')+' points="'+pts.map(function(pt){return pt[0].toFixed(1)+","+pt[1].toFixed(1);}).join(" ")+'"></polyline>'; };
+    scurveCard = card("Schedule progress (% complete)","&#8599;", pill("live","Derived &middot; milestone dates"),
+      '<svg width="100%" height="150" viewBox="0 0 460 150" preserveAspectRatio="none">'+
+        '<line x1="34" y1="14" x2="34" y2="120" stroke="#d9dfe4"></line>'+
+        '<line x1="34" y1="120" x2="450" y2="120" stroke="#d9dfe4"></line>'+
+        '<line x1="34" y1="67" x2="450" y2="67" stroke="#edf0f3"></line>'+
+        '<text x="28" y="123" text-anchor="end" font-size="9" fill="#93a0ab">0%</text>'+
+        '<text x="28" y="70" text-anchor="end" font-size="9" fill="#93a0ab">50%</text>'+
+        '<text x="28" y="17" text-anchor="end" font-size="9" fill="#93a0ab">100%</text>'+
+        '<line x1="'+tx.toFixed(1)+'" y1="14" x2="'+tx.toFixed(1)+'" y2="120" stroke="'+"#c0392b"+'" stroke-width="1.5" stroke-dasharray="3 3"></line>'+
+        '<rect x="'+(tx-20).toFixed(1)+'" y="0" width="40" height="13" rx="2" fill="#c0392b"></rect>'+
+        '<text x="'+tx.toFixed(1)+'" y="9.5" text-anchor="middle" font-size="8" font-weight="700" fill="#fff">TODAY</text>'+
+        poly(pPts,"#93a0ab",true)+poly(aPts,"#4d9a68",false)+
+        '<circle cx="'+aPts[aPts.length-1][0].toFixed(1)+'" cy="'+aPts[aPts.length-1][1].toFixed(1)+'" r="3.5" fill="#4d9a68"></circle>'+
+      '</svg>'+
+      '<div class="psr-scfoot"><span style="color:#4d9a68;font-weight:700">&mdash; Actual '+p.percent+'%</span> vs '+
+        '<span style="color:#93a0ab;font-weight:700">- - Planned '+(plannedPct!=null?plannedPct:"—")+'%</span>'+
+        (spi!=null?' &middot; SPI '+spi.toFixed(2):'')+'</div>', false);
+  } else {
+    schedCard  = card("Schedule status","&#9719;", pill("gap","Needs: Scorecard milestones"), gapState("the milestone plan on this project's Scorecard"), true);
+    scurveCard = card("Schedule progress (% complete)","&#8599;", pill("gap","Needs: Scorecard milestones"), gapState("milestone plan dates on this project's Scorecard"), true);
+  }
+
+  /* ===== Budget ===== */
+  var budgetCard, cpi=null;
+  if (fin && fin.budget) {
+    var budget=Number(fin.budget)||0, spent=Number(fin.spent)||0;
+    var remaining=Math.max(0, budget-spent);
+    var spentPct=budget?Math.round(spent/budget*100):0, remPct=Math.max(0,100-spentPct);
+    cpi = spent>0 ? (p.percent/100*budget)/spent : null;
+    var over = spent>budget;
+    budgetCard = card("Budget status","$", pill("live","Project Financials"),
+      '<div class="psr-dw">'+donut([{pct:spentPct,color:(over?"#c0392b":"#4d9a68")}], spentPct+"%")+
+      '<div class="psr-dl">'+
+        '<div class="r"><span class="l"><span class="sw" style="background:'+(over?"#c0392b":"#4d9a68")+'"></span>Spent</span><span class="v">'+money(spent)+' &middot; '+spentPct+'%</span></div>'+
+        '<div class="r"><span class="l"><span class="sw" style="background:#b7c0cb"></span>Remaining</span><span class="v">'+money(remaining)+' &middot; '+remPct+'%</span></div>'+
+        (fin.etc?'<div class="r"><span class="l"><span class="sw" style="background:#1568b8"></span>Est. to complete</span><span class="v">'+money(fin.etc)+'</span></div>':'')+
+      '</div></div>'+
+      '<span class="psr-tagline '+(over?"warn":"ok")+'">'+(over?"Over budget by "+money(spent-budget):"Within budget &middot; "+money(remaining)+" remaining")+'</span>', false);
+  } else {
+    budgetCard = card("Budget status","$", pill("gap","Needs: Project Financials"), gapState("a Project Financials record (budget / spent)"), true);
+  }
+
+  /* ===== Change summary ===== */
+  var changeCard;
+  var approved = sc && sc.changeRequests ? (sc.changeRequests.approved||0) : null;
+  var rejected = sc && sc.changeRequests ? (sc.changeRequests.rejected||0) : null;
+  var pending  = gov ? gov.openChangeRequests : null;
+  if (approved!=null || pending!=null) {
+    changeCard = card("Change summary","&#8644;", pill("live","Scorecard &middot; CAB"),
+      '<div class="psr-chg">'+
+        '<div class="c ap"><div class="n">'+(approved||0)+'</div><div class="t">Approved</div></div>'+
+        '<div class="c pe"><div class="n">'+(pending||0)+'</div><div class="t">Open / pending</div></div>'+
+        '<div class="c re"><div class="n">'+(rejected||0)+'</div><div class="t">Rejected</div></div>'+
+      '</div>', false);
+  } else {
+    changeCard = card("Change summary","&#8644;", pill("gap","Needs: Change records"), gapState("change requests tagged to this project"), true);
+  }
+
+  /* ===== Risks & issues ===== */
+  function sevOf(impact){ var i=String(impact||"").toLowerCase(); return i==="high"?"high":i==="low"?"low":"medium"; }
+  var openRisks = risks.filter(function(r){ return r.status!=="Closed"; });
+  var risksCard = openRisks.length
+    ? card("Top risks &amp; issues","&#9888;", pill("live","Risk &amp; Decision log"),
+        openRisks.slice(0,5).map(function(r){
+          return '<div class="psr-row"><div><div class="rt">'+esc(r.desc||r.title||"Risk")+'</div>'+
+            '<div class="ro">'+esc(r.type||"Risk")+(r.by?" &middot; "+esc(r.by):"")+(r.prob?" &middot; Prob "+esc(r.prob):"")+'</div></div>'+
+            '<span class="sev sev-'+sevOf(r.impact)+'">'+esc((r.impact||"med"))+'</span></div>';
+        }).join(""), false)
+    : card("Top risks &amp; issues","&#9888;", pill("live","Risk &amp; Decision log"),
+        '<div class="psr-empty">No open risks or issues logged for this project.</div>', false);
+
+  /* ===== Decisions ===== */
+  var openDecs = decs.filter(function(d){ return d.status!=="Closed"; });
+  var decCard = openDecs.length
+    ? card("Decisions needed","&#10003;", pill("live","Risk &amp; Decision log"),
+        openDecs.slice(0,5).map(function(d){
+          return '<div class="psr-row"><div><div class="rt">'+esc(d.point||d.title||"Decision")+'</div>'+
+            '<div class="ro">'+(d.owner?"Owner: "+esc(d.owner):"")+(d.comments?" &middot; "+esc(d.comments):"")+'</div></div>'+
+            '<span class="sev sev-medium">'+esc((d.status||"Open"))+'</span></div>';
+        }).join(""), false)
+    : card("Decisions needed","&#10003;", pill("live","Risk &amp; Decision log"),
+        '<div class="psr-empty">No pending decisions for this project.</div>', false);
+
+  /* ===== KPIs ===== */
+  function kpi(ic,val,t,h,good,bad){ return '<div class="psr-kpi'+(good?" good":"")+(bad?" bad":"")+'"><div class="ic">'+ic+'</div><div class="n">'+val+'</div><div class="t">'+t+'</div><div class="h">'+h+'</div></div>'; }
+  var kpiCard = card("Key performance indicators","&#9638;", pill("live","Computed from live data"),
+    '<div class="psr-grid five" style="margin-bottom:0">'+
+      kpi("CPI", cpi!=null?cpi.toFixed(2):"—", "Cost performance", cpi!=null?">1 is good":"needs financials", cpi!=null&&cpi>=1, cpi!=null&&cpi<0.9)+
+      kpi("SPI", spi!=null?spi.toFixed(2):"—", "Schedule performance", spi!=null?"≈1 on plan":"needs milestones", spi!=null&&spi>=0.95, spi!=null&&spi<0.8)+
+      kpi("WBS", hasWbs?wbs.percent+"%":"—", "Work complete", hasWbs?"effort-weighted":"needs WBS", hasWbs&&wbs.percent>=75, false)+
+      kpi("RES", capP?capP.demand+"h":"—", "Weekly demand", capP?"allocated hours":"needs allocations", false, false)+
+      kpi("RISK", gov?String(gov.openRisks):String(openRisks.length), "Open risks", "count", false, (gov?gov.openRisks:openRisks.length)>=3)+
+    '</div>', false);
+
+  /* ===== Delivery confidence (computed heuristic) ===== */
+  var schedHealth = spi!=null ? Math.round(clamp(spi,0,1.2)/1.2*100) : (completedPct!=null?completedPct:60);
+  var pace = completedPct!=null ? completedPct : (p.percent||0);
+  var riskExposure = clamp(100 - (gov?gov.openRisks:openRisks.length)*12 - lateN*8, 20, 100);
+  var confPct = Math.round(schedHealth*0.4 + pace*0.3 + riskExposure*0.3);
+  var confCls = confPct>=75?"g":confPct>=50?"a":"r";
+  var barCol = confPct>=75?"#4d9a68":confPct>=50?"#d0a13f":"#c0392b";
+  function cbar(l,v){ return '<div class="psr-cb"><div class="cl"><span>'+l+'</span><b>'+v+'%</b></div><div class="psr-meter"><i style="width:'+v+'%;background:'+barCol+'"></i></div></div>'; }
+  var confCard = card("Delivery confidence","&#128200;", pill("live","Computed &middot; weighted"),
+    '<div class="psr-conf"><div class="top"><span class="pct '+confCls+'">'+confPct+'%</span><span class="auto">AUTO</span></div>'+
+    '<div class="eta">Planned delivery &middot; '+esc(p.end||"TBD")+'</div>'+
+    cbar("Schedule health",schedHealth)+cbar("Milestone pace",pace)+cbar("Risk exposure",riskExposure)+'</div>', false);
+
+  /* ===== Governance / CAB (ITIL tier) ===== */
+  var govCard = "";
+  if (gov) {
+    govCard =
+      '<div class="psr-card" data-min-tier="itil"><div class="psr-ch"><div class="psr-ct"><span class="ic">&#9878;</span>Governance &amp; CAB</div>'+
+      pill("live","ITIL governance linkage")+'</div>'+
+      '<div class="psr-gov">'+
+        '<div class="g"><div class="gl">CAB position</div><div class="gv">'+esc(gov.cabStatus||"—")+'</div></div>'+
+        '<div class="g"><div class="gl">Open risks</div><div class="gv">'+gov.openRisks+'</div></div>'+
+        '<div class="g"><div class="gl">Open decisions</div><div class="gv">'+gov.openDecisions+'</div></div>'+
+        '<div class="g"><div class="gl">Open changes</div><div class="gv">'+gov.openChangeRequests+'</div></div>'+
+        '<div class="g"><div class="gl">CAB pending</div><div class="gv">'+gov.cabPending+'</div></div>'+
+      '</div></div>';
+  }
+
+  /* -------- assemble -------- */
+  root.innerHTML =
+    '<div class="psr-grid two">'+statusCard+summaryCard+'</div>'+
+    '<div class="psr-grid">'+milestoneCard+'</div>'+
+    '<div class="psr-grid two">'+scopeCard+mcCard+'</div>'+
+    '<div class="psr-grid two">'+schedCard+scurveCard+'</div>'+
+    '<div class="psr-grid two">'+budgetCard+changeCard+'</div>'+
+    '<div class="psr-grid two">'+risksCard+decCard+'</div>'+
+    '<div class="psr-grid two">'+kpiCard+confCard+'</div>'+
+    (govCard?'<div class="psr-grid">'+govCard+'</div>':'')+
+    '<div class="psr-foot">Read-only status report &middot; '+esc(p.name)+' ('+esc(p.code)+') &middot; '+esc(PPS.today())+
+    '<br>Sections marked “Gap” are unpopulated for this project and fill automatically once their source is entered elsewhere in the suite.</div>';
+
+  /* re-apply tier so the ITIL governance card is gated correctly */
+  if (typeof PPS.applyTier === "function") PPS.applyTier();
+
+  /* spotlight toggle: dim gap cards to show what is genuinely live */
+  var showing=false, sbtn=document.getElementById("psrSrc");
+  var stEl=document.createElement("style");
+  stEl.textContent=".psr-spotlight .psr-card.gap{opacity:.45;filter:saturate(.4)}.psr-spotlight .psr-card.gap .psr-pill.gap{opacity:1}";
+  document.head.appendChild(stEl);
+  sbtn.addEventListener("click", function(){
+    showing=!showing;
+    document.body.classList.toggle("psr-spotlight", showing);
+    sbtn.textContent = showing ? "Hide data sources" : "Show data sources";
+  });
+
+  /* live re-render if underlying data changes in another tab */
+  window.addEventListener("storage", function(e){
+    if (e.key && String(e.key).indexOf("pps") === 0) location.reload();
+  });
+})();
+</script>
+</body>
+</html>

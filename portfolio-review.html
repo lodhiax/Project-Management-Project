@@ -9,6 +9,10 @@
   table.grid td, table.grid th { font-size: 12.5px; padding: 7px 9px; }
   table.grid { border: 1px solid var(--line); }
   /* Shared toolbar / row-actions / modal styles now live in app.css */
+  /* Project name links through to its read-only status report */
+  a.psr-name-link { color: var(--link-dark); font-weight: 600; text-decoration: none; }
+  a.psr-name-link:hover { text-decoration: underline; }
+  a.psr-name-link::after { content: " \2197"; font-size: 10px; color: var(--ink-faint); }
 </style>
 </head>
 <body>
@@ -45,7 +49,7 @@
 <script src="assets/js/store.js"></script>
 
 <div class="pm-toolbar">
-  <span class="pm-hint">Add, edit, or remove projects. Changes save to this browser and feed the Weekly Scorecard.</span>
+  <span class="pm-hint">Click a project name to open its read-only status report. Add, edit, or remove projects &mdash; changes save to this browser and feed the Weekly Scorecard.</span>
   <button type="button" class="pps-btn" id="addProjectBtn">+ Add project</button>
 </div>
 
@@ -146,7 +150,7 @@
       var st = PPS.portfolioStatus(p.status);
       return '<tr>' +
         '<td class="center">' + n + '</td>' +
-        '<td>' + esc(p.name) + '</td>' +
+        '<td><a class="psr-name-link" href="project-status-report.html?code=' + attr(p.code) + '" title="Open status report">' + esc(p.name) + '</a></td>' +
         '<td>' + esc(p.pm) + '</td>' +
         '<td class="center">' + esc(p.phase) + '</td>' +
         '<td class="center">' + esc(p.start) + '</td>' +
@@ -156,6 +160,7 @@
         '<td>' + esc(p.remarks) + '</td>' +
         '<td class="status-cell"><span class="dot ' + st.dot + '" title="' + esc(st.label) + '"></span></td>' +
         '<td class="row-actions">' +
+          '<button type="button" class="report" data-code="' + attr(p.code) + '">Report</button>' +
           '<button type="button" class="edit" data-code="' + attr(p.code) + '">Edit</button>' +
           '<button type="button" class="del" data-code="' + attr(p.code) + '">Delete</button>' +
         '</td>' +
@@ -260,6 +265,10 @@
       var btn = e.target.closest ? e.target.closest("button[data-code]") : null;
       if (!btn) return;
       var code = btn.getAttribute("data-code");
+      if (btn.classList.contains("report")) {
+        window.location.href = "project-status-report.html?code=" + encodeURIComponent(code);
+        return;
+      }
       if (btn.classList.contains("edit")) {
         var proj = PPS.getProject(code);
         if (proj) openModal("edit", proj);

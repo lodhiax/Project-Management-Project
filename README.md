@@ -132,7 +132,8 @@ pmo-suite-updates/
   index.html                  Landing page
   intake-form.html            Project intake (captures ITIL request type in ITIL edition)
   intake-report.html          Intake register (gated ITIL Type column)
-  portfolio-review.html       Portfolio
+  portfolio-review.html       Portfolio (project names link to the status report)
+  project-status-report.html  Read-only per-project status report (drill-down from Portfolio)
   wbs.html                    Work Breakdown Structure
   capacity.html               Resource capacity vs demand
   financial-dashboard.html    Portfolio financials + Value Realization (ITIL)
@@ -149,6 +150,35 @@ pmo-suite-updates/
     js/store.js               Shared data store, tier system, navigation model
   README.md
 ```
+
+## Project Status Report (drill-down)
+
+Every project name on **Portfolio Review** (and a **Report** row action) links to
+`project-status-report.html?code=<PROJECT_CODE>` — a read-only, print-to-PDF executive
+status report for that one project. It is assembled entirely from the existing shared
+store via `window.PPS`, so it stays in sync with the rest of the suite and adds no new
+data of its own:
+
+| Report section | Source (`PPS` API) |
+|----------------|--------------------|
+| Overall status (RAG), header, executive summary | `getProject`, `getScorecardDetail` (objective, scope/budget status) |
+| Key milestone timeline (Gantt) + schedule S-curve | `getScorecardDetail(code).milestones` (start / planned / actual) |
+| Schedule status, milestone completion | derived from the scorecard milestones |
+| Work breakdown status | `getWbsRollup` |
+| Budget status + CPI | `getFinancials` (budget / spent), CPI computed as EV/AC |
+| Change summary | `getScorecardDetail(code).changeRequests` + `getProjectGovernance` |
+| Top risks & issues, decisions needed | `getRisksByProject`, `getDecisionsByProject` |
+| KPIs (CPI, SPI, WBS %, resource demand, open risks) | computed from the live inputs above |
+| Delivery confidence | weighted heuristic over schedule / pace / risk |
+| Governance & CAB (ITIL edition) | `getProjectGovernance` — gated `data-min-tier="itil"` |
+
+Each section carries a small badge: **Live** when it is drawn from populated store data,
+or **Gap** when that source is empty for the project. A gap shows an honest
+"not populated" note rather than placeholder figures, so a partly-filled project is never
+made to look complete. Use **Show data sources** to dim the gap sections and see at a
+glance what is genuinely live. The report is read-only by design; edits are still made on
+the existing pages (Portfolio, Scorecard, Financials, Risk & Decision, WBS), and the
+report reflects them via the shared store.
 
 ## Limitations
 
