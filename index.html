@@ -13,61 +13,44 @@
      hero still reads correctly if the stylesheet is slow.
      ========================================================= */
 
-  /* ---- HERO band ---- (headline left, live product preview right) */
+  /* ---- HERO band ---- */
   .lp-hero {
-    padding: 40px 20px 42px;
-    /* a soft brand-blue wash sits behind the product windows on the right,
-       standing in for the reference's colour block without cloning its purple */
-    background:
-      radial-gradient(115% 90% at 82% 30%, rgba(21,104,184,0.09), rgba(21,104,184,0) 62%),
-      linear-gradient(180deg, #f7f9fb 0%, #ffffff 76%);
+    text-align: center;
+    padding: 54px 20px 40px;
+    background: linear-gradient(180deg, #f7f9fb 0%, #ffffff 72%);
     border-bottom: 1px solid var(--line);
   }
-  .lp-hero-grid {
-    display: grid;
-    grid-template-columns: 1.12fr 0.88fr;
-    align-items: center;
-    gap: 40px;
-    max-width: 1090px;
-    margin: 0 auto;
-  }
-  .lp-hero-copy { font-family: "Segoe UI", "Segoe UI Web", Calibri, Arial, sans-serif; }
-  .lp-brandline {
+  .lp-kicker {
     display: inline-flex; align-items: center; gap: 8px;
     font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
-    color: #66727e; margin-bottom: 20px;
+    color: #66727e; margin-bottom: 18px;
   }
-  .lp-brandline::before {
+  .lp-kicker::before {
     content: ""; width: 16px; height: 16px; border-radius: 4px;
     background: linear-gradient(135deg, #7fb086, #5f9468);
     box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
   }
   .lp-hero h1 {
-    margin: 0;
-    max-width: 24ch;
+    margin: 0 auto;
+    max-width: 22ch;
     font-family: "Segoe UI", "Segoe UI Web", Calibri, Arial, sans-serif;
     font-size: 46px;
-    line-height: 1.06;
-    letter-spacing: -1.2px;
-    font-weight: 700;
-    color: #16212c;
+    line-height: 1.1;
+    letter-spacing: -0.6px;
+    font-weight: 300;
+    color: #1b2733;
   }
-  .lp-hero h1 .hl-2 { display: block; }   /* line break only — same weight, no accent trick */
-  .lp-hero-sub {
-    margin: 22px 0 0;
-    max-width: 52ch;
+  .lp-hero h1 .strong { display: block; font-weight: 700; }
+  .lp-accent { width: 56px; height: 3px; border-radius: 3px; background: #7fb086; margin: 22px auto 0; }
+  .lp-hero p {
+    margin: 20px auto 0;
+    max-width: 64ch;
+    font-family: "Segoe UI", "Segoe UI Web", Calibri, Arial, sans-serif;
     font-size: 16px;
     line-height: 1.6;
-    color: #55636f;
+    color: #66727e;
   }
-  .lp-replaces {
-    margin: 18px 0 4px;
-    font-size: 12.5px; color: #66727e; line-height: 1.5;
-  }
-  .lp-replaces .lp-replaces-lab {
-    font-size: 10.5px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
-    color: #93a0ab; margin-right: 7px;
-  }
+  .lp-hero p sup { color: #1568b8; font-size: 11px; }
 
   /* ---- FEATURE row: text left, product preview right ---- */
   .lp-feature {
@@ -91,7 +74,6 @@
     margin: 0 0 22px; font-size: 15px; line-height: 1.65; color: #55636f; max-width: 52ch;
   }
   .lp-cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
-  .lp-hero-copy .lp-cta-row { margin-top: 24px; }
   /* self-contained button styling (does not depend on app.css) */
   .lp-cta-row .pps-btn {
     display: inline-block; text-decoration: none; cursor: pointer;
@@ -112,7 +94,18 @@
 
   /* ---- floating product preview (built from real components) ---- */
   .lp-stage { position: relative; min-height: 330px; }
-  .lp-window { background: #fff; border: 1px solid #d9dfe4; border-radius: 8px; box-shadow: 0 10px 34px rgba(27,39,51,0.16), 0 2px 8px rgba(27,39,51,0.08); overflow: hidden; }
+  /* soft brand-colour backdrop behind the two windows, echoing the category
+     colours used in "Portfolio at a Glance" rather than an unrelated hue */
+  .lp-stage::before {
+    content: ""; position: absolute; z-index: 0;
+    top: -26px; left: -18px; right: -6px; height: 280px; border-radius: 32px;
+    background:
+      radial-gradient(60% 85% at 22% 18%, rgba(77,154,104,0.30) 0%, transparent 68%),
+      radial-gradient(55% 80% at 78% 12%, rgba(21,104,184,0.24) 0%, transparent 65%),
+      radial-gradient(60% 75% at 55% 85%, rgba(106,90,140,0.18) 0%, transparent 70%);
+    filter: blur(2px);
+  }
+  .lp-window { position: relative; background: #fff; border: 1px solid #d9dfe4; border-radius: 8px; box-shadow: 0 10px 34px rgba(27,39,51,0.16), 0 2px 8px rgba(27,39,51,0.08); overflow: hidden; }
   .lp-chrome { display: flex; align-items: center; gap: 7px; padding: 9px 12px; background: #f7f9fb; border-bottom: 1px solid #d9dfe4; }
   .lp-chrome .dot3 { width: 9px; height: 9px; border-radius: 50%; background: #cdd6de; }
   .lp-chrome .addr { margin-left: 8px; font-size: 10.5px; color: #93a0ab; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: "Segoe UI", Arial, sans-serif; }
@@ -127,20 +120,15 @@
   .lp-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 600; color: #17301c; background: #e0ece1; border: 1px solid #cfe2d1; border-radius: 12px; padding: 2px 9px; }
   .lp-pill .pdot { width: 8px; height: 8px; border-radius: 50%; background: #7fb086; }
   .lp-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 12px; }
-  .lp-kpi { border: 1px solid #d9dfe4; border-radius: 6px; padding: 9px 10px; background: #fff; transition: border-color .12s ease, background .12s ease; }
+  .lp-kpi { border: 1px solid #d9dfe4; border-top: 3px solid #d9dfe4; border-radius: 6px; padding: 9px 10px; background: #fff; }
+  .lp-kpi.k-active  { border-top-color: #1568b8; }
+  .lp-kpi.k-risk    { border-top-color: #c0392b; }
+  .lp-kpi.k-cost    { border-top-color: #4d9a68; }
   .lp-kpi .k-label { font-size: 8.5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #66727e; }
   .lp-kpi .k-num { font-size: 19px; font-weight: 700; color: #1b2733; line-height: 1.1; margin-top: 3px; }
-  /* semantic accents: the tiles carry meaning, not just chrome.
-     Active = the headline metric (brand blue). Risks/Cost stay quiet
-     until they actually have something to report, then they warm up. */
-  .lp-kpi.k-active { border-color: #d3e3f2; background: #f6fafd; }
   .lp-kpi.k-active .k-num { color: #1568b8; }
-  .lp-kpi.k-risk .k-num,
-  .lp-kpi.k-cost .k-num { color: #93a0ab; }
-  .lp-kpi.k-risk.is-hot { border-color: #e7c3bd; background: #fdf6f4; }
   .lp-kpi.k-risk .k-num.is-hot { color: #c0392b; }
-  .lp-kpi.k-cost.is-hot { border-color: #cfe2d1; background: #f6faf7; }
-  .lp-kpi.k-cost .k-num.is-hot { color: #3f8f5b; }
+  .lp-kpi.k-cost .k-num.is-hot { color: #2f8f52; }
   .lp-bars { margin-top: 13px; display: flex; flex-direction: column; gap: 7px; }
   .lp-bar-row { display: grid; grid-template-columns: 74px 1fr; align-items: center; gap: 8px; }
   .lp-bar-row .b-lab { font-size: 9.5px; color: #66727e; }
@@ -176,20 +164,31 @@
   .lp-tierbar-switch { color: #93a0ab; font-size: 11.5px; }
   @media (max-width: 700px) { .lp-tierbar-inner { justify-content: flex-start; } }
 
-  /* ---- Explore the Suite directory now lives on explore.html ---- */
+  /* ---- Explore the Suite directory ---- */
+  .explore-section { margin: 34px 0 8px; }
+  .explore-group { margin-bottom: 22px; }
+  .explore-group-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+  .explore-group-head h3 { font-size: 12.5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--ink-soft); margin: 0; }
+  .explore-badge { font-size: 9.5px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; padding: 2px 7px; border-radius: 9px; }
+  .explore-badge.core   { color: #4d6a8f; background: #e3eefa; }
+  .explore-badge.devops { color: #6a5a8c; background: #ebe7f2; }
+  .explore-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  @media (max-width: 900px) { .explore-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px) { .explore-grid { grid-template-columns: 1fr; } }
+  .explore-card {
+    border: 1px solid var(--line); border-radius: 7px; padding: 12px 14px; background: var(--surface);
+    text-decoration: none; color: inherit; display: block; transition: border-color .12s ease, box-shadow .12s ease;
+  }
+  .explore-card:hover { border-color: #b9c6d2; box-shadow: 0 2px 10px rgba(27,39,51,0.08); text-decoration: none; }
+  .explore-card .ec-title { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+  .explore-card .ec-sub { font-size: 11.5px; color: var(--ink-soft); margin-top: 3px; line-height: 1.4; }
 
   @media (max-width: 860px) {
-    .lp-hero { padding: 30px 18px 34px; }
-    .lp-hero-grid { grid-template-columns: 1fr; gap: 34px; }
-    .lp-hero h1 { font-size: 38px; letter-spacing: -1px; max-width: 18ch; }
-    .lp-hero-sub { max-width: 60ch; }
+    .lp-hero h1 { font-size: 34px; }
     .lp-feature { grid-template-columns: 1fr; gap: 30px; }
     .lp-stage { min-height: 300px; margin-top: 4px; }
     .lp-front { width: 82%; }
     .lp-back { width: 58%; }
-  }
-  @media (max-width: 460px) {
-    .lp-hero h1 { font-size: 31px; }
   }
 
   /* ---------- existing hub styles (unchanged) ---------- */
@@ -240,6 +239,21 @@
   .gl-list .ldot { width: 7px; height: 7px; border-radius: 50%; flex: none; position: relative; top: 4px; }
   .gl-list .lc { font-weight: 700; color: var(--ink); font-size: 10px; letter-spacing: 0.3px; white-space: nowrap; }
   .gl-spark { width: 100%; height: 34px; display: block; }
+  .group-block { margin: 26px 0 6px; }
+  .group-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+  .group-head h2 { font-size: 12.5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--ink-soft); margin: 0; }
+  .group-head .group-sub { font-size: 11.5px; color: var(--ink-faint); font-style: italic; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid.grid-1 { grid-template-columns: 1fr; }
+  .card { border: 1px solid var(--line); border-radius: 6px; padding: 15px 17px; background: var(--surface); text-decoration: none; color: inherit; display: block; transition: border-color .12s ease, box-shadow .12s ease; }
+  .card:hover { border-color: #b9c6d2; box-shadow: 0 2px 10px rgba(27,39,51,0.09); text-decoration: none; }
+  .card .step { font-size: 10.5px; font-weight: 700; color: var(--ink-soft); letter-spacing: 0.6px; text-transform: uppercase; }
+  .card h3 { margin: 5px 0 6px; color: var(--ink); font-size: 16px; font-weight: 600; }
+  .card p { margin: 0; color: #556372; font-size: 12.5px; line-height: 1.5; }
+  .flow-note { background: var(--ribbon); border: 1px solid var(--line); border-radius: 6px; padding: 13px 16px; margin: 24px 0 8px; color: var(--ink); font-size: 12.5px; line-height: 1.7; }
+  .flow-note strong { text-transform: uppercase; letter-spacing: 0.4px; font-size: 11.5px; color: var(--ink-soft); }
+  .flow-note code { background: #fff; border: 1px solid var(--line); border-radius: 3px; padding: 1px 6px; font-size: 12px; }
+  .flow-note .arrow { color: var(--stage-active); font-weight: 700; }
   .footer { margin-top: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
   .muted { color: var(--ink-faint); font-size: 12px; }
 </style>
@@ -248,68 +262,15 @@
 
 <nav class="pps-nav" id="ppsNav" aria-label="Primary"></nav>
 
-<!-- ===================== HERO (copy left, live preview right) ===================== -->
+<!-- ===================== HERO ===================== -->
 <section class="lp-hero bleed">
-  <div class="lp-hero-grid">
-    <div class="lp-hero-copy">
-      <span class="lp-brandline">PMO Portfolio Suite</span>
-      <h1>Run the whole portfolio<span class="hl-2">live, from one suite.</span></h1>
-      <p class="lp-hero-sub">One shared data layer links intake, delivery, risk, financials and
-         resources, so every figure traces back to exactly where it was entered &mdash; and
-         recalculates the moment it changes.</p>
-      <div class="lp-replaces"><span class="lp-replaces-lab">Replaces</span>spreadsheets, status decks and disconnected trackers.</div>
-      <div class="lp-cta-row">
-        <a href="#glance" class="pps-btn">Open Dashboard</a>
-        <a href="intake-form.html" class="pps-btn secondary" data-noguard>Start with Intake</a>
-        <a href="explore.html" class="pps-btn secondary">Browse all pages</a>
-      </div>
-      <div class="lp-points">
-        <div class="lp-point"><span class="pt-dot" style="background:#7fb086"></span>
-          <span><b>Traceable.</b> Every rolled-up figure links back to the entry that produced it.</span></div>
-        <div class="lp-point"><span class="pt-dot" style="background:#1568b8"></span>
-          <span><b>Live.</b> Totals, ROI and capacity recompute the moment you change a value.</span></div>
-        <div class="lp-point"><span class="pt-dot" style="background:#b5651d"></span>
-          <span><b>Self-contained.</b> Deploys on GitHub Pages with no backend and no login.</span></div>
-      </div>
-    </div>
-
-    <div class="lp-stage">
-      <div class="lp-window lp-back">
-        <div class="lp-chrome">
-          <span class="dot3"></span><span class="dot3"></span><span class="dot3"></span>
-          <span class="addr">pmo-suite / financial-dashboard</span>
-        </div>
-        <div class="lp-win-body">
-          <div class="lp-mini-title">Cost Reduction by Category</div>
-          <div class="lp-donut">
-            <svg width="66" height="66" viewBox="0 0 42 42" id="lpDonut" aria-hidden="true"></svg>
-            <div class="lp-legend" id="lpDonutLegend"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="lp-window lp-front">
-        <div class="lp-chrome">
-          <span class="dot3"></span><span class="dot3"></span><span class="dot3"></span>
-          <span class="addr">pmo-suite / scorecard</span>
-          <span class="live-chip">Live</span>
-        </div>
-        <div class="lp-win-body">
-          <div class="lp-sc-top">
-            <span class="lp-sc-code" id="lpScCode">P2606-01</span>
-            <span class="lp-pill"><span class="pdot" id="lpScDot"></span><span id="lpScStatus">On Track</span></span>
-          </div>
-          <div class="lp-sc-name" id="lpScName">Import Billing Automation</div>
-          <div class="lp-kpis">
-            <div class="lp-kpi k-active"><div class="k-label">Active</div><div class="k-num" id="lpKpiActive">&ndash;</div></div>
-            <div class="lp-kpi k-risk"><div class="k-label">Open Risks</div><div class="k-num" id="lpKpiRisks">&ndash;</div></div>
-            <div class="lp-kpi k-cost"><div class="k-label">Cost Redn</div><div class="k-num" id="lpKpiFin">&ndash;</div></div>
-          </div>
-          <div class="lp-bars" id="lpBars"></div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <span class="lp-kicker">PMO Portfolio Suite</span>
+  <h1>Run Your Whole Portfolio,
+    <span class="strong">End to End with One Suite</span>
+  </h1>
+  <div class="lp-accent"></div>
+  <p>One shared data layer links intake, delivery, risk, financials and resources, so every
+     figure on every dashboard traces back to exactly where it was entered.</p>
 </section>
 
 <!-- ===================== EDITION / TIER BAR ===================== -->
@@ -319,6 +280,67 @@
     <div class="lp-tier-steps" id="tierSteps"><!-- rendered by JS --></div>
     <span class="lp-tierbar-desc" id="tbDesc">&nbsp;</span>
     <span class="lp-tierbar-switch">Switch it from the edition menu next to the logo above.</span>
+  </div>
+</section>
+
+<!-- ===================== FEATURE + PREVIEW ===================== -->
+<section class="lp-feature">
+  <div class="lp-feature-copy">
+    <div class="lp-eyebrow">One connected suite</div>
+    <h2>Portfolio Command Center</h2>
+    <p class="lead">Everything runs on a single client-side data store. Add, edit and delete
+       anywhere, and the roll-ups, scorecards and financials recalculate live. Nothing is
+       re-keyed, and no number stands on its own.</p>
+    <div class="lp-cta-row">
+      <a href="#glance" class="pps-btn">Open Dashboard</a>
+      <a href="intake-form.html" class="pps-btn secondary" data-noguard>Start with Intake</a>
+      <a href="#explore" class="pps-btn secondary">Browse all pages</a>
+    </div>
+    <div class="lp-points">
+      <div class="lp-point"><span class="pt-dot" style="background:#7fb086"></span>
+        <span><b>Traceable.</b> Every rolled-up figure links back to the entry that produced it.</span></div>
+      <div class="lp-point"><span class="pt-dot" style="background:#1568b8"></span>
+        <span><b>Live.</b> Totals, ROI and capacity recompute the moment you change a value.</span></div>
+      <div class="lp-point"><span class="pt-dot" style="background:#b5651d"></span>
+        <span><b>Self-contained.</b> Deploys on GitHub Pages with no backend and no login.</span></div>
+    </div>
+  </div>
+
+  <div class="lp-stage">
+    <div class="lp-window lp-back">
+      <div class="lp-chrome">
+        <span class="dot3"></span><span class="dot3"></span><span class="dot3"></span>
+        <span class="addr">pmo-suite / financial-dashboard</span>
+      </div>
+      <div class="lp-win-body">
+        <div class="lp-mini-title">Cost Reduction by Category</div>
+        <div class="lp-donut">
+          <svg width="66" height="66" viewBox="0 0 42 42" id="lpDonut" aria-hidden="true"></svg>
+          <div class="lp-legend" id="lpDonutLegend"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="lp-window lp-front">
+      <div class="lp-chrome">
+        <span class="dot3"></span><span class="dot3"></span><span class="dot3"></span>
+        <span class="addr">pmo-suite / scorecard</span>
+        <span class="live-chip">Live</span>
+      </div>
+      <div class="lp-win-body">
+        <div class="lp-sc-top">
+          <span class="lp-sc-code" id="lpScCode">P2606-01</span>
+          <span class="lp-pill"><span class="pdot" id="lpScDot"></span><span id="lpScStatus">On Track</span></span>
+        </div>
+        <div class="lp-sc-name" id="lpScName">Import Billing Automation</div>
+        <div class="lp-kpis">
+          <div class="lp-kpi k-active"><div class="k-label">Active</div><div class="k-num" id="lpKpiActive">&ndash;</div></div>
+          <div class="lp-kpi k-risk"><div class="k-label">Open Risks</div><div class="k-num" id="lpKpiRisks">&ndash;</div></div>
+          <div class="lp-kpi k-cost"><div class="k-label">Cost Redn</div><div class="k-num" id="lpKpiFin">&ndash;</div></div>
+        </div>
+        <div class="lp-bars" id="lpBars"></div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -414,6 +436,92 @@
     </a>
 
   </div>
+</div>
+
+<!-- ===================== EXPLORE THE SUITE ===================== -->
+<div class="explore-section" id="explore">
+  <div class="group-head"><h2>Explore the Suite</h2><span class="group-sub">Every view, grouped by workflow</span></div>
+
+  <div class="explore-group">
+    <div class="explore-group-head"><h3>Intake Process</h3><span class="explore-badge core">Core</span></div>
+    <div class="explore-grid">
+      <a class="explore-card" href="intake-form.html"><div class="ec-title">Intake Form</div><div class="ec-sub">Submit a new project or change request.</div></a>
+      <a class="explore-card" href="intake-report.html"><div class="ec-title">Intake Report</div><div class="ec-sub">Review, approve and promote requests into the portfolio.</div></a>
+    </div>
+  </div>
+
+  <div class="explore-group">
+    <div class="explore-group-head"><h3>Portfolio &amp; Delivery</h3><span class="explore-badge core">Core</span></div>
+    <div class="explore-grid">
+      <a class="explore-card" href="portfolio-review.html"><div class="ec-title">Portfolio Review</div><div class="ec-sub">Track every active project's delivery status.</div></a>
+      <a class="explore-card" href="wbs.html"><div class="ec-title">Work Breakdown</div><div class="ec-sub">Plan tasks in Table or Gantt view, and track Milestones.</div></a>
+      <a class="explore-card" href="scorecard.html"><div class="ec-title">Project Scorecard</div><div class="ec-sub">Weekly status, KPIs and budget for one project.</div></a>
+      <a class="explore-card" href="risk-decision-log.html"><div class="ec-title">Risk &amp; Decision Log</div><div class="ec-sub">Log open risks, issues and key decisions.</div></a>
+      <a class="explore-card" href="repository.html"><div class="ec-title">Repository</div><div class="ec-sub">Central document and artifact control.</div></a>
+      <a class="explore-card" href="change-request-form.html"><div class="ec-title">Change Request</div><div class="ec-sub">Raise an ITIL change against a project.</div></a>
+    </div>
+  </div>
+
+  <div class="explore-group">
+    <div class="explore-group-head"><h3>Resourcing &amp; Financials</h3><span class="explore-badge core">Core</span></div>
+    <div class="explore-grid">
+      <a class="explore-card" href="resources.html"><div class="ec-title">Resource Management</div><div class="ec-sub">Roster and project allocations.</div></a>
+      <a class="explore-card" href="capacity.html"><div class="ec-title">Resource Capacity</div><div class="ec-sub">Demand vs. availability across the team.</div></a>
+      <a class="explore-card" href="financials.html"><div class="ec-title">Project Financials</div><div class="ec-sub">Enter cost, savings and avoidance data.</div></a>
+      <a class="explore-card" href="financial-dashboard.html"><div class="ec-title">Financial Dashboard</div><div class="ec-sub">Portfolio-wide savings, avoidance and ROI.</div></a>
+    </div>
+  </div>
+
+  <div class="explore-group">
+    <div class="explore-group-head"><h3>CI/CD Delivery</h3><span class="explore-badge devops">DevOps</span></div>
+    <div class="explore-grid">
+      <a class="explore-card" href="deployment-intake.html"><div class="ec-title">Deployment Intake</div><div class="ec-sub">Queue a deployment against a milestone and its linked change.</div></a>
+      <a class="explore-card" href="deployment-events.html"><div class="ec-title">Pipeline &amp; Deployment Events</div><div class="ec-sub">The event log for every deployment attempt.</div></a>
+    </div>
+  </div>
+</div>
+
+<div class="group-block">
+  <div class="group-head"><h2>Data Lineage</h2><span class="group-sub">Click any node to open that page</span></div>
+  <div class="lineage">
+    <div class="lineage-row">
+      <a class="lineage-node" href="intake-form.html">Intake Form<span class="li-sub">Submit a request</span></a>
+      <span class="lineage-arrow">&rarr;</span>
+      <a class="lineage-node" href="portfolio-review.html">Portfolio Review<span class="li-sub">Track delivery</span></a>
+      <span class="lineage-arrow">&rarr;</span>
+      <a class="lineage-node" href="wbs.html">Work Breakdown<span class="li-sub">Plan tasks &amp; milestones</span></a>
+      <span class="lineage-arrow">&rarr;</span>
+      <a class="lineage-node" href="scorecard.html">Project Scorecard<span class="li-sub">Weekly status</span></a>
+    </div>
+    <div class="lineage-row">
+      <a class="lineage-node" href="financials.html">Project Financials<span class="li-sub">Enter cost data</span></a>
+      <span class="lineage-arrow">&rarr;</span>
+      <a class="lineage-node" href="financial-dashboard.html">Financial Dashboard<span class="li-sub">Portfolio roll-up</span></a>
+    </div>
+    <div class="lineage-row">
+      <a class="lineage-node" href="resources.html">Resource Management<span class="li-sub">Roster &amp; allocations</span></a>
+      <span class="lineage-arrow">&rarr;</span>
+      <a class="lineage-node" href="capacity.html">Resource Capacity<span class="li-sub">Demand vs. availability</span></a>
+    </div>
+    <div class="lineage-row">
+      <a class="lineage-node" href="change-request-form.html">Change Request<span class="li-sub">Raise an ITIL change</span></a>
+      <span class="lineage-arrow">&rarr;</span>
+      <a class="lineage-node" href="deployment-intake.html">Deployment Intake<span class="li-sub">Queue against a milestone</span></a>
+      <span class="lineage-arrow">&rarr;</span>
+      <a class="lineage-node" href="deployment-events.html">Deployment Events<span class="li-sub">Pipeline event log</span></a>
+    </div>
+  </div>
+</div>
+
+<div class="flow-note">
+  <strong>How the groups are linked</strong><br>
+  Intake Form <span class="arrow">&rarr;</span> Intake Report &nbsp;&nbsp;(submissions populate the read-only register)<br>
+  Portfolio Review <span class="arrow">&rarr;</span> Project Scorecard &nbsp;&nbsp;(portfolio data drives every derived scorecard value)<br>
+  Resource Management <span class="arrow">&rarr;</span> Resource Capacity vs. Demand &nbsp;&nbsp;(roster and allocations roll up automatically for active projects)<br>
+  Project Financials <span class="arrow">&rarr;</span> Financial Dashboard &nbsp;&nbsp;(per-project cost entries roll up into the portfolio's savings, avoidance and ROI view; the Scorecard's own budget/spend figures read from the same records)<br>
+  Work Breakdown now includes a Milestones tab, scoped to the selected project, that can link to an ITIL change and gate a deployment.<br>
+  Change Request <span class="arrow">&rarr;</span> Deployment Intake <span class="arrow">&rarr;</span> Deployment Events &nbsp;&nbsp;(the DevOps edition locks deployment to an approved change; the ITIL edition warns but allows an override)<br>
+  Risk &amp; Decision and Repository are standalone governance and document-control tools on the same shared data layer.
 </div>
 
 <div class="footer">
@@ -581,31 +689,26 @@
       var bars = portfolio.filter(function (p) { return p.section === "active"; })
         .slice(0, 3).map(function (p) {
           var pst = PPS.portfolioStatus(p.status);
-          var col = DOT[pst.dot] || "#7fb086";
+          var barColor = DOT[pst.dot] || "#7fb086";
           return '<div class="lp-bar-row"><span class="b-lab">' + PPS.esc(p.code) +
-                 '</span><span class="lp-track"><span style="width:' + (p.percent || 0) +
-                 '%;background:' + col + '"></span></span></div>';
+                 '</span><span class="lp-track"><span style="width:' + (p.percent || 0) + '%;background:' + barColor + '"></span></span></div>';
         }).join("");
       document.getElementById("lpBars").innerHTML = bars;
     }
 
     document.getElementById("lpKpiActive").textContent = stats.totalActive;
-
-    var riskNum = document.getElementById("lpKpiRisks");
-    riskNum.textContent = stats.openRisksTotal;
-    var risksHot = stats.openRisksTotal > 0;
-    riskNum.classList.toggle("is-hot", risksHot);
-    riskNum.closest(".lp-kpi").classList.toggle("is-hot", risksHot);
-
+    var riskEl = document.getElementById("lpKpiRisks");
+    riskEl.textContent = stats.openRisksTotal;
+    riskEl.classList.toggle("is-hot", stats.openRisksTotal > 0);
     var cr = fin.totals.costReduction || 0;
-    var finNum = document.getElementById("lpKpiFin");
-    finNum.textContent = "$" + Math.round(cr / 1000) + "k";
-    var costHot = cr > 0;
-    finNum.classList.toggle("is-hot", costHot);
-    finNum.closest(".lp-kpi").classList.toggle("is-hot", costHot);
+    var costEl = document.getElementById("lpKpiFin");
+    costEl.textContent = "$" + Math.round(cr / 1000) + "k";
+    costEl.classList.toggle("is-hot", cr > 0);
 
     var segs = (fin.donut || []).slice(0, 4);
-    var palette = ["#5f9468", "#7fb086", "#a9cbb0", "#cfe2d1"];
+    // Same category palette as the "Portfolio at a Glance" icons below, so the
+    // hero preview reads as part of the same product rather than a mockup.
+    var palette = ["#4d9a68", "#1568b8", "#6a5a8c", "#b07d1e"];
     var totalVal = segs.reduce(function (a, s) { return a + (s.value || 0); }, 0) || 1;
     var svg = document.getElementById("lpDonut");
     var legend = document.getElementById("lpDonutLegend");
