@@ -4,6 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PMO Portfolio Suite</title>
+<script>
+  /* Demo-only sign-in gate for the homepage. Not real access control —
+     there's no backend or account system behind it (see login.html) —
+     it exists purely to show a login step before the suite loads.
+     Checks sessionStorage first (per-tab), then localStorage (the
+     "keep me signed in" option on the login page). */
+  (function () {
+    try {
+      var authed = sessionStorage.getItem("ppsDemoAuthed") || localStorage.getItem("ppsDemoAuthed");
+      if (!authed) { location.replace("login.html?next=index.html"); }
+    } catch (e) { /* storage unavailable — let the page load rather than trap the visitor */ }
+  })();
+</script>
 <link rel="stylesheet" href="assets/css/app.css">
 <style>
   /* =========================================================
@@ -247,6 +260,29 @@
 <body>
 
 <nav class="pps-nav" id="ppsNav" aria-label="Primary"></nav>
+
+<div id="ppsSessionBar" style="display:flex; justify-content:flex-end; align-items:center; gap:8px; padding:6px 0 0; font-size:11.5px; color:var(--ink-soft);"></div>
+<script>
+  /* Demo session indicator, paired with the guard in <head>. Purely
+     cosmetic — reflects the sessionStorage/localStorage flag set by
+     login.html, nothing more. */
+  (function () {
+    try {
+      var raw = sessionStorage.getItem("ppsDemoAuthed") || localStorage.getItem("ppsDemoAuthed");
+      var rec = raw ? JSON.parse(raw) : null;
+      var bar = document.getElementById("ppsSessionBar");
+      if (rec && rec.user && bar) {
+        bar.innerHTML = "Signed in as <b style=\"color:var(--ink)\">" + rec.user.replace(/</g,"&lt;") +
+          "</b>&nbsp;&middot;&nbsp;<a href=\"#\" id=\"ppsSignOut\" style=\"color:var(--link)\">Sign out</a>";
+        document.getElementById("ppsSignOut").addEventListener("click", function (e) {
+          e.preventDefault();
+          try { sessionStorage.removeItem("ppsDemoAuthed"); localStorage.removeItem("ppsDemoAuthed"); } catch (ex) {}
+          location.href = "login.html";
+        });
+      }
+    } catch (e) {}
+  })();
+</script>
 
 <!-- ===================== HERO (copy left, live preview right) ===================== -->
 <section class="lp-hero bleed">
