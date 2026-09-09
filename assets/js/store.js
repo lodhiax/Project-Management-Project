@@ -1,5 +1,6 @@
 /* ============================================================
    PMO Portfolio Suite — shared data store
+   Build version: 1.0.1
    ------------------------------------------------------------
    This single file is the "glue" that links all four pages.
    Everything is client-side (localStorage), so it deploys as a
@@ -108,11 +109,11 @@
   // --- Portfolio: the current data set (active + completed) ---
   var SEED_PORTFOLIO = [
     { code:"P2606-01", name:"Import Billing Automation",              pm:"Michael Turner", phase:"UAT",         start:"15-Jun-26", end:"30-Sep-26", percent:75,  progress:"UAT cycle 2 complete; 3 low-severity defects open.",             remarks:"Business sign-off targeted next week.",       status:"onTrack",   section:"active" },
-    { code:"P2607-02", name:"Customer Tariff Portal",                 pm:"James Carter",   phase:"Development", start:"12-Jul-26", end:"15-Nov-26", percent:40,  progress:"Core portal screens built; tariff API integration underway.",    remarks:"Waiting on SSO config from InfoSec.",         status:"atRisk",    section:"active" },
-    { code:"P2608-03", name:"OMS VAT Invoice Format",                 pm:"David Bennett",  phase:"Development", start:"14-Aug-26", end:"26-Oct-26", percent:30,  progress:"Tax calculation module in progress.",                            remarks:"Blocked: final VAT rules not yet confirmed by Finance.", status:"delayed", section:"active" },
-    { code:"P2608-04", name:"Cash Reconciliation Engine",             pm:"Emily Watson",   phase:"Analysis",    start:"1-Aug-26",  end:"20-Dec-26", percent:15,  progress:"Requirements workshops complete; solution design drafting.",      remarks:"On track for design gate review.",            status:"onTrack",   section:"active" },
-    { code:"P2607-05", name:"EMPOST Reporting Revamp",                pm:"Robert Hughes",  phase:"On Hold",     start:"5-Jul-26",  end:"TBD",       percent:20,  progress:"Paused pending budget re-approval.",                             remarks:"Resume decision expected end of month.",      status:"onHold",    section:"active" },
-    { code:"P2609-06", name:"SMS Notification Service",               pm:"Daniel Foster",  phase:"Not Started", start:"15-Sep-26", end:"31-Jan-27", percent:0,   progress:"Kickoff scheduled; vendor shortlisting in progress.",            remarks:"Awaiting resource allocation.",               status:"notStarted",section:"active" },
+    { code:"P2607-02", name:"Customer Tariff Portal",                 pm:"James Carter",   phase:"Development", start:"12-Jul-26", end:"15-Nov-26", percent:48,  progress:"SSO cutover approved (CAB-77); integration resuming this week.", remarks:"Back on track after InfoSec clearance.",      status:"onTrack",   section:"active" },
+    { code:"P2608-03", name:"OMS VAT Invoice Format",                 pm:"David Bennett",  phase:"Development", start:"14-Aug-26", end:"26-Oct-26", percent:38,  progress:"Finance confirmed final VAT rules; tax calculation module resuming.", remarks:"Catching up on schedule; one week of slip remains.", status:"atRisk", section:"active" },
+    { code:"P2608-04", name:"Cash Reconciliation Engine",             pm:"Emily Watson",   phase:"Analysis",    start:"1-Aug-26",  end:"20-Dec-26", percent:22,  progress:"Solution design signed off; build backlog being groomed.",        remarks:"On track for design gate review.",            status:"onTrack",   section:"active" },
+    { code:"P2607-05", name:"EMPOST Reporting Revamp",                pm:"Robert Hughes",  phase:"Analysis",    start:"5-Jul-26",  end:"20-Jan-27", percent:25,  progress:"Budget re-approved; requirements workshops resumed this week.",  remarks:"Back from hold; revised timeline agreed with sponsor.", status:"onTrack",   section:"active" },
+    { code:"P2609-06", name:"SMS Notification Service",               pm:"Daniel Foster",  phase:"Planning",    start:"15-Sep-26", end:"31-Jan-27", percent:8,   progress:"Vendor selected (MessageBird); kickoff workshop held.",          remarks:"Resource allocation confirmed; on schedule.", status:"onTrack",section:"active" },
     { code:"P2601-07", name:"Re-rating Utility (OMS & Coloader)",     pm:"David Bennett",  phase:"Live",        start:"25-Jan-26", end:"30-Jun-26", percent:100, progress:"Deployed to production; hypercare period closed.",               remarks:"Closed.",                                     status:"completed", section:"completed" },
     { code:"P2602-08", name:"Duty & Tax Reconciliation Dashboard",    pm:"Emily Watson",   phase:"Live",        start:"10-Feb-26", end:"15-Jul-26", percent:100, progress:"Live and adopted by the operations team.",                       remarks:"Closed.",                                     status:"completed", section:"completed" }
   ];
@@ -152,6 +153,175 @@
       changeRequestDetails: [
         { desc:"Requested multi-currency support in the reconciliation output for co-loader invoices.", raisedBy:"James Carter", date:"22-Aug-26", status:"onHold" }
       ]
+    },
+    "P2607-02": {
+      sponsor: "Priya Anand, VP, Customer Experience",
+      category: "Customer Experience",
+      scopeStatus: "onTrack",
+      budgetStatus: "onTrack",
+      objective: "Customers currently call in or email to check tariff rates and usage history, which creates avoidable call-center volume. This project delivers a self-service portal where customers can look up their tariff plan, download usage history, and raise a plan-change request without picking up the phone. Scope covers the customer-facing screens, the tariff-rules API integration, and single sign-on so customers use one login across the wider digital estate.",
+      changeRequests: { approved: 1, rejected: 0, lastCycle: 1 },
+      milestones: [
+        { phase:"Planning", name:"Requirements & UX wireframes signed off", start:"12-Jul-26", planned:"26-Jul-26", actual:"26-Jul-26", status:"completed" },
+        { phase:"Build",    name:"Core portal screens built",               start:"27-Jul-26", planned:"20-Aug-26", actual:"18-Aug-26", status:"completed" },
+        { phase:"Build",    name:"SSO integration",                        start:"20-Aug-26", planned:"5-Sep-26",  actual:"",          status:"onTrack" },
+        { phase:"Build",    name:"Tariff-rules API integration",           start:"5-Sep-26",  planned:"3-Oct-26",  actual:"",          status:"onTrack" },
+        { phase:"Test",     name:"UAT",                                    start:"6-Oct-26",  planned:"31-Oct-26", actual:"",          status:"notStarted" },
+        { phase:"Deploy",   name:"Go-live",                                start:"3-Nov-26",  planned:"15-Nov-26", actual:"",          status:"notStarted" }
+      ],
+      risks: [
+        { desc:"Tariff-rules API is shared with two other digital initiatives; a schema change on their side could ripple into our integration.", owner:"James Carter", severity:"Medium", finalStatus:"Monitoring" }
+      ],
+      issues: [],
+      keyUpdates: [
+        "CAB approved the SSO cutover (CAB-77); InfoSec cleared the identity-broker configuration, so integration work resumes this week after roughly a two-week hold.",
+        "Core portal screens (rate lookup, usage history, plan-change request) are built and demoed to the CX steering group; feedback was positive with two minor copy changes requested.",
+        "Confirmed the tariff-rules API contract with the Digital Platforms team; no breaking changes expected before our integration window."
+      ],
+      changeRequestDetails: [
+        { desc:"Tariff portal SSO cutover — approved by CAB.", raisedBy:"James Carter", date:"1-Sep-26", status:"onTrack" }
+      ]
+    },
+    "P2608-03": {
+      sponsor: "Marcus Lee, Head of Finance Operations",
+      category: "Compliance",
+      scopeStatus: "atRisk",
+      budgetStatus: "onTrack",
+      objective: "OMS currently prints invoices without a compliant VAT breakdown, which Finance has been patching manually before they go out. This project adds a proper VAT breakdown to the OMS invoice format so every invoice is compliant at the point of issue, removing the manual Finance touchpoint and the risk that comes with it.",
+      changeRequests: { approved: 1, rejected: 0, lastCycle: 1 },
+      milestones: [
+        { phase:"Planning", name:"Requirements sign-off",                  start:"14-Aug-26", planned:"22-Aug-26", actual:"22-Aug-26", status:"completed" },
+        { phase:"Build",    name:"Tax calculation module",                 start:"25-Aug-26", planned:"19-Sep-26", actual:"",          status:"atRisk" },
+        { phase:"Build",    name:"Invoice template rework",                start:"19-Sep-26", planned:"3-Oct-26",  actual:"",          status:"notStarted" },
+        { phase:"Test",     name:"UAT with Finance",                       start:"6-Oct-26",  planned:"17-Oct-26", actual:"",          status:"notStarted" },
+        { phase:"Deploy",   name:"Go-live",                                start:"20-Oct-26", planned:"26-Oct-26", actual:"",          status:"notStarted" }
+      ],
+      risks: [
+        { desc:"VAT rules were only confirmed this week; roughly a one-week schedule slip has already been absorbed and there's limited float left before UAT.", owner:"David Bennett", severity:"Medium", finalStatus:"Open" }
+      ],
+      issues: [],
+      keyUpdates: [
+        "Finance confirmed the final VAT calculation rules this week, clearing the block that had paused the tax calculation module for roughly ten days.",
+        "Tax calculation module resumed; the team re-planned the build against the confirmed rules and is tracking to close most of the slip by the invoice template milestone.",
+        "Agreed a lighter-touch UAT approach with Finance (targeted scenarios on the confirmed rule set) to help recover schedule without cutting test coverage that matters."
+      ],
+      changeRequestDetails: [
+        { desc:"Routine config toggle for the invoice template (pre-approved, Standard change).", raisedBy:"David Bennett", date:"1-Sep-26", status:"onTrack" }
+      ]
+    },
+    "P2608-04": {
+      sponsor: "Sarah Whitfield, Director, Innovation & CS",
+      category: "Efficiency",
+      scopeStatus: "onTrack",
+      budgetStatus: "onTrack",
+      objective: "Cash reconciliation between bank receipts and OMS payment records is currently a manual month-end exercise for the Finance team. This project designs and builds an automated cash reconciliation engine that matches bank feed data against OMS receipts daily, flags exceptions early, and gives Finance a running reconciled position instead of a month-end scramble.",
+      changeRequests: { approved: 0, rejected: 0, lastCycle: 0 },
+      milestones: [
+        { phase:"Planning", name:"Requirements workshops",                 start:"1-Aug-26",  planned:"15-Aug-26", actual:"14-Aug-26", status:"completed" },
+        { phase:"Analysis", name:"Solution design",                        start:"18-Aug-26",  planned:"12-Sep-26", actual:"10-Sep-26", status:"completed" },
+        { phase:"Build",    name:"Bank feed ingestion",                    start:"15-Sep-26",  planned:"10-Oct-26", actual:"",          status:"notStarted" },
+        { phase:"Build",    name:"Matching & exception engine",            start:"13-Oct-26",  planned:"14-Nov-26", actual:"",          status:"notStarted" },
+        { phase:"Test",     name:"UAT with Finance",                       start:"17-Nov-26",  planned:"5-Dec-26",  actual:"",          status:"notStarted" },
+        { phase:"Deploy",   name:"Go-live",                                start:"8-Dec-26",  planned:"20-Dec-26",  actual:"",          status:"notStarted" }
+      ],
+      risks: [
+        { desc:"Bank feed format varies slightly by receiving account; ingestion logic may need per-account handling that wasn't fully scoped at design time.", owner:"Emily Watson", severity:"Low", finalStatus:"Monitoring" }
+      ],
+      issues: [],
+      keyUpdates: [
+        "Solution design signed off two days ahead of plan; Finance stakeholders confirmed the matching-rule hierarchy (exact match, tolerance match, manual review).",
+        "Build backlog is being groomed against the design; bank feed ingestion is first up since it's the longest lead-time integration."
+      ],
+      changeRequestDetails: []
+    },
+    "P2607-05": {
+      sponsor: "Marcus Lee, Head of Finance Operations",
+      category: "Reporting",
+      scopeStatus: "onTrack",
+      budgetStatus: "onTrack",
+      objective: "EMPOST volume reporting is currently a set of disconnected spreadsheets refreshed by hand each week. This project rebuilds it as a proper weekly dashboard so Operations and International teams get a consistent, self-serve view of EMPOST volumes without waiting on a manual refresh.",
+      changeRequests: { approved: 0, rejected: 0, lastCycle: 0 },
+      milestones: [
+        { phase:"Planning", name:"Requirements workshops (resumed)",       start:"1-Sep-26",  planned:"12-Sep-26", actual:"",          status:"onTrack" },
+        { phase:"Analysis", name:"Data source & refresh design",           start:"15-Sep-26", planned:"3-Oct-26",  actual:"",          status:"notStarted" },
+        { phase:"Build",    name:"Dashboard build",                        start:"6-Oct-26",  planned:"14-Nov-26", actual:"",          status:"notStarted" },
+        { phase:"Deploy",   name:"Go-live",                                start:"17-Nov-26", planned:"21-Nov-26", actual:"",          status:"notStarted" }
+      ],
+      risks: [
+        { desc:"Project was on hold for several weeks; some requirements captured pre-hold may need a light revalidation with stakeholders before build starts.", owner:"Robert Hughes", severity:"Low", finalStatus:"Monitoring" }
+      ],
+      issues: [],
+      keyUpdates: [
+        "Budget re-approved by the sponsor; project formally resumed after a hold period pending re-approval.",
+        "Requirements workshops restarted this week; original scope holds, with a revised go-live target agreed to reflect the hold period."
+      ],
+      changeRequestDetails: []
+    },
+    "P2609-06": {
+      sponsor: "Priya Anand, VP, Customer Experience",
+      category: "Customer Experience",
+      scopeStatus: "onTrack",
+      budgetStatus: "onTrack",
+      objective: "Consumers currently have no proactive notification when a delivery status changes; they have to check manually. This project adds SMS delivery notifications so consumers are messaged automatically at key delivery milestones, reducing inbound status-check contacts.",
+      changeRequests: { approved: 0, rejected: 0, lastCycle: 0 },
+      milestones: [
+        { phase:"Planning", name:"Vendor selection (SMS gateway)",         start:"15-Sep-26", planned:"22-Sep-26", actual:"20-Sep-26", status:"completed" },
+        { phase:"Planning", name:"Kickoff & requirements workshop",        start:"22-Sep-26", planned:"29-Sep-26", actual:"29-Sep-26", status:"completed" },
+        { phase:"Build",    name:"Notification trigger integration",      start:"1-Oct-26",  planned:"31-Oct-26", actual:"",          status:"notStarted" },
+        { phase:"Test",     name:"UAT",                                   start:"3-Nov-26",  planned:"14-Nov-26", actual:"",          status:"notStarted" },
+        { phase:"Deploy",   name:"Go-live",                               start:"17-Nov-26", planned:"21-Nov-26", actual:"",          status:"notStarted" }
+      ],
+      risks: [
+        { desc:"Target customer segments for the initial rollout still need final confirmation from Consumer leadership before build scope is fully locked.", owner:"Daniel Foster", severity:"Low", finalStatus:"Open" }
+      ],
+      issues: [],
+      keyUpdates: [
+        "MessageBird selected as the SMS gateway vendor after a short comparison against two alternatives on cost and delivery reliability.",
+        "Kickoff workshop held with Consumer and Digital Platforms teams; initial notification triggers (dispatched, out for delivery, delivered) agreed."
+      ],
+      changeRequestDetails: []
+    },
+    "P2601-07": {
+      sponsor: "David Bennett, Head of Operations Systems",
+      category: "Compliance",
+      scopeStatus: "onTrack",
+      budgetStatus: "onTrack",
+      objective: "OMS and the co-loader system used two different re-rating logics, creating reconciliation gaps. This project delivered a single re-rating utility shared by both systems, closing that gap. Delivered and closed.",
+      changeRequests: { approved: 2, rejected: 0, lastCycle: 0 },
+      milestones: [
+        { phase:"Build",    name:"Shared re-rating logic built",  start:"25-Jan-26", planned:"15-Apr-26", actual:"12-Apr-26", status:"completed" },
+        { phase:"Test",     name:"UAT (OMS & Coloader)",          start:"15-Apr-26", planned:"20-May-26", actual:"18-May-26", status:"completed" },
+        { phase:"Deploy",   name:"Go-live & hypercare",           start:"22-May-26", planned:"30-Jun-26", actual:"28-Jun-26", status:"completed" }
+      ],
+      risks: [],
+      issues: [],
+      keyUpdates: [
+        "Hypercare period closed with no P1/P2 incidents; support handed over to BAU operations.",
+        "Post-implementation review confirmed reconciliation gaps between OMS and Coloader are fully closed."
+      ],
+      changeRequestDetails: []
+    },
+    "P2602-08": {
+      sponsor: "Marcus Lee, Head of Finance Operations",
+      category: "Reporting",
+      scopeStatus: "onTrack",
+      budgetStatus: "onTrack",
+      objective: "Duty and tax reconciliation was tracked in offline spreadsheets with no shared view across Finance and Operations. This project delivered a shared dashboard giving both teams one live view of duty and tax reconciliation status. Delivered and adopted.",
+      changeRequests: { approved: 1, rejected: 0, lastCycle: 0 },
+      milestones: [
+        { phase:"Build",    name:"Dashboard build",               start:"10-Feb-26", planned:"30-Apr-26", actual:"27-Apr-26", status:"completed" },
+        { phase:"Test",     name:"UAT",                            start:"1-May-26",  planned:"20-May-26", actual:"18-May-26", status:"completed" },
+        { phase:"Deploy",   name:"Go-live",                        start:"22-May-26", planned:"15-Jul-26", actual:"10-Jul-26", status:"completed" }
+      ],
+      risks: [],
+      issues: [],
+      keyUpdates: [
+        "Adoption tracking shows daily active use by both Finance and Operations reconciliation teams since go-live.",
+        "One enhancement request (additional currency filter) logged for a future minor release; not blocking."
+      ],
+      changeRequestDetails: [
+        { desc:"Added a currency filter to the dashboard's Top-5 supplier view.", raisedBy:"Emily Watson", date:"20-Jul-26", status:"completed" }
+      ]
     }
   };
 
@@ -171,7 +341,14 @@
     { id:11, project:FLAGSHIP, desc:"Stress testing", type:"Risk", prob:"Medium", impact:"Medium", action:"Approach needs finalizing so application performance can be validated ahead of production deployment.", by:"Client", date:"1-Aug-22", status:"Open" },
     { id:12, project:FLAGSHIP, desc:"Scope creep across workstreams", type:"Risk", prob:"Medium", impact:"Medium", action:"Additional requirements identified across workstreams during UAT; being centrally logged and managed by the core team rather than absorbed silently.", by:"Client", date:"1-Aug-22", status:"Open" },
     { id:13, project:FLAGSHIP, desc:"SDK limitations for a responsive onboarding app", type:"Risk", prob:"Medium", impact:"High", action:"The onboarding solution's web-responsive approach introduced challenges accessing device-native biometric and camera hardware on tablets.", by:"Client", date:"23-Aug-22", status:"Open" },
-    { id:14, project:FLAGSHIP, desc:"UAT timeline slippage", type:"Risk", prob:"Medium", impact:"Medium", action:"UAT start delayed due to stakeholder availability; original start date pushed back roughly one week.", by:"Client", date:"5-Sep-22", status:"Open" }
+    { id:14, project:FLAGSHIP, desc:"UAT timeline slippage", type:"Risk", prob:"Medium", impact:"Medium", action:"UAT start delayed due to stakeholder availability; original start date pushed back roughly one week.", by:"Client", date:"5-Sep-22", status:"Open" },
+    { id:15, project:"P2607-02", desc:"Tariff-rules API shared with two other digital initiatives",   type:"Risk", prob:"Low",    impact:"Medium", action:"Monitoring the shared API's change log; no breaking changes flagged for our integration window.", by:"James Carter", date:"5-Sep-26",  status:"Open" },
+    { id:16, project:"P2607-02", desc:"SSO cutover delay (InfoSec queue)",                              type:"Issue", prob:"Medium", impact:"High",  action:"CAB approved the cutover (CAB-77); InfoSec cleared configuration. Closed out.",                    by:"Michael Turner", date:"3-Sep-26",  status:"Closed" },
+    { id:17, project:"P2608-03", desc:"VAT rule confirmation delay from Finance",                       type:"Issue", prob:"Medium", impact:"High",  action:"Finance confirmed final VAT rules; tax calculation module resumed.",                              by:"David Bennett",  date:"1-Sep-26",  status:"Closed" },
+    { id:18, project:"P2608-03", desc:"Limited schedule float remaining before UAT",                    type:"Risk", prob:"Medium", impact:"Medium", action:"Lighter-touch UAT scope agreed with Finance to help recover the week already lost.",             by:"David Bennett",  date:"3-Sep-26",  status:"Open" },
+    { id:19, project:"P2608-04", desc:"Bank feed format varies by receiving account",                   type:"Risk", prob:"Low",    impact:"Medium", action:"Per-account handling being scoped into the ingestion design before build starts.",               by:"Emily Watson",   date:"10-Sep-26", status:"Open" },
+    { id:20, project:"P2607-05", desc:"Pre-hold requirements may need revalidation",                    type:"Risk", prob:"Low",    impact:"Low",    action:"Light revalidation session scheduled with stakeholders alongside the resumed workshops.",         by:"Robert Hughes",  date:"1-Sep-26",  status:"Open" },
+    { id:21, project:"P2609-06", desc:"Target customer segments not yet finalized",                     type:"Risk", prob:"Medium", impact:"Medium", action:"Awaiting confirmation from Consumer leadership; kickoff scope held provisional until confirmed.", by:"Daniel Foster",  date:"29-Sep-26", status:"Open" }
   ];
 
   var SEED_DECISIONS = [
@@ -189,7 +366,14 @@
     { id:12, project:FLAGSHIP, point:"Core transaction engine scope", owner:"Client", comments:"Core engine to handle all transactions going forward; general ledger entries forwarded to the client's core banking system.", date:"10-May-22", status:"Closed" },
     { id:13, project:FLAGSHIP, point:"Development code access for client resources", owner:"Client", comments:"Client resources granted the same code access as the delivery vendor's development team, in line with a one-team delivery model.", date:"3-Jul-22", status:"Closed" },
     { id:14, project:FLAGSHIP, point:"Architecture finalization", owner:"Client / Core Platform Vendor / Delivery Vendor", comments:"Architecture submitted by the platform vendor; a joint technical review is still required to formally close this item.", date:"", status:"Open" },
-    { id:15, project:FLAGSHIP, point:"Multi-factor authentication approach", owner:"Client", comments:"To be presented at the technical review committee, since it falls outside current scope; design vs. MFA trade-off needs sign-off.", date:"7-Jul-22", status:"Closed" }
+    { id:15, project:FLAGSHIP, point:"Multi-factor authentication approach", owner:"Client", comments:"To be presented at the technical review committee, since it falls outside current scope; design vs. MFA trade-off needs sign-off.", date:"7-Jul-22", status:"Closed" },
+    { id:16, project:"P2607-02", point:"SSO identity broker approach", owner:"CAB / InfoSec", comments:"CAB approved cutover to the shared identity broker (CAB-77); InfoSec configuration cleared.", date:"3-Sep-26", status:"Closed" },
+    { id:17, project:"P2607-02", point:"Tariff-rules API contract", owner:"Digital Platforms Team", comments:"Contract confirmed stable through our integration window; no breaking changes expected.", date:"28-Aug-26", status:"Closed" },
+    { id:18, project:"P2608-03", point:"Final VAT calculation rules", owner:"Finance", comments:"Finance confirmed the final VAT rule set, unblocking the tax calculation module.", date:"1-Sep-26", status:"Closed" },
+    { id:19, project:"P2608-03", point:"UAT scope for schedule recovery", owner:"Finance / David Bennett", comments:"Agreed a targeted UAT scope on the confirmed rule set rather than a full regression pass, to help recover lost schedule.", date:"3-Sep-26", status:"Closed" },
+    { id:20, project:"P2608-04", point:"Matching-rule hierarchy", owner:"Finance", comments:"Confirmed exact-match, tolerance-match, then manual-review hierarchy for the reconciliation engine.", date:"10-Sep-26", status:"Closed" },
+    { id:21, project:"P2607-05", point:"Budget re-approval", owner:"Sponsor (Marcus Lee)", comments:"Budget re-approved; project resumed from hold with a revised go-live target.", date:"29-Aug-26", status:"Closed" },
+    { id:22, project:"P2609-06", point:"SMS gateway vendor selection", owner:"Daniel Foster", comments:"MessageBird selected after a short comparison on cost and delivery reliability against two alternatives.", date:"20-Sep-26", status:"Closed" }
   ];
 
   // --- Resource roster: named leads plus a few shared delivery pools.
@@ -219,8 +403,10 @@
     { project:"P2608-03", resource:"Reporting Team",          hours:22 },
     { project:"P2608-04", resource:"Emily Watson",            hours:18 },
     { project:"P2608-04", resource:"Data & Integrations Team", hours:14 },
-    { project:"P2607-05", resource:"Robert Hughes",           hours:6  },
-    { project:"P2609-06", resource:"Daniel Foster",           hours:8  }
+    { project:"P2607-05", resource:"Robert Hughes",           hours:22 },
+    { project:"P2607-05", resource:"Reporting Team",          hours:10 },
+    { project:"P2609-06", resource:"Daniel Foster",           hours:20 },
+    { project:"P2609-06", resource:"Digital Platforms Team",  hours:8  }
   ];
 
   // --- Financial metrics, keyed by project code. This is the single
@@ -431,6 +617,47 @@
       { id:11, parentId:9,    name:"UAT cycle 2",                                      owner:"Emily Watson",   start:"21-Sep-26", end:"25-Sep-26", effort:60,  percent:20,  status:"onTrack" },
       { id:12, parentId:null, name:"Deploy", owner:"Michael Turner", start:"28-Sep-26", end:"30-Sep-26", effort:0,   percent:0,   status:"notStarted" },
       { id:13, parentId:12,   name:"Go-live & hypercare",                             owner:"Michael Turner", start:"28-Sep-26", end:"30-Sep-26", effort:40,  percent:0,   status:"notStarted" }
+    ],
+    "P2607-02": [
+      { id:1, parentId:null, name:"Planning", owner:"James Carter", start:"12-Jul-26", end:"26-Jul-26", effort:0,  percent:0,   status:"completed" },
+      { id:2, parentId:1,    name:"Requirements & UX wireframes",     owner:"James Carter",   start:"12-Jul-26", end:"26-Jul-26", effort:60, percent:100, status:"completed" },
+      { id:3, parentId:null, name:"Build", owner:"James Carter", start:"27-Jul-26", end:"3-Oct-26", effort:0,  percent:0,   status:"onTrack" },
+      { id:4, parentId:3,    name:"Core portal screens",              owner:"James Carter",   start:"27-Jul-26", end:"18-Aug-26", effort:120, percent:100, status:"completed" },
+      { id:5, parentId:3,    name:"SSO integration",                  owner:"David Bennett",  start:"20-Aug-26", end:"5-Sep-26",  effort:70,  percent:40,  status:"onTrack" },
+      { id:6, parentId:3,    name:"Tariff-rules API integration",     owner:"James Carter",   start:"5-Sep-26",  end:"3-Oct-26",  effort:90,  percent:10,  status:"onTrack" },
+      { id:7, parentId:null, name:"Test", owner:"James Carter", start:"6-Oct-26", end:"31-Oct-26", effort:0, percent:0, status:"notStarted" },
+      { id:8, parentId:7,    name:"UAT",                              owner:"James Carter",   start:"6-Oct-26",  end:"31-Oct-26", effort:60,  percent:0,   status:"notStarted" }
+    ],
+    "P2608-03": [
+      { id:1, parentId:null, name:"Planning", owner:"David Bennett", start:"14-Aug-26", end:"22-Aug-26", effort:0,  percent:0,   status:"completed" },
+      { id:2, parentId:1,    name:"Requirements sign-off",            owner:"David Bennett",  start:"14-Aug-26", end:"22-Aug-26", effort:40, percent:100, status:"completed" },
+      { id:3, parentId:null, name:"Build", owner:"David Bennett", start:"25-Aug-26", end:"3-Oct-26", effort:0,  percent:0,   status:"atRisk" },
+      { id:4, parentId:3,    name:"Tax calculation module",           owner:"David Bennett",  start:"25-Aug-26", end:"19-Sep-26", effort:100, percent:45,  status:"atRisk" },
+      { id:5, parentId:3,    name:"Invoice template rework",          owner:"David Bennett",  start:"19-Sep-26", end:"3-Oct-26",  effort:60,  percent:0,   status:"notStarted" },
+      { id:6, parentId:null, name:"Test", owner:"David Bennett", start:"6-Oct-26", end:"17-Oct-26", effort:0, percent:0, status:"notStarted" },
+      { id:7, parentId:6,    name:"UAT with Finance",                 owner:"David Bennett",  start:"6-Oct-26",  end:"17-Oct-26", effort:40,  percent:0,   status:"notStarted" }
+    ],
+    "P2608-04": [
+      { id:1, parentId:null, name:"Planning", owner:"Emily Watson", start:"1-Aug-26", end:"15-Aug-26", effort:0,  percent:0,   status:"completed" },
+      { id:2, parentId:1,    name:"Requirements workshops",           owner:"Emily Watson",   start:"1-Aug-26",  end:"14-Aug-26", effort:50, percent:100, status:"completed" },
+      { id:3, parentId:null, name:"Analysis", owner:"Emily Watson", start:"18-Aug-26", end:"12-Sep-26", effort:0, percent:0, status:"completed" },
+      { id:4, parentId:3,    name:"Solution design",                 owner:"Emily Watson",   start:"18-Aug-26", end:"10-Sep-26", effort:80, percent:100, status:"completed" },
+      { id:5, parentId:null, name:"Build", owner:"Emily Watson", start:"15-Sep-26", end:"14-Nov-26", effort:0, percent:0, status:"notStarted" },
+      { id:6, parentId:5,    name:"Bank feed ingestion",              owner:"Emily Watson",   start:"15-Sep-26", end:"10-Oct-26", effort:110, percent:0,   status:"notStarted" },
+      { id:7, parentId:5,    name:"Matching & exception engine",      owner:"Emily Watson",   start:"13-Oct-26", end:"14-Nov-26", effort:140, percent:0,   status:"notStarted" }
+    ],
+    "P2607-05": [
+      { id:1, parentId:null, name:"Planning", owner:"Robert Hughes", start:"1-Sep-26", end:"12-Sep-26", effort:0, percent:0, status:"onTrack" },
+      { id:2, parentId:1,    name:"Requirements workshops (resumed)", owner:"Robert Hughes",  start:"1-Sep-26", end:"12-Sep-26", effort:40, percent:35, status:"onTrack" },
+      { id:3, parentId:null, name:"Analysis", owner:"Robert Hughes", start:"15-Sep-26", end:"3-Oct-26", effort:0, percent:0, status:"notStarted" },
+      { id:4, parentId:3,    name:"Data source & refresh design",     owner:"Robert Hughes",  start:"15-Sep-26", end:"3-Oct-26", effort:50, percent:0, status:"notStarted" }
+    ],
+    "P2609-06": [
+      { id:1, parentId:null, name:"Planning", owner:"Daniel Foster", start:"15-Sep-26", end:"29-Sep-26", effort:0, percent:0, status:"completed" },
+      { id:2, parentId:1,    name:"Vendor selection",                owner:"Daniel Foster",  start:"15-Sep-26", end:"20-Sep-26", effort:20, percent:100, status:"completed" },
+      { id:3, parentId:1,    name:"Kickoff & requirements workshop",  owner:"Daniel Foster",  start:"22-Sep-26", end:"29-Sep-26", effort:24, percent:100, status:"completed" },
+      { id:4, parentId:null, name:"Build", owner:"Daniel Foster", start:"1-Oct-26", end:"31-Oct-26", effort:0, percent:0, status:"notStarted" },
+      { id:5, parentId:4,    name:"Notification trigger integration", owner:"Daniel Foster",  start:"1-Oct-26",  end:"31-Oct-26", effort:70,  percent:0, status:"notStarted" }
     ]
   };
 
@@ -441,7 +668,15 @@
     { id:1, projectCode:"P2606-01", title:"Requirements sign-off",          status:"Done",        percentComplete:100, riskTag:"none",                    linkedChangeId:null, log:["Seed: baseline milestone."] },
     { id:2, projectCode:"P2606-01", title:"Billing engine build complete",  status:"In Progress", percentComplete:60,  riskTag:"none",                    linkedChangeId:null, log:[] },
     { id:3, projectCode:"P2606-01", title:"UAT sign-off",                    status:"Not Started", percentComplete:0,   riskTag:"none",                    linkedChangeId:null, log:[] },
-    { id:4, projectCode:"P2607-02", title:"SSO integration",                 status:"Blocked",     percentComplete:25,  riskTag:"High-Risk/Financial Impact", linkedChangeId:null, log:["Seed: waiting on InfoSec."] }
+    { id:4, projectCode:"P2607-02", title:"SSO integration",                 status:"In Progress", percentComplete:55,  riskTag:"none",                    linkedChangeId:null, log:["Seed: waiting on InfoSec.", "CAB approved cutover (CAB-77); InfoSec cleared. Integration resumed."] },
+    { id:5, projectCode:"P2607-02", title:"Tariff-rules API integration",    status:"In Progress", percentComplete:10,  riskTag:"none",                    linkedChangeId:null, log:[] },
+    { id:6, projectCode:"P2608-03", title:"Tax calculation module",          status:"In Progress", percentComplete:45,  riskTag:"High-Risk/Financial Impact", linkedChangeId:null, log:["Seed: paused pending Finance VAT rule confirmation.", "Finance confirmed final rules; module resumed."] },
+    { id:7, projectCode:"P2608-03", title:"Invoice template rework",         status:"Not Started", percentComplete:0,   riskTag:"none",                    linkedChangeId:null, log:[] },
+    { id:8, projectCode:"P2608-04", title:"Solution design sign-off",        status:"Done",        percentComplete:100, riskTag:"none",                    linkedChangeId:null, log:[] },
+    { id:9, projectCode:"P2608-04", title:"Bank feed ingestion",             status:"Not Started", percentComplete:0,   riskTag:"none",                    linkedChangeId:null, log:[] },
+    { id:10, projectCode:"P2607-05", title:"Requirements workshops (resumed)", status:"In Progress", percentComplete:35, riskTag:"none",                  linkedChangeId:null, log:["Seed: on hold pending budget re-approval.", "Budget re-approved; workshops resumed."] },
+    { id:11, projectCode:"P2609-06", title:"Vendor selection",               status:"Done",        percentComplete:100, riskTag:"none",                    linkedChangeId:null, log:[] },
+    { id:12, projectCode:"P2609-06", title:"Kickoff workshop",               status:"Done",        percentComplete:100, riskTag:"none",                    linkedChangeId:null, log:[] }
   ];
 
   // --- [P3-T2a] A few change tickets in the registry so milestones have
@@ -449,8 +684,9 @@
   //     One unapproved Normal, one Approved Normal, one pre-approved Standard. ---
   var SEED_CHANGES = [
     { cifNumber:"CIF-20260901-0001", projectCode:"P2606-01", itilChangeType:"Normal",   cabDecision:"",         status:"Submitted", briefDesc:"Import billing production server update", requestDate:"01-Sep-26", linkedMilestoneId:null },
-    { cifNumber:"CIF-20260901-0002", projectCode:"P2607-02", itilChangeType:"Normal",   cabDecision:"Approved", status:"Submitted", briefDesc:"Tariff portal SSO cutover",             requestDate:"01-Sep-26", cabDate:"03-Sep-26", cabReference:"CAB-77", linkedMilestoneId:null },
-    { cifNumber:"CIF-20260901-0003", projectCode:"P2606-01", itilChangeType:"Standard", cabDecision:"",         status:"Submitted", briefDesc:"Routine config toggle (pre-approved)",   requestDate:"01-Sep-26", linkedMilestoneId:null }
+    { cifNumber:"CIF-20260901-0002", projectCode:"P2607-02", itilChangeType:"Normal",   cabDecision:"Approved", status:"Submitted", briefDesc:"Tariff portal SSO cutover",             requestDate:"01-Sep-26", cabDate:"03-Sep-26", cabReference:"CAB-77", linkedMilestoneId:4 },
+    { cifNumber:"CIF-20260901-0003", projectCode:"P2606-01", itilChangeType:"Standard", cabDecision:"",         status:"Submitted", briefDesc:"Routine config toggle (pre-approved)",   requestDate:"01-Sep-26", linkedMilestoneId:null },
+    { cifNumber:"CIF-20260902-0004", projectCode:"P2608-03", itilChangeType:"Standard", cabDecision:"",         status:"Submitted", briefDesc:"OMS invoice template config toggle (pre-approved)", requestDate:"02-Sep-26", linkedMilestoneId:7 }
   ];
 
   // --- [Service Catalog / CI Mapping] CI records map a repository/service asset
@@ -458,7 +694,9 @@
   //     DevOps deployment target. ---
   var SEED_CIMAP = [
     { id:1, projectCode:"P2606-01", ci:"Reconciliation Engine", service:"Billing Reconciliation Service", serviceOwner:"Data & Integrations", slaTier:"Tier 1 (Gold)",   repoUrl:"github.com/socalgas/recon-engine",  targetEnv:"Production", targetRoute:"prod-recon.internal.socalgas" },
-    { id:2, projectCode:"P2606-01", ci:"Import Adapter",        service:"Import Data Feed Service",       serviceOwner:"Data & Integrations", slaTier:"Tier 2 (Silver)", repoUrl:"github.com/socalgas/import-billing", targetEnv:"Staging",    targetRoute:"stg-import.internal.socalgas" }
+    { id:2, projectCode:"P2606-01", ci:"Import Adapter",        service:"Import Data Feed Service",       serviceOwner:"Data & Integrations", slaTier:"Tier 2 (Silver)", repoUrl:"github.com/socalgas/import-billing", targetEnv:"Staging",    targetRoute:"stg-import.internal.socalgas" },
+    { id:3, projectCode:"P2607-02", ci:"Customer Portal",       service:"Self-Service Tariff Portal",      serviceOwner:"Digital Platforms",   slaTier:"Tier 1 (Gold)",   repoUrl:"github.com/socalgas/tariff-portal", targetEnv:"Development", targetRoute:"dev-tariff.internal.socalgas" },
+    { id:4, projectCode:"P2608-03", ci:"Invoice Format Service",service:"OMS Invoice Generation",          serviceOwner:"Reporting Team",      slaTier:"Tier 2 (Silver)", repoUrl:"github.com/socalgas/vat-invoice-format", targetEnv:"Development", targetRoute:"dev-invoice.internal.socalgas" }
   ];
   function ensureSeed() {
     // Per-key backfill. Each guard writes ONLY when its key is absent, so it
@@ -1031,7 +1269,15 @@
     { id:"DEP-20260904-0004", runId:4, createdAt:"2026-09-04T16:20:00Z", date:"4-Sep-26",
       repo:"socalgas/import-billing", branch:"release/1.2", commit:"9f8e7d6", environment:"Production",
       workflow:"CI/CD Pipeline", event:"workflow_run", triggeredBy:"Michael Turner", projectCode:"P2606-01", changeRef:"",
-      stages:[{name:"Build",status:"success",durationSec:71},{name:"Test",status:"success",durationSec:121},{name:"Deploy",status:"success",durationSec:47}], status:"success" }
+      stages:[{name:"Build",status:"success",durationSec:71},{name:"Test",status:"success",durationSec:121},{name:"Deploy",status:"success",durationSec:47}], status:"success" },
+    { id:"DEP-20260902-0005", runId:5, createdAt:"2026-09-02T10:30:00Z", date:"2-Sep-26",
+      repo:"socalgas/vat-invoice-format", branch:"main", commit:"7d6c5b4", environment:"Development",
+      workflow:"Build & Deploy", event:"workflow_run", triggeredBy:"David Bennett", projectCode:"P2608-03", changeRef:"CIF-20260902-0004",
+      stages:[{name:"Build",status:"success",durationSec:58},{name:"Test",status:"success",durationSec:82},{name:"Deploy",status:"success",durationSec:29}], status:"success" },
+    { id:"DEP-20260905-0006", runId:6, createdAt:"2026-09-05T13:10:00Z", date:"5-Sep-26",
+      repo:"socalgas/tariff-portal", branch:"feature/sso", commit:"b4a3928", environment:"Development",
+      workflow:"Build & Deploy", event:"workflow_run", triggeredBy:"James Carter", projectCode:"P2607-02", changeRef:"CIF-20260901-0002",
+      stages:[{name:"Build",status:"success",durationSec:55},{name:"Test",status:"failure",durationSec:41},{name:"Deploy",status:"skipped",durationSec:0}], status:"failure" }
   ];
 
   function getDeployments() {
@@ -1891,6 +2137,7 @@
 
   /* Expose API */
   window.PPS = {
+    version: "1.0.1",
     KEYS: KEYS,
     today: today,
     intakeStatus: intakeStatus,    portfolioStatus: portfolioStatus,

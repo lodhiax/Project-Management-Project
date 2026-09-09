@@ -1,5 +1,7 @@
 # PMO Portfolio Suite
 
+**Version:** 1.0.1
+
 A single-deploy, client-side PMO (Project Management Office) suite that presents as three progressively richer editions from one codebase: **PMO Core**, **PMO + ITIL**, and **PMO + ITIL + DevOps**. Everything runs in the browser on `localStorage`, so it deploys as a static site (for example on GitHub Pages) with no backend and no build step.
 
 ## What it is
